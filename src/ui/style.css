@@ -1,0 +1,116 @@
+@font-face {
+  font-family: 'Andika';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('@fontsource/andika/files/andika-latin-400-normal.woff2') format('woff2');
+}
+
+:root {
+  --ink: #4a2e36;
+  --parchment: #fbf3e4;
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #f3ead6;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+#stage {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Letters: DOM, above the 3D canvas, never touched by render scale. */
+#letters {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.glyph {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-family: 'Andika', ui-rounded, system-ui, sans-serif;
+  line-height: 1;
+  color: var(--ink);
+  white-space: nowrap;
+  will-change: transform;
+  /* Andika's lowercase sits low in its line box; nudge to the optical centre. */
+  padding-bottom: 0.14em;
+  transition: color 0.25s;
+}
+
+.glyph.done {
+  color: #2f6f5e;
+}
+
+#ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.bar {
+  position: absolute;
+  top: calc(8px + var(--sat));
+  left: calc(10px + var(--sal));
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.round {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  background: rgba(251, 243, 228, 0.92);
+  box-shadow: 0 0 0 2.5px var(--ink), 0 3px 0 2.5px rgba(74, 46, 54, 0.25);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform 0.18s cubic-bezier(0.3, 1.8, 0.5, 1);
+}
+
+.round:active { transform: scale(0.88); }
+.round.on { background: #ffd27a; }
+.round svg { width: 28px; height: 28px; }
+
+#veil {
+  position: fixed;
+  inset: 0;
+  background: #f3ead6;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+#veil.on { opacity: 1; }
+
+#nogl {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 96px;
+}
