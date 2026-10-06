@@ -18,22 +18,23 @@ export interface ScenePalette {
   outline: string;
   water: string;
   foam: string;
+  sun: string;
 }
 
 export const PALETTES = {
   goldenNoon: {
-    skyTop: '#e6d9b8', skyMid: '#eee3c7', skyHorizon: '#f5edd9',
+    skyTop: '#a9cdd3', skyMid: '#d2e3d2', skyHorizon: '#fbefd0',
     cloud: '#fffbf2', cloudShade: '#efe4cd',
     light: '#fff8e6', mid: '#e8d8b8', shade: '#bca894',
     tint: '#b3a36c', tintAmt: 0.34, lift: 0.05, wash: '#e7dbbd',
-    outline: '#402c20', water: '#9fb8ae', foam: '#f2efe6',
+    outline: '#402c20', water: '#86b6ad', foam: '#f6f2e6', sun: '#fff7da',
   },
   mintMorning: {
-    skyTop: '#cfded2', skyMid: '#dfe8d6', skyHorizon: '#f3efdc',
+    skyTop: '#a3ccd0', skyMid: '#cfe4da', skyHorizon: '#f8f1d8',
     cloud: '#fdfbf3', cloudShade: '#dde6d6',
     light: '#fffaf0', mid: '#dde4cf', shade: '#a9b7ac',
     tint: '#93ab8f', tintAmt: 0.4, lift: 0.07, wash: '#e3e8d6',
-    outline: '#3d302c', water: '#96b5b0', foam: '#f2f1e8',
+    outline: '#3d302c', water: '#80b3b2', foam: '#f4f3e8', sun: '#fffbe6',
   },
 } satisfies Record<string, ScenePalette>;
 

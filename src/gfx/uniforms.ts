@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import type { ScenePalette } from './palette';
 
-export const MAX_BLOBS = 16;
+// Enough for a full menagerie. If this grows further, move to a shadow mask texture.
+export const MAX_BLOBS = 64;
 
 /** One shared uniform block, spread into every scene material. */
 export const U = {

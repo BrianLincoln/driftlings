@@ -71,6 +71,11 @@ for (const size of SIZES) {
       await page.evaluate(() => window.__dl.step(1 / 60, 100));
       await page.screenshot({ path: `shots/${scene}-${size.name}-payoff.png` });
     }
+    if (scene === 'home') {
+      // The island is wider than the screen: also capture it panned to one side.
+      await page.evaluate(() => { window.__dl.pan(-4.5); window.__dl.step(1 / 60, 30); });
+      await page.screenshot({ path: `shots/${scene}-${size.name}-panned${suffix}.png` });
+    }
     const info = await page.evaluate(() => window.__dl.info());
     console.log(`ok ${scene} ${size.name}`, JSON.stringify(info));
   }

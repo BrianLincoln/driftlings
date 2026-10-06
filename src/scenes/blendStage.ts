@@ -3,7 +3,8 @@ import { PALETTES } from '../gfx/palette';
 import { buildIsland, buildWater, islandHeight, type IslandShape } from '../gfx/ground';
 import { buildSky } from '../gfx/sky';
 import { pushBlob } from '../gfx/uniforms';
-import { Creature, LOOKS } from '../cast/creature';
+import { Creature } from '../cast/creature';
+import { rescue } from '../cast/species';
 import { Companion } from '../cast/companion';
 import { Spring, squash } from '../cast/spring';
 import { playClip, preload, sfx } from '../audio/sound';
@@ -54,7 +55,7 @@ export function createBlendStage(): Diorama {
   perch.scale.set(1.45, 1.95, 1.15);
   scene.add(perch);
 
-  const creature = new Creature(LOOKS.apricot);
+  const creature = new Creature(rescue(0));
   scene.add(creature.root);
   const companion = new Companion();
   companion.groundY = y;
@@ -165,9 +166,9 @@ export function createBlendStage(): Diorama {
         squash(s.tile.slab, sy);
         s.tile.slab.rotation.z = s.lean.step(0, 140, 10, dt) * 0.05;
         // Only the tile to touch next carries the glint.
-        s.tile.mat.uniforms.uGlint.value = i === next ? 1 : 0;
+        s.tile.mat.uniforms.uGlint.value = i === next ? 0.6 : 0;
         s.tile.halo.visible = i === next;
-        s.tile.halo.scale.setScalar(1 + 0.025 * Math.sin(pulse * 4.2));
+        s.tile.halo.scale.setScalar(1 + 0.012 * Math.sin(pulse * 3.2));
         s.tile.slab.position.y = 0.12 + (s.tapped ? 0.07 : 0);
         if (s.glyph) {
           s.glyph.scaleY = sy;

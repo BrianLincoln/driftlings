@@ -48,10 +48,10 @@ void main() {
     float fres = 1.0 - abs(dot(n, v));
     float rim = step(0.72, fres) * (0.55 + 0.45 * sin(uTime * 2.4));
     float sweep = fract((vWorld.x + vWorld.z) * 0.22 + vWorld.y * 0.3 - uTime * 0.32);
-    float shimmer = step(0.94, sweep) * step(sweep, 0.975);
+    float shimmer = step(0.955, sweep) * step(sweep, 0.975);
     float g = clamp(max(rim, shimmer) * uGlint, 0.0, 1.0);
-    col = mix(col, vec3(1.0, 0.94, 0.72), g * 0.85);
-    flag = mix(flag, 0.45, g);
+    col = mix(col, vec3(1.0, 0.94, 0.72), g * 0.5);
+    flag = mix(flag, 0.2, g);
   }
   writeG(col, flag, n, uTag);
 }

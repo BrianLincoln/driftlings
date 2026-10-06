@@ -104,7 +104,7 @@ void main() {
 }
 
 export function buildWater(p: ScenePalette, s: IslandShape): THREE.Mesh {
-  const geo = new THREE.CircleGeometry(160, 48);
+  const geo = new THREE.CircleGeometry(520, 64);
   geo.rotateX(-Math.PI / 2);
   geo.translate(0, -0.22, 0);
   const mat = new THREE.ShaderMaterial({
@@ -114,6 +114,7 @@ export function buildWater(p: ScenePalette, s: IslandShape): THREE.Mesh {
       uWater: { value: new THREE.Color(p.water) },
       uFoam: { value: new THREE.Color(p.foam) },
       uShore: { value: new THREE.Vector2(s.radius, s.seed) },
+      uFar: { value: new THREE.Color(p.skyHorizon) },
     },
     vertexShader: /* glsl */ `
 out vec3 vWorld;
@@ -124,7 +125,7 @@ void main() {
 }`,
     fragmentShader: /* glsl */ `
 in vec3 vWorld;
-uniform vec3 uWater, uFoam;
+uniform vec3 uWater, uFoam, uFar;
 uniform vec2 uShore;
 ${TOON}
 ${WRITE_G}
@@ -141,6 +142,16 @@ void main() {
   vec3 col = mix(uWater, uFoam, max(f1, f2 * 0.8));
   // A lighter shelf near the island.
   col = mix(col, mix(uWater, uFoam, 0.22), step(d, 1.5) * (1.0 - max(f1, f2)));
+  // Distance as flat layers: the sea pales toward the horizon in three steps.
+  float far = length(vWorld.xz - cameraPosition.xz);
+  col = mix(col, uFar, 0.16 * step(34.0, far) + 0.16 * step(70.0, far) + 0.16 * step(115.0, far));
+  // Short drawn glints that drift, so open water is never a blank field.
+  vec2 g = vec2(vWorld.x * 0.22 + uTime * 0.03, vWorld.z * 1.1);
+  vec2 cell = floor(g);
+  float hsh = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
+  vec2 f = fract(g) - 0.5;
+  float glint = step(0.72, hsh) * step(abs(f.y), 0.045) * step(abs(f.x + (hsh - 0.85)), 0.2);
+  col = mix(col, uFoam, 0.55 * glint * step(2.2, d) * step(far, 60.0));
   writeG(col, -0.55, vec3(0.0, 1.0, 0.0), ${TAG.ground.toFixed(2)});
 }`,
   });

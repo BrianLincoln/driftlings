@@ -89,10 +89,10 @@ export function buildTile(): Tile {
   foot.scale.set(1.5, 0.7, 0.9);
   foot.position.set(0, -0.05, -0.02);
   haloGeo ??= place(
-    paint(new RoundedBoxGeometry(TILE.width + 0.13, TILE.height + 0.13, TILE.depth * 0.55, 5, 0.085), C.glow),
+    paint(new RoundedBoxGeometry(TILE.width + 0.1, TILE.height + 0.1, TILE.depth * 0.55, 5, 0.085), C.glow),
     [0, TILE.height / 2, 0],
   );
-  const halo = new THREE.Mesh(haloGeo, toonMaterial({ tag: TAG.tile, unlit: 1, flag: 0.62 }));
+  const halo = new THREE.Mesh(haloGeo, toonMaterial({ tag: TAG.tile, unlit: 1, flag: 0.3 }));
   halo.visible = false;
   slab.add(halo);
   const anchor = new THREE.Object3D();

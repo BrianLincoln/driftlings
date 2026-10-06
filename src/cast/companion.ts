@@ -1,7 +1,6 @@
 import * as THREE from 'three';
-import { C } from '../gfx/palette';
 import { TAG } from '../gfx/glsl';
-import { capsule, ellipsoid, lathe, merge, place } from '../gfx/geo';
+import { capsule, ellipsoid, merge, place } from '../gfx/geo';
 import { toonMaterial, type ToonMaterial } from '../gfx/materials';
 import { pushBlob } from '../gfx/uniforms';
 import { Blinker, Spring, ease, squash } from './spring';
@@ -50,46 +49,33 @@ export class Companion {
   groundY: (x: number, z: number) => number = () => 0;
 
   constructor() {
-    const amber = C.amber;
-    // A teardrop with a curled tip: the tip is its silhouette hook.
-    const drop = lathe(
-      [[0, 0], [0.15, 0.015], [0.215, 0.12], [0.2, 0.25], [0.12, 0.37], [0.05, 0.46], [0, 0.54]],
-      (p, n) => (n.z > 0.55 && p.y < 0.17 ? '#ffe2a8' : amber),
-      44, 36,
-    );
-    const pos = drop.getAttribute('position') as THREE.BufferAttribute;
-    for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i);
-      if (y > 0.3) {
-        const k = y - 0.3;
-        pos.setX(i, pos.getX(i) + k * k * 2.6);
-        pos.setY(i, y - k * k * 0.9);
-      }
-    }
+    // The owner's own companion from the reference game: a pebble-round body,
+    // big painted eyes, two stubby arms, two feet and a glowing spot on its chest.
+    const warm = '#f4b650';
     const geo = merge(
-      drop,
-      place(ellipsoid(0.06, 0.035, 0.08, '#e08a44'), [0.08, -0.03, 0.05]),
-      place(ellipsoid(0.06, 0.035, 0.08, '#e08a44'), [-0.08, -0.03, 0.05]),
+      place(ellipsoid(0.23, 0.235, 0.22, (p, n) => (n.z > 0.5 && p.y < -0.42 ? '#fff1c4' : warm), 44), [0, 0.22, 0]),
+      place(ellipsoid(0.07, 0.04, 0.09, '#eda653'), [0.09, 0.0, 0.06]),
+      place(ellipsoid(0.07, 0.04, 0.09, '#eda653'), [-0.09, 0.0, 0.06]),
     );
     // Self-lit and exempt from the grade: it stays warm in any palette.
     this.mat = toonMaterial({
       tag: TAG.creature,
-      unlit: 0.55,
+      unlit: 0.5,
       flag: 0.5,
       face: {
-        origin: [0, 0.2, 0],
-        eye: [0.38, 0.1, 0.2, 0.27],
-        pupil: [0.1, 0.135, 0.09, 0.08],
-        mouth: [-0.32, 0.1],
-        blush: [0.68, -0.2, 0.12],
+        origin: [0, 0.22, 0],
+        eye: [0.36, 0.2, 0.22, 0.27],
+        pupil: [0.085, 0.115, 0.13, 0.11],
+        mouth: [-0.2, 0.07],
+        blush: [0.7, -0.08, 0.12],
       },
     });
     this.body.add(new THREE.Mesh(geo, this.mat));
     const armMat = toonMaterial({ tag: TAG.creature, unlit: 0.55, flag: 0.5 });
     for (const side of [-1, 1]) {
       const pivot = new THREE.Group();
-      pivot.position.set(side * 0.185, 0.2, 0.03);
-      pivot.add(new THREE.Mesh(place(capsule(0.036, 0.085, '#f0984c'), [0, -0.075, 0]), armMat));
+      pivot.position.set(side * 0.215, 0.17, 0.03);
+      pivot.add(new THREE.Mesh(place(capsule(0.042, 0.07, '#f3b458'), [0, -0.06, 0]), armMat));
       this.body.add(pivot);
       this.arms.push(pivot);
     }
@@ -118,7 +104,7 @@ export class Companion {
     const p = this.root.position;
     const w = this.want;
     this.bob += dt;
-    let lift = 0.09 + Math.sin(this.bob * 2.1) * 0.025;
+    let lift = 0.035 + Math.abs(Math.sin(this.bob * 2.1)) * 0.02;
     let faceYaw = Math.atan2(this.viewer.x - p.x, this.viewer.z - p.z);
     let lookAt: THREE.Vector3 = this.viewer;
     const armTarget = [0, 0];
@@ -206,6 +192,7 @@ export class Companion {
     this.happyFor = Math.max(0, this.happyFor - dt);
     const u = this.mat.uniforms;
     gazeAt(this.body, lookAt, this.gaze);
+    this.gaze.y = Math.max(-1, this.gaze.y - 0.25); // its face sits above the body's origin
     this.gazeNow.x = ease(this.gazeNow.x, this.gaze.x, 10, dt);
     this.gazeNow.y = ease(this.gazeNow.y, this.gaze.y, 10, dt);
     const happy = this.happyFor > 0;

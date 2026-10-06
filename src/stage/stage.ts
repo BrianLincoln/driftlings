@@ -12,7 +12,7 @@ const MAX_DT = 1 / 20;
 
 /** Owns the renderer, the camera, the frame loop, resize, and taps. */
 export class Stage {
-  readonly camera = new THREE.PerspectiveCamera(30, 1, 0.5, 200); // narrow: flat, storybook perspective
+  readonly camera = new THREE.PerspectiveCamera(30, 1, 0.5, 700); // narrow: flat, storybook perspective
   readonly glyphs: GlyphLayer;
   readonly governor = new QualityGovernor();
   private renderer: THREE.WebGLRenderer;
@@ -22,6 +22,10 @@ export class Stage {
   private cssW = 1;
   private cssH = 1;
   private last = 0;
+  private pan = 0;
+  private panGoal = 0;
+  private panVel = 0;
+  private drag: { id: number; x: number; y: number; lastX: number; moved: boolean } | null = null;
   paused = false;
   frames = 0;
 
@@ -34,12 +38,78 @@ export class Stage {
 
     window.addEventListener('resize', () => this.resize());
     window.visualViewport?.addEventListener('resize', () => this.resize());
-    canvas.addEventListener('pointerdown', (e) => {
-      unlockAudio();
-      this.tapAt(e.clientX, e.clientY);
-    });
+    this.bindPointer(canvas);
     this.resize();
     requestAnimationFrame((t) => this.loop(t));
+  }
+
+  // Tap, or drag sideways to pan a wide scene. Nothing else.
+  private bindPointer(canvas: HTMLCanvasElement): void {
+    canvas.addEventListener('pointerdown', (e) => {
+      unlockAudio();
+      const range = this.panLimit();
+      if (range <= 0) {
+        this.tapAt(e.clientX, e.clientY); // nothing to pan: respond on touch-down
+        return;
+      }
+      canvas.setPointerCapture(e.pointerId);
+      this.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, lastX: e.clientX, moved: false };
+      this.panVel = 0;
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      const d = this.drag;
+      if (!d || d.id !== e.pointerId) return;
+      if (!d.moved && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 12) d.moved = true;
+      if (d.moved) {
+        const dx = (e.clientX - d.lastX) * this.worldPerPx();
+        this.panGoal = THREE.MathUtils.clamp(this.panGoal - dx, -this.panLimit(), this.panLimit());
+        this.panVel = -dx;
+      }
+      d.lastX = e.clientX;
+    });
+    const end = (e: PointerEvent) => {
+      const d = this.drag;
+      if (!d || d.id !== e.pointerId) return;
+      this.drag = null;
+      if (!d.moved && e.type === 'pointerup') this.tapAt(e.clientX, e.clientY);
+    };
+    canvas.addEventListener('pointerup', end);
+    canvas.addEventListener('pointercancel', end);
+  }
+
+  private panLimit(): number {
+    return this.current?.panRange?.(this.mode) ?? 0;
+  }
+
+  /** World units across the stage box per CSS pixel, at the box's depth. */
+  private worldPerPx(): number {
+    const s = this.current;
+    if (!s) return 0;
+    const d = this.camera.position.distanceTo(s.framing(this.mode).center);
+    return (2 * d * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2)) / this.cssH;
+  }
+
+  /** Aim the camera for the current scene, layout and pan. */
+  private frame(): void {
+    const s = this.current;
+    if (!s) return;
+    const aspect = this.cssW / this.cssH;
+    const f = s.framing(this.mode);
+    f.center = f.center.clone();
+    f.center.x += this.pan;
+    applyFraming(this.camera, f, aspect, this.insets());
+    // Where the horizon falls on screen, for the sky backdrop.
+    const horizon = 0.5 + 0.5 * (Math.tan(THREE.MathUtils.degToRad(f.elevation)) / Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2));
+    s.scene.traverse((o) => {
+      const u = ((o as THREE.Mesh).material as THREE.ShaderMaterial | undefined)?.uniforms;
+      if (u?.uAspect) u.uAspect.value = aspect;
+      if (u?.uHorizon) u.uHorizon.value = horizon;
+    });
+  }
+
+  panTo(x: number): void {
+    this.pan = this.panGoal = THREE.MathUtils.clamp(x, -this.panLimit(), this.panLimit());
+    this.frame();
   }
 
   get scene(): Diorama | null {
@@ -64,6 +134,7 @@ export class Stage {
     }
     this.glyphs.clear();
     this.current = next;
+    this.pan = this.panGoal = this.panVel = 0;
     applyLightBands(next.palette);
     this.post.setPalette(next.palette);
     this.veil.style.background = next.palette.skyHorizon;
@@ -109,17 +180,13 @@ export class Stage {
     const h = Math.round(this.cssH * scale);
     this.post.quality = this.governor.quality;
     this.post.setSize(w, h, scale);
-    const aspect = this.cssW / this.cssH;
-    this.mode = layoutModeFor(aspect);
+    this.mode = layoutModeFor(this.cssW / this.cssH);
     document.body.dataset.layout = this.mode;
     const s = this.current;
     if (!s) return;
     s.layout(this.mode);
-    applyFraming(this.camera, s.framing(this.mode), aspect, this.insets());
-    s.scene.traverse((o) => {
-      const m = (o as THREE.Mesh).material as THREE.ShaderMaterial | undefined;
-      if (m?.uniforms?.uAspect) m.uniforms.uAspect.value = aspect;
-    });
+    this.panGoal = THREE.MathUtils.clamp(this.panGoal, -this.panLimit(), this.panLimit());
+    this.frame();
   }
 
   /** Advance and draw one frame. Exposed so tests can step at a fixed dt. */
@@ -127,6 +194,15 @@ export class Stage {
     const s = this.current;
     if (!s) return;
     U.uTime.value += dt;
+    if (!this.drag && Math.abs(this.panVel) > 1e-4) {
+      // A flick carries on a little, then settles.
+      this.panGoal = THREE.MathUtils.clamp(this.panGoal + this.panVel, -this.panLimit(), this.panLimit());
+      this.panVel *= Math.exp(-6 * dt);
+    }
+    if (Math.abs(this.panGoal - this.pan) > 1e-4) {
+      this.pan += (this.panGoal - this.pan) * (1 - Math.exp(-18 * dt));
+      this.frame();
+    }
     beginBlobs();
     s.update(dt, this.camera);
     endBlobs();

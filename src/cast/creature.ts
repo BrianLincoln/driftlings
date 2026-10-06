@@ -1,30 +1,14 @@
 import * as THREE from 'three';
 import { TAG } from '../gfx/glsl';
-import { ellipsoid, lathe, merge, place } from '../gfx/geo';
 import { toonMaterial, type ToonMaterial } from '../gfx/materials';
 import { pushBlob } from '../gfx/uniforms';
 import { Blinker, Spring, ease, squash } from './spring';
 import { angleDelta, gazeAt } from './gaze';
 import { sfx } from '../audio/sound';
+import { creatureGeo } from './creatureParts';
+import type { Rescue } from './species';
 
-// One creature recipe. A species is this shape; a rescue is a species plus a
-// CreatureLook, so a hundred rescues do not need a hundred designs.
-
-export interface CreatureLook {
-  coat: string;
-  belly: string;
-  ear: string;
-  sprig: string;
-  /** Ear length multiplier. */
-  earLength: number;
-  size: number;
-}
-
-export const LOOKS: Record<string, CreatureLook> = {
-  apricot: { coat: '#e8b48a', belly: '#f7e6cf', ear: '#d99a78', sprig: '#8fa862', earLength: 1, size: 1 },
-  slate: { coat: '#a9b4c6', belly: '#eef0ee', ear: '#8e9ab2', sprig: '#d9b25c', earLength: 1.25, size: 0.9 },
-  moss: { coat: '#b7c08c', belly: '#f3efd6', ear: '#98a56f', sprig: '#e39a86', earLength: 0.8, size: 1.1 },
-};
+// The creature rig and behaviour. What it looks like comes from cast/species.ts.
 
 type Mood = 'idle' | 'happy' | 'sit';
 
@@ -38,6 +22,9 @@ export class Creature {
   private earSpring = new Spring(0);
   private blink = new Blinker();
   private yaw = 0;
+  private headY = 0.56;
+  private restYaw: number | null = null;
+  private earLean = 0.55;
   private goal: THREE.Vector3 | null = null;
   private hopPhase = 0;
   private air = 0;
@@ -53,53 +40,33 @@ export class Creature {
   wanderRadius = 0;
   groundY: (x: number, z: number) => number = () => 0;
 
-  constructor(readonly look: CreatureLook) {
-    const coat = look.coat;
-    const bodyGeo = merge(
-      lathe([[0, 0.02], [0.2, 0.03], [0.27, 0.16], [0.25, 0.32], [0.17, 0.44], [0, 0.5]],
-        (p, n) => (n.z > 0.45 && p.y < 0.4 ? look.belly : coat)),
-      place(ellipsoid(0.09, 0.05, 0.13, look.ear), [0.13, 0.04, 0.13]),
-      place(ellipsoid(0.09, 0.05, 0.13, look.ear), [-0.13, 0.04, 0.13]),
-      place(ellipsoid(0.06, 0.11, 0.06, coat), [0.25, 0.25, 0.04], [0, 0, 0.5]),
-      place(ellipsoid(0.06, 0.11, 0.06, coat), [-0.25, 0.25, 0.04], [0, 0, -0.5]),
-      place(ellipsoid(0.09, 0.09, 0.09, look.belly), [0, 0.15, -0.27]),
-    );
+  /** If set, wandering stays around this spot rather than the scene origin. */
+  home = new THREE.Vector3();
+  readonly size: number;
+
+  constructor(readonly who: Rescue) {
+    const geo = creatureGeo(who.species, who.coat);
     const bodyMat = toonMaterial({ tag: TAG.creature, flag: -0.6 });
-    this.body.add(new THREE.Mesh(bodyGeo, bodyMat));
-
-    this.headMat = toonMaterial({
-      tag: TAG.creature,
-      flag: -0.6,
-      face: {
-        origin: [0, 0, 0],
-        eye: [0.38, 0.04, 0.215, 0.28],
-        pupil: [0.13, 0.17, 0.07, 0.07],
-        mouth: [-0.4, 0.12],
-        blush: [0.66, -0.24, 0.13],
-      },
-    });
-    const headGeo = merge(
-      ellipsoid(0.28, 0.24, 0.25, coat, 40),
-      // The sprig: a small two-leaf sprout, this species' silhouette hook.
-      place(ellipsoid(0.035, 0.09, 0.02, look.sprig), [0.045, 0.28, 0], [0, 0, -0.6]),
-      place(ellipsoid(0.03, 0.07, 0.02, look.sprig), [-0.035, 0.27, 0], [0, 0, 0.7]),
-    );
-    this.head.add(new THREE.Mesh(headGeo, this.headMat));
-    this.head.position.set(0, 0.56, 0.03);
-
-    const earLen = 0.19 * look.earLength;
-    for (const side of [-1, 1]) {
-      const pivot = new THREE.Group();
-      pivot.position.set(side * 0.17, 0.14, -0.02);
-      pivot.rotation.z = -side * 0.55;
-      const geo = place(ellipsoid(0.075, earLen, 0.04, (_p, n) => (n.z > 0.5 ? look.belly : look.ear)), [0, earLen * 0.85, 0]);
-      pivot.add(new THREE.Mesh(geo, bodyMat));
-      this.head.add(pivot);
-      this.ears.push(pivot);
+    this.body.add(new THREE.Mesh(geo.body, bodyMat));
+    this.headMat = toonMaterial({ tag: TAG.creature, flag: -0.6, face: geo.face });
+    this.head.add(new THREE.Mesh(geo.head, this.headMat));
+    this.headY = geo.headY;
+    this.head.position.set(0, geo.headY, 0.03);
+    this.earLean = geo.earLean;
+    if (geo.ear) {
+      for (const side of [-1, 1]) {
+        const pivot = new THREE.Group();
+        pivot.position.set(side * geo.earPivot.x, geo.earPivot.y, geo.earPivot.z);
+        pivot.rotation.z = -side * geo.earLean;
+        pivot.add(new THREE.Mesh(geo.ear, bodyMat));
+        this.head.add(pivot);
+        this.ears.push(pivot);
+      }
     }
     this.body.add(this.head);
     this.root.add(this.body);
-    this.root.scale.setScalar(look.size);
+    this.size = who.species.size;
+    this.root.scale.setScalar(this.size);
     this.yaw = this.root.rotation.y;
   }
 
@@ -145,7 +112,7 @@ export class Creature {
       if (this.pause <= 0) {
         const a = Math.random() * Math.PI * 2;
         const r = Math.sqrt(Math.random()) * this.wanderRadius;
-        this.goal = new THREE.Vector3(Math.sin(a) * r, 0, Math.cos(a) * r);
+        this.goal = new THREE.Vector3(this.home.x + Math.sin(a) * r, 0, this.home.z + Math.cos(a) * r);
         this.pause = 1.5 + Math.random() * 4;
       }
     }
@@ -157,6 +124,7 @@ export class Creature {
       if (dist < 0.08) {
         this.goal = null;
         this.hopPhase = 0;
+        this.restYaw = (Math.random() - 0.5) * 1.3;
       } else {
         this.yaw += angleDelta(this.yaw, Math.atan2(dx, dz)) * (1 - Math.exp(-8 * dt));
         const before = this.hopPhase;
@@ -168,6 +136,10 @@ export class Creature {
         p.z += Math.cos(this.yaw) * step;
         if (Math.floor(before) !== Math.floor(this.hopPhase)) this.sq.kick(-2.2); // landing
       }
+    }
+
+    if (!this.goal && this.restYaw !== null) {
+      this.yaw += angleDelta(this.yaw, this.restYaw) * (1 - Math.exp(-5 * dt));
     }
 
     if (this.spin > 0) {
@@ -184,19 +156,20 @@ export class Creature {
       this.root.rotation.y = this.yaw;
     }
 
-    p.y = this.groundY(p.x, p.z) + lift * this.look.size;
+    p.y = this.groundY(p.x, p.z) + lift * this.size;
     this.happyFor = Math.max(0, this.happyFor - dt);
 
     const sitting = this.mood === 'sit';
     const breathe = 1 + Math.sin(performance.now() * 0.0022 + p.x) * 0.012;
     squash(this.body, this.sq.step((sitting ? 0.8 : 1) * breathe, 180, 13, dt));
-    this.head.position.y = ease(this.head.position.y, sitting ? 0.5 : 0.56, 10, dt);
+    this.head.position.y = ease(this.head.position.y, this.headY - (sitting ? 0.06 : 0), 10, dt);
 
     const flop = this.earSpring.step(-this.sq.v * 0.05 + (sitting ? 0.25 : 0), 90, 9, dt);
-    this.ears[0].rotation.x = flop;
-    this.ears[1].rotation.x = flop;
-    this.ears[0].rotation.z = 0.55 + flop * 0.6;
-    this.ears[1].rotation.z = -0.55 - flop * 0.6;
+    this.ears.forEach((ear, i) => {
+      const side = i === 0 ? -1 : 1;
+      ear.rotation.x = flop;
+      ear.rotation.z = -side * (this.earLean + flop * 0.6);
+    });
 
     const u = this.headMat.uniforms;
     this.root.updateMatrixWorld();
@@ -209,6 +182,6 @@ export class Creature {
     u.uMouth!.value.z = ease(u.uMouth!.value.z, happy ? 0.07 : 0.035, 10, dt);
     u.uBlush!.value.w = ease(u.uBlush!.value.w, happy ? 0.85 : 0.45, 6, dt);
 
-    pushBlob(p.x, p.z, 0.27 * this.look.size * (1 - Math.min(0.5, lift)), 1.25);
+    pushBlob(p.x, p.z, 0.27 * this.size * (1 - Math.min(0.5, lift)), 1.25);
   }
 }

@@ -87,19 +87,28 @@ void main() {
   vec4 nd = texture(tND, vUv);
   vec3 n = nd.xyz * 2.0 - 1.0;
   float ne = 0.0;
+  float te = 0.0;
   if (nd.a > 0.0) {
     vec4 a = texture(tND, vUv - vec2(off.x, 0.0)), b = texture(tND, vUv + vec2(off.x, 0.0));
     vec4 c = texture(tND, vUv + vec2(0.0, off.y)), e = texture(tND, vUv - vec2(0.0, off.y));
     ne = max(max(1.0 - dot(n, a.xyz * 2.0 - 1.0), 1.0 - dot(n, b.xyz * 2.0 - 1.0)),
              max(1.0 - dot(n, c.xyz * 2.0 - 1.0), 1.0 - dot(n, e.xyz * 2.0 - 1.0)));
     // A change of category is always a line (a tile standing on the ground).
-    float te = max(max(abs(nd.a - a.a), abs(nd.a - b.a)), max(abs(nd.a - c.a), abs(nd.a - e.a)));
+    te = max(max(abs(nd.a - a.a), abs(nd.a - b.a)), max(abs(nd.a - c.a), abs(nd.a - e.a)));
     ne = max(ne, step(0.05, te) * step(min(min(a.a, b.a), min(c.a, e.a)), nd.a + 0.01) * 2.0);
   }
   float normalEdge = smoothstep(uNormalThr, uNormalThr + 0.15, ne) * step(-0.002, min(ex, ey)); // only on the nearer side
   // Far layers are flat tones without ink.
   float fade = 1.0 - smoothstep(35.0, 55.0, d);
-  col = mix(col, uOutlineCol, max(depthEdge, normalEdge) * fade);
+  float edge = max(depthEdge, normalEdge) * fade;
+  vec3 lineCol = uOutlineCol;
+  // A crease inside one creature (neck, arm against body) is a soft line in
+  // its own colour. Ink is kept for the silhouette, or necks read as collars.
+  if (abs(nd.a - 0.62) < 0.02 && te < 0.05) {
+    edge *= 0.5;
+    lineCol = mix(col * 0.62, uOutlineCol, 0.2);
+  }
+  col = mix(col, lineCol, edge);
 
   col += texture(tBloom, vUv).rgb * uBloom;
   o = vec4(col, 1.0);
@@ -184,7 +193,7 @@ export class PostChain {
       uWash: { value: new THREE.Color() },
       uTintAmt: { value: 0 },
       uLift: { value: 0 },
-      uBloom: { value: 0.75 },
+      uBloom: { value: 0.55 },
     });
     this.fxaa = pass(FXAA, { tIn: { value: this.comp.texture }, uTexel: { value: new THREE.Vector2() } });
 

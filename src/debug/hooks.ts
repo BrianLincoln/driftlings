@@ -12,6 +12,8 @@ export interface DebugHooks {
   quality(q: Quality): void;
   targets(): Array<{ id: string; x: number; y: number; r: number }>;
   tap(id: string): boolean;
+  /** Pan a wide scene to a world x offset. */
+  pan(x: number): void;
   info(): Record<string, unknown>;
 }
 
@@ -38,6 +40,7 @@ export function installHooks(stage: Stage, goto: (name: string, instant?: boolea
       const t = stage.targets().find((x) => x.id === id);
       return !!t && stage.tapAt(t.x, t.y) === id;
     },
+    pan: (x) => stage.panTo(x),
     info: () => ({
       scene: stage.scene?.name,
       layout: stage.layoutMode,
