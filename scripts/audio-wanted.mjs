@@ -20,7 +20,7 @@ const lines = [
   '',
 ];
 // Spoken prompts the game will use as soon as they exist. Keep them short and reusable.
-const PROMPTS = { 'your-turn': 'Your turn!' };
+const PROMPTS = {};
 let total = 0;
 const prompts = Object.entries(PROMPTS).filter(([id]) => !(`prompts/${id}` in manifest));
 if (prompts.length) {

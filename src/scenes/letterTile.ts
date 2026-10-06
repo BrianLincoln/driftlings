@@ -9,23 +9,28 @@ import { buildTile, type Tile } from './props';
 export const SPEAKER_ICON =
   '<svg viewBox="0 0 28 28" style="width:1em;height:1em;display:block" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11h4l6-5v16l-6-5H5z" fill="currentColor"/><path d="M19 10.5c1.6 1.8 1.6 5.2 0 7"/><path d="M22 7.500c3.200 3.600 3.200 9.400 0 13"/></svg>';
 
+/** How long the letter takes to fade before the slab starts to shrink. */
+const LETTER_FADE = 0.12;
+
 export class LetterTile {
   readonly root: THREE.Group;
   readonly anchor: THREE.Object3D;
   private tile: Tile;
   private glyph: Glyph;
-  private pipGlyph: Glyph | null = null;
-  private pipAnchor = new THREE.Object3D();
   private sq = new Spring(1);
   private lean = new Spring(0);
   private pop = new Spring(0);
   private popTarget = 1;
   private pulse = Math.random() * 6;
+  /** Seconds since `vanish`, or -1 while the tile is staying. */
+  private leaving = -1;
   /** Where the tile should be; it eases there. */
   readonly goal = new THREE.Vector3();
   active = false;
   done = false;
   dim = false;
+  /** The letter is wiped off for a moment; the slab stays. For when something stands in front of it. */
+  blank = false;
   gone = false;
 
   constructor(readonly text: string, private glyphs: GlyphLayer, readonly scale = 1, icon = false) {
@@ -34,16 +39,6 @@ export class LetterTile {
     this.anchor = this.tile.anchor;
     this.glyph = glyphs.add(text, this.anchor, 0.74 * scale, icon);
     this.root.scale.setScalar(0.001);
-  }
-
-  /** Show a row of dots above the tile, `done` of them filled: "this many taps". */
-  pips(done: number, total: number): void {
-    if (!this.pipGlyph) {
-      this.pipAnchor.position.set(0, 1.22, 0);
-      this.root.add(this.pipAnchor);
-      this.pipGlyph = this.glyphs.add("", this.pipAnchor, 0.11 * this.scale, true);
-    }
-    this.pipGlyph.el.innerHTML = `<span class="taps">${Array.from({ length: total }, (_, i) => `<i class="${i < done ? 'on' : ''}"></i>`).join('')}</span>`;
   }
 
   /** Place immediately, with no glide. */
@@ -66,9 +61,13 @@ export class LetterTile {
     this.lean.kick(9);
   }
 
-  /** Shrink away. The tile can be disposed once `gone`. */
+  /**
+   * Go away: the letter fades where it is, then the slab shrinks. A letter that
+   * rode the shrinking slab down to its foot looked like it was falling off.
+   * The tile can be disposed once `gone`.
+   */
   vanish(): void {
-    this.popTarget = 0;
+    if (this.leaving < 0) this.leaving = 0;
   }
 
   lean_back(rad: number): void {
@@ -84,6 +83,10 @@ export class LetterTile {
     this.root.position.x = ease(this.root.position.x, this.goal.x, 9, dt);
     this.root.position.y = ease(this.root.position.y, this.goal.y, 9, dt);
     this.root.position.z = ease(this.root.position.z, this.goal.z, 9, dt);
+    if (this.leaving >= 0) {
+      this.leaving += dt;
+      if (this.leaving > LETTER_FADE) this.popTarget = 0;
+    }
     const pop = Math.max(0.001, this.pop.step(this.popTarget, 170, this.popTarget ? 15 : 26, dt));
     if (this.popTarget === 0 && pop < 0.03) this.gone = true;
     this.root.scale.setScalar(pop * this.scale);
@@ -98,14 +101,14 @@ export class LetterTile {
     g.scaleY = sy * pop;
     g.scaleX = pop / Math.sqrt(Math.max(0.4, sy));
     g.tilt = -this.tile.slab.rotation.z;
-    g.opacity = ease(g.opacity, this.dim ? 0.3 : 1, 10, dt);
+    if (this.leaving >= 0) g.opacity = ease(g.opacity, 0, 30, dt);
+    else if (this.blank) g.opacity = ease(g.opacity, 0, 30, dt);
+    else g.opacity = ease(g.opacity, this.dim ? 0.3 : 1, 10, dt);
     g.el.classList.toggle('done', this.done);
-    if (this.pipGlyph) this.pipGlyph.scaleX = this.pipGlyph.scaleY = pop;
   }
 
   dispose(): void {
     this.glyphs.remove(this.glyph);
-    if (this.pipGlyph) this.glyphs.remove(this.pipGlyph);
     this.root.removeFromParent();
   }
 }

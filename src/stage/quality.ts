@@ -15,7 +15,7 @@ export function renderScale(dpr: number, cssPixels: number, quality: Quality): n
   const full = Math.min(dpr, 3);
   const half = Math.max(1, full / 2);
   if (quality === 'low') return half;
-  return cssPixels * full * full > 4.6e6 ? half : full;
+  return cssPixels * full * full > 9e6 ? half : full;
 }
 
 const WINDOW = 1.5;

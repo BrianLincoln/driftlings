@@ -12,6 +12,9 @@ import type { Rescue } from './species';
 
 type Mood = 'idle' | 'happy' | 'sit';
 
+/** Seconds for each part of the whirlwind, and how many times round it goes. */
+const WHIRL = { down: 0.26, spin: 0.55, back: 0.3, turns: 3 };
+
 export class Creature {
   readonly root = new THREE.Group();
   readonly head = new THREE.Group();
@@ -31,6 +34,7 @@ export class Creature {
   private spin = 0;
   private happyFor = 0;
   private pause = 0;
+  private whirling: { t: number; home: THREE.Vector3; to: THREE.Vector3; puffAt: number; kick(): void } | null = null;
   private gaze = { x: 0, y: 0 };
   private gazeNow = { x: 0, y: 0 };
   mood: Mood = 'idle';
@@ -48,9 +52,12 @@ export class Creature {
 
   constructor(readonly who: Rescue) {
     const geo = creatureGeo(who.species, who.coat);
-    const bodyMat = toonMaterial({ tag: TAG.creature, flag: -0.6 });
+    // Creatures pop against the graded world: they keep their own colour through
+    // the grade and their shade bands are lifted so a white belly stays white.
+    const look = { tag: TAG.creature, flag: -1, unlit: 0.35 };
+    const bodyMat = toonMaterial(look);
     this.body.add(new THREE.Mesh(geo.body, bodyMat));
-    this.headMat = toonMaterial({ tag: TAG.creature, flag: -0.6, face: geo.face });
+    this.headMat = toonMaterial({ ...look, face: geo.face });
     this.head.add(new THREE.Mesh(geo.head, this.headMat));
     this.headY = geo.headY;
     this.head.position.set(0, geo.headY, 0.03);
@@ -93,6 +100,51 @@ export class Creature {
     sfx.coo();
   }
 
+  /**
+   * A quick whirlwind: leap down to a spot, spin there like a top, leap back.
+   * `kick` is called on landing and again and again through the spin, for
+   * whatever the feet throw up. Returns the seconds until it lands.
+   */
+  whirl(to: THREE.Vector3, kick: () => void): number {
+    if (this.whirling) return 0;
+    this.goal = null;
+    this.spin = 0;
+    this.whirling = { t: 0, home: this.root.position.clone(), to: to.clone(), puffAt: WHIRL.down, kick };
+    this.happyFor = WHIRL.down + WHIRL.spin + WHIRL.back;
+    this.sq.kick(4);
+    sfx.whoosh();
+    return WHIRL.down;
+  }
+
+  private stepWhirl(dt: number): void {
+    const w = this.whirling!;
+    const p = this.root.position;
+    w.t += dt;
+    const leap = (from: THREE.Vector3, to: THREE.Vector3, k: number) => {
+      p.lerpVectors(from, to, k);
+      p.y += Math.sin(k * Math.PI) * 0.5 * this.root.scale.x;
+    };
+    const spinning = w.t - WHIRL.down;
+    if (spinning < 0) leap(w.home, w.to, w.t / WHIRL.down);
+    else if (spinning < WHIRL.spin) {
+      p.copy(w.to);
+      this.root.rotation.y = this.yaw + (spinning / WHIRL.spin) * Math.PI * 2 * WHIRL.turns;
+      if (w.t >= w.puffAt) {
+        if (w.puffAt === WHIRL.down) this.sq.kick(-4); // landing
+        w.puffAt += 0.1;
+        w.kick();
+      }
+    } else {
+      const k = Math.min(1, (spinning - WHIRL.spin) / WHIRL.back);
+      this.root.rotation.y = this.yaw;
+      leap(w.to, w.home, k);
+      if (k >= 1) {
+        this.whirling = null;
+        this.sq.kick(-3);
+      }
+    }
+  }
+
   /** A small acknowledging bounce. */
   nod(): void {
     this.sq.kick(2.6);
@@ -115,7 +167,9 @@ export class Creature {
     const p = this.root.position;
     let lift = 0;
 
-    if (this.wanderRadius > 0 && !this.goal && this.mood === 'idle' && this.spin <= 0) {
+    if (this.whirling) this.stepWhirl(dt);
+
+    if (this.wanderRadius > 0 && !this.goal && this.mood === 'idle' && this.spin <= 0 && !this.whirling) {
       this.pause -= dt;
       if (this.pause <= 0) {
         const a = Math.random() * Math.PI * 2;
@@ -160,11 +214,11 @@ export class Creature {
         this.spin = 0;
         this.sq.kick(-3);
       }
-    } else {
+    } else if (!this.whirling) {
       this.root.rotation.y = this.yaw;
     }
 
-    p.y = this.groundY(p.x, p.z) + lift * this.size;
+    if (!this.whirling) p.y = this.groundY(p.x, p.z) + lift * this.size;
     this.happyFor = Math.max(0, this.happyFor - dt);
 
     const sitting = this.mood === 'sit';

@@ -112,8 +112,11 @@ export const pickLetter: ExerciseModule<PickLetterItem> = {
         t += dt;
         if (index >= items.length) return;
         if (askedAt < 0 && t > 0.5) {
-          const lead = index === 0 ? kit.say(promptClip('which-letter-makes-the-sound')) + 0.15 : 0;
-          askedAt = t + ask(lead);
+          if (index === 0) {
+            const said = kit.line([promptClip('which-letter-makes-the-sound'), soundClip(item().target)]);
+            lastHeard = t + said.lastAt;
+            askedAt = t + said.end;
+          } else askedAt = t + ask();
         }
         if (askedAt >= 0 && !answered) {
           if (t - lastHeard > REPLAY_AFTER) ask();

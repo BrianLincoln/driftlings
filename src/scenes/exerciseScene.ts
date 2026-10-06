@@ -6,13 +6,14 @@ import { pushBlob } from '../gfx/uniforms';
 import { Creature } from '../cast/creature';
 import { Companion } from '../cast/companion';
 import type { Rescue } from '../cast/species';
-import { say, preloadClips } from '../audio/narrate';
+import { say, sayLine, preloadClips } from '../audio/narrate';
 import { EXERCISES } from '../exercises';
 import type { ExerciseKit, ExerciseRun } from '../exercises/contract';
 import type { AttemptDraft } from '../learn/events';
 import type { Round } from '../learn/items';
 import type { Framing, LayoutMode } from '../stage/framing';
 import type { Diorama, StageContext } from './diorama';
+import { Dust } from './dust';
 import { LetterTile } from './letterTile';
 import { Pips } from '../ui/pips';
 import { PROP_MAT, buildFarIsles, bushGeo, rockGeo, treeGeo } from './props';
@@ -64,6 +65,8 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
   const companion = new Companion();
   companion.groundY = y;
   scene.add(companion.root);
+  const dust = new Dust();
+  scene.add(dust.root);
 
   let mode: LayoutMode = 'wide';
   let ctx: StageContext | null = null;
@@ -106,12 +109,22 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
       return (v.x * 0.5 + 0.5) * ctx!.size().width;
     },
     say,
+    line: sayLine,
     cheer() {
       if (plan.boss) guest.nod(); // a sleeper only stirs; it wakes at the end
       else guest.react();
       companion.act('celebrate');
     },
     nod: () => guest.nod(),
+    trouble() {
+      // Down off the rock, over the letters, round and round on top of them in a cloud of dust, and back up.
+      const z = 2.0;
+      let landed = false;
+      return guest.whirl(new THREE.Vector3(0, y(0, z), z), () => {
+        dust.burst(guest.root.position, landed ? 6 : 12, 0.3 * guest.root.scale.x);
+        landed = true;
+      }) + 0.15;
+    },
   };
 
   const startRound = () => {
@@ -226,6 +239,7 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
       guest.lookTarget = companion.want.face ?? camera.position;
       guest.update(dt);
       companion.update(dt);
+      dust.update(dt);
     },
     // For scripted play.
     debug: () => (finished ? { finished: true } : pause > 0 || !run ? { waiting: true } : run.debug?.() ?? { waiting: true }),

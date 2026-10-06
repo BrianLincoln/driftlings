@@ -1,4 +1,5 @@
 import type * as THREE from 'three';
+import type { Line } from '../audio/narrate';
 import type { ClipId } from '../content/content';
 import type { Companion } from '../cast/companion';
 import type { AttemptDraft } from '../learn/events';
@@ -32,10 +33,14 @@ export interface ExerciseKit {
   screenX(tile: LetterTile): number;
   /** Play a narration clip; returns its length in seconds. */
   say(clip: ClipId, delay?: number): number;
+  /** Say several clips in a row, with the pauses speech needs between them. */
+  line(clips: ClipId[], delay?: number): Line;
   /** Something good happened. The host decides what that looks like. */
   cheer(): void;
   /** A small acknowledgement, for steps that are not answers. */
   nod(): void;
+  /** Whoever is watching makes mischief. Returns the seconds until it lands. */
+  trouble(): number;
 }
 
 export interface ExerciseHooks {

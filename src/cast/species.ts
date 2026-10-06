@@ -55,18 +55,19 @@ export const SPECIES: Species[] = [
 const ct = (id: string, coat: string, belly: string, accent: string, crest: string, pattern: Pattern = 'plain'): Coat =>
   ({ id, coat, belly, accent, crest, pattern });
 
-// Muted, but each a clearly different hue so a crowd reads as a crowd.
+// Bright against the muted world: saturated coats and near-white bellies, each a
+// clearly different hue so a crowd reads as a crowd.
 export const COATS: Coat[] = [
-  ct('apricot', '#e8b48a', '#f7e6cf', '#d99a78', '#8fa862'),
-  ct('slate', '#a9b4c6', '#eef0ee', '#8e9ab2', '#d9b25c'),
-  ct('moss', '#b7c08c', '#f3efd6', '#98a56f', '#e39a86'),
-  ct('rose', '#e3a7a5', '#f8e7e0', '#c98886', '#f1d58a', 'spots'),
-  ct('plum', '#b49cc0', '#efe6ee', '#9580a6', '#f0c26a'),
-  ct('teal', '#8fc0b8', '#e9f3ec', '#73a59e', '#f0b48a', 'stripes'),
-  ct('butter', '#ecd58e', '#fbf4dc', '#d6ba6e', '#9bb47a'),
-  ct('cocoa', '#b9917c', '#f0dfcf', '#9c7764', '#e8c46a', 'stripes'),
-  ct('sky', '#a8c8e0', '#f0f5f6', '#8aaccc', '#f3a9a0', 'spots'),
-  ct('cream', '#f1e6d2', '#fffaf0', '#dcc7a8', '#c98f7a'),
+  ct('apricot', '#f5a66a', '#fff4e2', '#e5814f', '#7fc04e'),
+  ct('slate', '#8fa6dc', '#fbfcff', '#6c84c4', '#f5c23c'),
+  ct('moss', '#a9cf5c', '#fcfbe4', '#82ad3c', '#f58a70'),
+  ct('rose', '#f58f9c', '#fff1ee', '#de6a7c', '#fbd95c', 'spots'),
+  ct('plum', '#b78ae0', '#faf2ff', '#9568c6', '#fbc04a'),
+  ct('teal', '#5fcdbc', '#f1fff8', '#3fa99a', '#fba473', 'stripes'),
+  ct('butter', '#fbd756', '#fffbe6', '#e6b533', '#84c466'),
+  ct('cocoa', '#c98a62', '#fff0de', '#a56a46', '#f7c74a', 'stripes'),
+  ct('sky', '#7cc0f2', '#f6fcff', '#559ede', '#fb9488', 'spots'),
+  ct('cream', '#fff3dc', '#ffffff', '#f0cf9c', '#e8795e'),
 ];
 
 export interface Rescue {

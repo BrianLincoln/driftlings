@@ -20,14 +20,20 @@ export interface PickLetterItem {
   skills: SkillId[];
 }
 
-/** Sound out a word, blend it, then pick which spoken word it was. */
+/**
+ * How much a word asks of the child, easiest first.
+ * read: sound it out and hear it. guided: then rebuild it after it is jumbled,
+ * with each next letter shown. free: rebuild it unaided. Only free is scored.
+ */
+export type BlendStage = 'read' | 'guided' | 'free';
+
+/** Sound out a word, hear it, and (past the first stage) put it back together. */
 export interface BlendItem {
   kind: 'blend';
   key: string;
   word: string;
   graphemes: string[];
-  /** Spoken options for the check, including the word. Already in display order. */
-  choices: string[];
+  stage: BlendStage;
   skills: SkillId[];
   supports: SkillId[];
 }

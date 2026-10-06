@@ -6,7 +6,7 @@ import type { Content, Item, Round } from './items';
 import { TUNING, applyOutcome, confusions, emptyState, foldSkills, isDue, quality, statusOf, type SkillState } from './model';
 import { seeded } from './rng';
 import { gate, need, planCheckpoint, planLesson, planPractice, practiceTargets } from './scheduler';
-import { blend, gpc, shapeOf, type SkillId } from './skills';
+import { blend, gpc, graphemeOf, shapeOf, type SkillId } from './skills';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -201,17 +201,16 @@ describe('generator', () => {
     expect(words).toEqual(['am']);
   });
 
-  it('builds a blend check with the word among distinct choices', () => {
+  it('builds a word item from its letters', () => {
     const item = blendItem('sat', ctxFor(ids.slice(0, 5)))!;
-    expect(item.choices).toContain('sat');
-    expect(new Set(item.choices).size).toBe(item.choices.length);
-    expect(item.choices.length).toBe(3);
+    expect(item.graphemes).toEqual(['s', 'a', 't']);
+    expect(item.stage).toBe('free');
     expect(item.skills).toEqual([blend('cvc')]);
     expect(item.supports).toEqual([gpc('s'), gpc('a'), gpc('t')]);
   });
 
-  it('will not build a check with nothing to choose between', () => {
-    expect(blendItem('am', ctxFor(ids.slice(0, 5), { content: content('am', ['am']) }))).toBeNull();
+  it('will not build a word the child cannot sound out yet', () => {
+    expect(blendItem('map', ctxFor(ids.slice(0, 5)))).toBeNull();
   });
 });
 
@@ -221,7 +220,7 @@ describe('scheduler', () => {
     if (item.kind === 'meet') return ctx.known.has(gpc(item.grapheme)) && sounds.includes(item.grapheme);
     if (item.kind === 'pick-letter') return ctx.known.has(gpc(item.target)) && sounds.includes(item.target) && item.choices.includes(item.target);
     return item.graphemes.every((g) => ctx.known.has(gpc(g)) && sounds.includes(g)) &&
-      ctx.known.has(blend(shapeOf(item.graphemes))) && item.choices.every((w) => WORDS.includes(w));
+      ctx.known.has(blend(shapeOf(item.graphemes))) && WORDS.includes(item.word);
   };
 
   it('holds its invariants across every node and many seeds', () => {
@@ -255,6 +254,19 @@ describe('scheduler', () => {
     expect(fresh).toBeLessThan(targets.length);
   });
 
+  it('asks about the letter just met before anything else', () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      allNodes().forEach((node, i, nodes) => {
+        const met = node.teaches.map(graphemeOf).filter((g): g is string => !!g && sounds.includes(g));
+        if (node.kind !== 'lesson' || met.length === 0) return;
+        const rounds = planLesson(node, ctxFor(nodes.slice(0, i + 1).map((x) => x.id), { seed, foils: ['m', 's'] }), T0);
+        expect(rounds[0].exercise).toBe('meet');
+        expect(rounds[1].exercise).toBe('pick-letter');
+        expect((rounds[1].items[0] as { target: string }).target).toBe(met[met.length - 1]);
+      });
+    }
+  });
+
   it('leans review toward shaky letters', () => {
     const shaky = foldSkills([0, 1, 2, 3].map((i) => attempt(gpc('a'), T0 + i, { correct: false, answer: 'm' })));
     let a = 0;
@@ -271,6 +283,19 @@ describe('scheduler', () => {
     expect(rounds.map((r) => r.exercise)).toEqual(['blend', 'pick-letter']);
     const words = rounds[0].items.map((i) => (i as { word: string }).word);
     expect(new Set(words).size).toBe(words.length);
+  });
+
+  it('only sounds words out in the lesson that introduces them', () => {
+    const rounds = planLesson(A1.nodes[4], ctxFor(ids.slice(0, 5)), T0);
+    expect(rounds[0].items.every((i) => i.kind === 'blend' && i.stage === 'read')).toBe(true);
+  });
+
+  it('shows how to rebuild the first word of a checkpoint, then leaves the child to it', () => {
+    const stages = (states: Map<SkillId, SkillState>) =>
+      itemsOf(planCheckpoint(A1, ctxFor(ids, { states }), T0)).flatMap((i) => (i.kind === 'blend' ? [i.stage] : []));
+    expect(stages(new Map())).toEqual(['guided', 'free', 'free']);
+    const going = foldSkills(['vc', 'cvc'].flatMap((s) => [0, 1].map((i) => attempt(blend(s as 'vc'), T0 + i, { exercise: 'blend' }))));
+    expect(stages(going)).toEqual(['free', 'free', 'free']);
   });
 
   it('covers every letter of the area in its checkpoint', () => {

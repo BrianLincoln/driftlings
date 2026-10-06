@@ -1,4 +1,4 @@
-import type { BlendItem, Content, MeetItem, PickLetterItem } from './items';
+import type { BlendItem, BlendStage, Content, MeetItem, PickLetterItem } from './items';
 import type { SkillState } from './model';
 import { shuffle, weighted, type Rng } from './rng';
 import { blend, gpc, graphemeOf, shapeOf, type SkillId } from './skills';
@@ -70,30 +70,15 @@ export function decodableWords(ctx: GenContext): Array<{ text: string; graphemes
   );
 }
 
-export function blendItem(word: string, ctx: GenContext, nChoices = 3): BlendItem | null {
-  const words = decodableWords(ctx);
-  const w = words.find((x) => x.text === word);
+export function blendItem(word: string, ctx: GenContext, stage: BlendStage = 'free'): BlendItem | null {
+  const w = decodableWords(ctx).find((x) => x.text === word);
   if (!w) return null;
-  let pool = words.filter((x) => x.text !== word);
-  if (pool.length === 0) return null; // nothing to choose between: the check would prove nothing
-  const others: string[] = [];
-  const letters = new Set(w.graphemes);
-  while (others.length < nChoices - 1 && pool.length > 0) {
-    // Near neighbours (shared letters, similar length) make the check mean something.
-    const pick = weighted(
-      pool,
-      (x) => 1 + 2 * x.graphemes.filter((g) => letters.has(g)).length + (x.graphemes.length === w.graphemes.length ? 2 : 0),
-      ctx.rng,
-    );
-    others.push(pick.text);
-    pool = pool.filter((x) => x.text !== pick.text);
-  }
   return {
     kind: 'blend',
     key: key('blend', word),
     word,
     graphemes: w.graphemes,
-    choices: shuffle([word, ...others], ctx.rng),
+    stage,
     skills: [blend(shapeOf(w.graphemes))],
     supports: w.graphemes.map(gpc),
   };

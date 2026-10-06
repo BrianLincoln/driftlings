@@ -3,129 +3,77 @@ import type { MeetItem } from '../learn/items';
 import type { LetterTile } from '../scenes/letterTile';
 import type { ExerciseModule } from './contract';
 
-// Meet a letter. The narrator names it and says its sound, the companion
-// shows what to do by tapping the tile itself, and then it is the child's
-// turn: three taps, each one saying the sound again. Exposure only; nothing
-// is scored.
+// Meet a letter: it appears, the narrator names it and says its sound, and
+// after a beat the lesson moves on. Nothing to tap and nothing scored; the
+// questions that follow are where the child answers.
 
-const TAPS = 3;
-const NUDGE_AFTER = 6;
 const nameClip = (g: string): ClipId => `letters/${g}-name`;
-
-type Phase = 'arrive' | 'tell' | 'show' | 'yours' | 'leave';
 
 export const meet: ExerciseModule<MeetItem> = {
   kind: 'meet',
   clips: (items) => [
-    promptClip('this-is-the-letter'), promptClip('it-makes-the-sound'), promptClip('your-turn'), promptClip('listen'),
+    promptClip('this-is-the-letter'), promptClip('it-makes-the-sound'), promptClip('listen'),
     ...items.flatMap((i) => [soundClip(i.grapheme), nameClip(i.grapheme)]),
   ],
 
   start(items, kit, hooks) {
     let index = -1;
     let tile: LetterTile | null = null;
-    let phase: Phase = 'arrive';
-    let taps = 0;
     let t = 0;
-    let until = 0;
-    let touched = false;
-    let lastAction = 0;
-
-    const go = (p: Phase, lasts: number) => { phase = p; until = t + lasts; };
-    const sound = () => soundClip(tile!.text);
-
-    /** The companion taps the tile: this is the whole instruction. */
-    const show = () => {
-      kit.companion.act('show');
-      touched = false;
-      lastAction = t;
-    };
+    let told = false;
+    /** When the sound itself is spoken, so the tile can react on it. */
+    let soundAt = Infinity;
+    let leaveAt = Infinity;
 
     const next = () => {
       index++;
       if (index >= items.length) return hooks.finished();
       tile = kit.tile(items[index].grapheme, 1.3);
       tile.snap(kit.spot('tiles', 0, 1));
-      taps = 0;
       t = 0;
-      go('arrive', 0.6);
+      told = false;
+      soundAt = leaveAt = Infinity;
       const c = kit.companion;
-      c.want.pose = 'stand';
+      c.want.pose = 'point';
       c.want.face = tile.anchor.getWorldPosition(c.want.face ?? tile.goal.clone());
       c.want.at.copy(kit.besideSpot(tile));
+      c.nudge();
     };
     next();
 
     return {
-      touchables: () =>
-        tile && phase === 'yours'
-          ? [{ id: 'tile:0', object: tile.anchor, radius: tile.radius, onTap: () => {
-              if (!tile) return;
-              tile.press();
-              kit.say(sound(), 0.03);
-              kit.nod();
-              lastAction = t;
-              tile.pips(++taps, TAPS);
-              if (taps >= TAPS) {
-                tile.active = false;
-                tile.done = true;
-                tile.hop();
-                kit.cheer();
-                go('leave', 1.2);
-              }
-            } }]
-          : [],
-
+      touchables: () => [],
       update(dt) {
         t += dt;
         if (!tile) return;
-        // The companion's reach lands a moment after it starts: that is when the tile reacts.
-        if (!touched && (phase === 'show' || phase === 'yours') && t - lastAction > 0.32) {
-          touched = true;
-          tile.press();
-          kit.say(sound());
-        }
-        if (phase === 'yours' && t - lastAction > NUDGE_AFTER) show();
-        if (t < until) return;
-
-        if (phase === 'arrive') {
+        if (!told && t > 0.6) {
+          told = true;
           const g = tile.text;
-          let d = 0;
-          if (hasClip(nameClip(g))) {
-            // "This is the letter [name]. It makes the sound [sound]."
-            d += kit.say(promptClip('this-is-the-letter'), d);
-            d += kit.say(nameClip(g), d) + 0.25;
-            d += kit.say(promptClip('it-makes-the-sound'), d) + 0.05;
-          } else {
-            d += kit.say(promptClip('listen'), d) + 0.2;
-          }
-          d += kit.say(sound(), d);
-          tile.press(0.6);
-          go('tell', d + 0.35);
-        } else if (phase === 'tell') {
-          show();
-          go('show', 1.3);
-        } else if (phase === 'show') {
-          // "Your turn", once the clip exists. Nothing that asks the child to speak: the game wants a tap.
-          const d = kit.say(promptClip('your-turn'));
-          tile.active = true;
-          tile.pips(0, TAPS);
-          lastAction = t + d;
-          touched = true;
-          phase = 'yours';
-          until = Infinity;
-        } else if (phase === 'leave') {
+          // "This is the letter [name]. It makes the sound [sound]."
+          const said = kit.line(
+            hasClip(nameClip(g))
+              ? [promptClip('this-is-the-letter'), nameClip(g), promptClip('it-makes-the-sound'), soundClip(g)]
+              : [promptClip('listen'), soundClip(g)],
+          );
+          soundAt = t + said.lastAt;
+          leaveAt = t + said.end + 0.8; // a beat, then on to the questions
+        }
+        if (t >= soundAt) {
+          soundAt = Infinity;
+          tile.hop();
+          kit.nod();
+        }
+        if (t >= leaveAt) {
           tile.vanish();
           tile = null;
           hooks.itemDone();
           next();
         }
       },
-
       layout() {
         tile?.goal.copy(kit.spot('tiles', 0, 1));
       },
-      debug: () => (tile && phase === 'yours' ? { tap: ['tile:0'] } : { waiting: true }),
+      debug: () => ({ waiting: true }),
       dispose() {},
     };
   },

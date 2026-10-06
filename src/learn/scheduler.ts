@@ -37,10 +37,15 @@ function nonNull<T>(xs: Array<T | null>): T[] {
   return xs.filter((x): x is T => x !== null);
 }
 
-/** Avoid the same answer three times running, where the pool allows. */
-function spread<T extends { target?: string; word?: string }>(items: T[], ctx: GenContext): T[] {
+/**
+ * Avoid the same answer three times running, where the pool allows.
+ * `first`, when given, is the answer the round must open with.
+ */
+function spread<T extends { target?: string; word?: string }>(items: T[], ctx: GenContext, first?: string): T[] {
   const out = shuffle(items, ctx.rng);
   const k = (t: T) => t.target ?? t.word;
+  const lead = first === undefined ? -1 : out.findIndex((t) => k(t) === first);
+  if (lead > 0) out.unshift(...out.splice(lead, 1));
   for (let i = 2; i < out.length; i++) {
     if (k(out[i]) === k(out[i - 1]) && k(out[i]) === k(out[i - 2])) {
       const j = out.findIndex((t, n) => n > i && k(t) !== k(out[i]));
@@ -58,7 +63,13 @@ function picks(n: number, pool: string[], ctx: GenContext, now: number): PickLet
   );
 }
 
-function blends(n: number, ctx: GenContext, now: number, favour: ReadonlySet<string> = new Set()): BlendItem[] {
+/**
+ * Words to build. `intro` is the lesson that first shows words are made of
+ * letters: every word there is only sounded out and heard. Anywhere else the
+ * child rebuilds each word, and is shown how on the first one unless that
+ * word shape is already going well.
+ */
+function blends(n: number, ctx: GenContext, now: number, favour: ReadonlySet<string> = new Set(), intro = false): BlendItem[] {
   let pool = decodableWords(ctx);
   const out: BlendItem[] = [];
   while (out.length < n && pool.length > 0) {
@@ -71,6 +82,10 @@ function blends(n: number, ctx: GenContext, now: number, favour: ReadonlySet<str
     const item = blendItem(w.text, ctx);
     if (item) out.push(item);
   }
+  out.forEach((item, i) => {
+    const status = statusOf(ctx.states.get(item.skills[0]));
+    item.stage = intro ? 'read' : i === 0 && (status === 'new' || status === 'shaky') ? 'guided' : 'free';
+  });
   return out;
 }
 
@@ -79,6 +94,7 @@ const round = (items: Item[]): Round[] => (items.length ? [{ exercise: items[0].
 /**
  * A lesson. `ctx.known` must already include what the node teaches.
  * New letters are met, then practised with older letters mixed in, then used in words.
+ * The first question after meeting a letter is always about that letter.
  */
 export function planLesson(node: NodeDef, ctx: GenContext, now: number): Round[] {
   const fresh = nonNull(node.teaches.map(graphemeOf)).filter((g) => ctx.content.hasSound(g));
@@ -87,7 +103,7 @@ export function planLesson(node: NodeDef, ctx: GenContext, now: number): Round[]
 
   if (teachesBlending) {
     return [
-      ...round(blends(SIZES.blendLessonBlends, ctx, now)),
+      ...round(blends(SIZES.blendLessonBlends, ctx, now, undefined, true)),
       ...round(spread(picks(SIZES.blendLessonPicks, older, ctx, now), ctx)),
     ];
   }
@@ -99,7 +115,7 @@ export function planLesson(node: NodeDef, ctx: GenContext, now: number): Round[]
   ];
   return [
     ...round(nonNull(fresh.map((g) => meetItem(g, ctx)))),
-    ...round(spread(practice, ctx)),
+    ...round(spread(practice, ctx, fresh[fresh.length - 1])),
     ...round(blends(SIZES.lessonBlends, ctx, now, new Set(fresh))),
   ];
 }

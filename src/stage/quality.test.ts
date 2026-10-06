@@ -16,6 +16,9 @@ describe('renderScale', () => {
     expect(renderScale(2, 820 * 1180, 'low')).toBe(1);
     expect(renderScale(1, 1600 * 900, 'low')).toBe(1);
   });
+  it('uses the full device ratio on a 2x laptop', () => {
+    expect(renderScale(2, 1728 * 1117, 'high')).toBe(2);
+  });
   it('halves on very large high-density screens', () => {
     expect(renderScale(2, 2560 * 1440, 'high')).toBe(1);
   });

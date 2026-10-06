@@ -149,22 +149,3 @@ html, body {
   0%, 100% { box-shadow: 0 0 0 2.5px var(--ink), 0 0 0 2.5px rgba(255, 210, 122, 0); }
   50% { box-shadow: 0 0 0 2.5px var(--ink), 0 0 0 9px rgba(255, 210, 122, 0.75); }
 }
-
-.taps {
-  display: flex;
-  gap: 0.35em;
-}
-
-.taps i {
-  width: 1em;
-  height: 1em;
-  border-radius: 50%;
-  background: rgba(251, 243, 228, 0.85);
-  box-shadow: 0 0 0 0.16em var(--ink);
-  transition: background 0.2s, transform 0.3s cubic-bezier(0.3, 1.8, 0.5, 1);
-}
-
-.taps i.on {
-  background: #ffd27a;
-  transform: scale(1.2);
-}
