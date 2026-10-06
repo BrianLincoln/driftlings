@@ -215,6 +215,7 @@ export class Stage {
     }
     beginBlobs();
     s.update(dt, this.camera);
+    if (s.reframing) this.frame();
     endBlobs();
     this.post.render(s.scene, this.camera);
     this.glyphs.update(this.camera, this.cssW, this.cssH);

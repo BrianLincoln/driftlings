@@ -16,9 +16,9 @@ import type { ExerciseModule } from './contract';
 type Phase = 'sound' | 'word' | 'jumble' | 'build' | 'leave';
 
 const REPLAY_AFTER = 7;
-/** The watcher lands on the letters to jumble them. Letters are drawn over everything, so they are wiped while it is there. */
-const COVERED = 0.55;
 const HELP_AFTER = 12;
+/** After the last letter's sound has finished, a beat of quiet before the letters close up and the word is said. */
+const BEFORE_WORD = 0.45;
 
 export const blendExercise: ExerciseModule<BlendItem> = {
   kind: 'blend',
@@ -42,9 +42,14 @@ export const blendExercise: ExerciseModule<BlendItem> = {
     let openAt = 0;
     let nextSound = 0;
     let wordEnd = 0;
+    /** When the letters close up into the word; Infinity unless the last letter has just been tapped. */
+    let joinAt = Infinity;
+    let joinThen: 'jumble' | 'celebrate' = 'celebrate';
     let afterWord: 'jumble' | 'celebrate' = 'celebrate';
     let scatterAt = 0;
+    /** The watcher lands on the letters to jumble them. Letters are drawn over everything, so they are wiped while it is there. */
     let blankAt = Infinity;
+    let clearAt = 0;
     let jumbles = 0;
     let lastHeard = 0;
     let lastMove = 0;
@@ -91,9 +96,17 @@ export const blendExercise: ExerciseModule<BlendItem> = {
       wrongs = 0;
       wrongHere = 0;
       helped = false;
+      joinAt = Infinity;
       go('sound');
       tiles.forEach((tile, i) => tile.snap(kit.spot('tiles', i, n())));
       openAt = t + 0.4;
+      guide();
+    };
+
+    /** The last letter has been tapped: hear it out before anything else happens. */
+    const lastLetter = (tile: LetterTile, then: 'jumble' | 'celebrate') => {
+      joinAt = t + 0.03 + kit.say(soundClip(tile.text), 0.03) + BEFORE_WORD;
+      joinThen = then;
       guide();
     };
 
@@ -132,12 +145,12 @@ export const blendExercise: ExerciseModule<BlendItem> = {
       const tile = tiles[i];
       if (phase === 'sound') {
         tile.press();
-        kit.say(soundClip(tile.text), 0.03);
-        if (i !== nextSound) return;
+        if (i !== nextSound) return void kit.say(soundClip(tile.text), 0.03);
         nextSound++;
         kit.nod();
-        if (nextSound >= n()) sayWord(item().stage === 'read' ? 'celebrate' : 'jumble');
-        else guide();
+        if (nextSound >= n()) return lastLetter(tile, item().stage === 'read' ? 'celebrate' : 'jumble');
+        kit.say(soundClip(tile.text), 0.03);
+        guide();
         return;
       }
       if (phase !== 'build' || placed.includes(tile)) return;
@@ -170,15 +183,15 @@ export const blendExercise: ExerciseModule<BlendItem> = {
       tile.done = true;
       wrongHere = 0;
       tile.hop();
-      kit.say(soundClip(tile.text), 0.03);
       if (placed.length < n()) {
+        kit.say(soundClip(tile.text), 0.03);
         kit.nod();
         guide();
         return;
       }
       if (scored) report(true, item().word);
       order = placed;
-      sayWord('celebrate');
+      lastLetter(tile, 'celebrate');
     };
 
     next();
@@ -186,7 +199,7 @@ export const blendExercise: ExerciseModule<BlendItem> = {
     return {
       touchables() {
         const out: Touchable[] = [];
-        if (t < openAt) return out;
+        if (t < openAt || joinAt < Infinity) return out;
         if (phase === 'sound') {
           tiles.forEach((tile, i) => out.push({ id: `tile:${i}`, object: tile.anchor, radius: tile.radius, onTap: () => tapTile(i) }));
         }
@@ -207,11 +220,17 @@ export const blendExercise: ExerciseModule<BlendItem> = {
         const open = t >= openAt;
         const lit = phase === 'sound' ? tiles[nextSound] : phase === 'build' && shown() ? wanted() : undefined;
         tiles.forEach((tile) => (tile.active = open && tile === lit));
+        if (t >= joinAt) {
+          joinAt = Infinity;
+          sayWord(joinThen);
+        }
         if (phase === 'word' && t > wordEnd + 0.25) {
           if (afterWord === 'jumble') {
             go('jumble');
-            scatterAt = t + kit.trouble();
+            const { lands, clear } = kit.trouble();
+            scatterAt = t + lands;
             blankAt = scatterAt - 0.2;
+            clearAt = t + clear;
           } else {
             order.forEach((tile, i) => { tile.done = true; setTimeout(() => tile.hop(), i * 70); });
             kit.cheer();
@@ -219,8 +238,8 @@ export const blendExercise: ExerciseModule<BlendItem> = {
           }
         }
         if (phase === 'jumble' && t >= scatterAt) scatter();
-        tiles.forEach((tile) => (tile.blank = t >= blankAt && t < scatterAt + COVERED));
-        if (phase === 'build' && open) {
+        tiles.forEach((tile) => (tile.blank = t >= blankAt && t < clearAt));
+        if (phase === 'build' && open && joinAt === Infinity) {
           if (t - lastHeard > REPLAY_AFTER) lastHeard = t + kit.say(wordClip(item().word));
           if (!helped && t - lastMove > HELP_AFTER) {
             helped = true;
@@ -242,7 +261,7 @@ export const blendExercise: ExerciseModule<BlendItem> = {
       },
 
       debug() {
-        if (t < openAt) return { waiting: true };
+        if (t < openAt || joinAt < Infinity) return { waiting: true };
         if (phase === 'sound') return { tap: [`tile:${nextSound}`] };
         if (phase === 'build') return { tap: [`build:${tiles.indexOf(wanted()!)}`] };
         return { waiting: true };

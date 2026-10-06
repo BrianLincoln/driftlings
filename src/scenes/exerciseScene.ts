@@ -5,8 +5,10 @@ import { buildSky } from '../gfx/sky';
 import { pushBlob } from '../gfx/uniforms';
 import { Creature } from '../cast/creature';
 import { Companion } from '../cast/companion';
+import { Spring } from '../cast/spring';
 import type { Rescue } from '../cast/species';
-import { say, sayLine, preloadClips } from '../audio/narrate';
+import { hush, say, sayLine, preloadClips } from '../audio/narrate';
+import { sfx } from '../audio/sound';
 import { EXERCISES } from '../exercises';
 import type { ExerciseKit, ExerciseRun } from '../exercises/contract';
 import type { AttemptDraft } from '../learn/events';
@@ -16,7 +18,7 @@ import type { Diorama, StageContext } from './diorama';
 import { Dust } from './dust';
 import { LetterTile } from './letterTile';
 import { Pips } from '../ui/pips';
-import { PROP_MAT, buildFarIsles, bushGeo, rockGeo, treeGeo } from './props';
+import { PROP_MAT, bushGeo, rockGeo, treeGeo } from './props';
 
 // The host for exercises: a small clearing, the companion, and whoever is
 // watching. It plays a list of rounds, one exercise after another, and lends
@@ -25,7 +27,7 @@ import { PROP_MAT, buildFarIsles, bushGeo, rockGeo, treeGeo } from './props';
 
 export interface ExercisePlan {
   rounds: Round[];
-  /** Who watches from the boulder. For a boss, the big sleepy creature in the way. */
+  /** Who watches from the boulder. For a boss, the big one in the way: awake by now, and watching. */
   guest: Rescue;
   boss: boolean;
   onAttempt(a: AttemptDraft): void;
@@ -33,6 +35,14 @@ export interface ExercisePlan {
 }
 
 const SHAPE: IslandShape = { radius: 4.6, rise: 0.25, sand: 0.8, seed: 4.1 };
+/** The ending: seconds the camera closes in on the guest while it braces, before it pops into colour. */
+const SUSPENSE = 1.15;
+const FANFARE = 'sfx/success';
+/**
+ * The boulder's stretch: across, up, deep. Its top, where the guest stands, follows from the
+ * middle one. A boss is big enough to clear the tiles from a low rock, and has to fit under the pips.
+ */
+const PERCH = { little: [1.6, 2.55, 1.25], boss: [1.45, 1.95, 1.15] } as const;
 
 export function createExerciseScene(plan: ExercisePlan): Diorama {
   const scene = new THREE.Scene();
@@ -40,7 +50,6 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
   const y = (x: number, z: number) => islandHeight(SHAPE, x, z);
   const prop = PROP_MAT();
   scene.add(buildSky(palette), buildWater(palette, SHAPE), buildIsland(SHAPE));
-  scene.add(buildFarIsles(palette.water, [[-20, -60, 21], [24, -85, 27]]));
 
   const scenery = [
     { geo: treeGeo(71), wide: [-2.7, -2.2], tall: [-1.25, -3.1], r: 1.0 },
@@ -51,16 +60,16 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
   ].map((s) => ({ ...s, mesh: new THREE.Mesh(s.geo, prop) }));
   for (const s of scenery) scene.add(s.mesh);
 
-  // The guest stands on a boulder so all of it reads above the tiles. A boss is
-  // big enough to sit on the ground behind them.
+  // The guest stands on a boulder tall enough that its feet clear the top of the
+  // biggest tile with air to spare, from either camera.
   const perch = new THREE.Mesh(rockGeo(31, 0.75), prop);
-  perch.scale.set(1.45, 1.95, 1.15);
+  const [perchX, perchY, perchZ] = PERCH[plan.boss ? 'boss' : 'little'];
+  perch.scale.set(perchX, perchY, perchZ);
   scene.add(perch);
   const guest = new Creature(plan.guest);
-  if (plan.boss) {
-    guest.root.scale.multiplyScalar(1.9);
-    guest.drowse = 0;
-  }
+  if (plan.boss) guest.root.scale.multiplyScalar(3.0);
+  // Far from home it has no colour. It all comes back at once when it wakes.
+  guest.setColour(0);
   scene.add(guest.root);
   const companion = new Companion();
   companion.groundY = y;
@@ -80,6 +89,9 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
   let doneItems = 0;
   const pips = new Pips(total);
   const v = new THREE.Vector3();
+  // How far the camera has closed in on the guest: 0 is the whole clearing, 1 is just the guest.
+  const zoom = new Spring(0);
+  let zoomGoal = 0;
 
   const kit: ExerciseKit = {
     get mode() { return mode; },
@@ -110,9 +122,9 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
     },
     say,
     line: sayLine,
+    hush,
     cheer() {
-      if (plan.boss) guest.nod(); // a sleeper only stirs; it wakes at the end
-      else guest.react();
+      guest.react();
       companion.act('celebrate');
     },
     nod: () => guest.nod(),
@@ -120,10 +132,11 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
       // Down off the rock, over the letters, round and round on top of them in a cloud of dust, and back up.
       const z = 2.0;
       let landed = false;
-      return guest.whirl(new THREE.Vector3(0, y(0, z), z), () => {
+      const { lands, clear } = guest.whirl(new THREE.Vector3(0, y(0, z), z), () => {
         dust.burst(guest.root.position, landed ? 6 : 12, 0.3 * guest.root.scale.x);
         landed = true;
-      }) + 0.15;
+      });
+      return { lands: lands + 0.15, clear };
     },
   };
 
@@ -131,25 +144,34 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
     roundIndex++;
     const round = plan.rounds[roundIndex];
     if (!round) {
-      // Everything is done. A boss wakes up and moves out of the way.
+      // Everything is done. A boss gets its colour back like anyone else, then moves out of the way.
+      // The camera closes in while the guest braces, then: pop.
       finished = true;
+      zoomGoal = 1;
+      sfx.brace(SUSPENSE);
+      guest.wake(SUSPENSE, () => {
+        const p = guest.root.position;
+        const s = guest.root.scale.x;
+        dust.burst(p, 9, 0.45 * s, plan.boss ? 0.9 : 0.6);
+        zoomGoal = 0.8;
+        zoom.kick(-2.5); // the camera jolts back with it
+        companion.quiet = say(FANFARE) > 0;
+        companion.act('celebrate');
+      });
       if (plan.boss) {
-        guest.drowse = null;
-        guest.react();
         after = () => {
+          zoomGoal = 0;
           guest.hopTo(4.5, -2.5);
           pause = 1.6;
           after = plan.onFinished;
         };
-        pause = 1.4;
+        pause = SUSPENSE + 1.9;
       } else {
-        guest.react();
-        pause = 1.5;
+        pause = SUSPENSE + 2.2;
         after = plan.onFinished;
       }
       companion.want.pose = 'stand';
       companion.want.face = null;
-      companion.act('celebrate');
       return;
     }
     const module = EXERCISES.get(round.exercise);
@@ -159,7 +181,6 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
       itemDone() {
         doneItems++;
         pips.set(doneItems);
-        if (plan.boss) guest.drowse = Math.min(0.85, doneItems / total);
       },
       finished() {
         run?.dispose();
@@ -180,10 +201,21 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
     get touchables() {
       return run && pause <= 0 ? run.touchables() : [];
     },
+    get reframing() {
+      return Math.abs(zoom.x - zoomGoal) > 1e-3 || Math.abs(zoom.v) > 1e-3;
+    },
     framing(m: LayoutMode): Framing {
-      return m === 'tall'
+      const f: Framing = m === 'tall'
         ? { center: new THREE.Vector3(0, 1.0, 0.9), width: 3.75, height: 5.9, elevation: 17, fov: 40 }
-        : { center: new THREE.Vector3(0, 1.0, 0.7), width: 7.0, height: 4.3, elevation: 11 };
+        : { center: new THREE.Vector3(0, 1.0, 0.7), width: 7.0, height: 4.3, elevation: 13 };
+      if (zoom.x === 0) return f;
+      // Close in on a box around the guest, with room for its jump and the dust.
+      const p = guest.root.position;
+      const tall = guest.height * guest.root.scale.y;
+      f.center.lerp(v.set(p.x, guest.groundY(p.x, p.z) + tall * 0.6, p.z), zoom.x);
+      f.width = THREE.MathUtils.lerp(f.width, Math.min(f.width, tall * 2.7), zoom.x);
+      f.height = THREE.MathUtils.lerp(f.height, Math.min(f.height, tall * 2.9), zoom.x);
+      return f;
     },
     layout(m) {
       mode = m;
@@ -192,7 +224,7 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
         s.mesh.position.set(x, y(x, z) - 0.04, z);
       }
       perch.position.set(0, y(0, -1.1) - 0.1, -1.1);
-      perchTop = perch.position.y + 1.3;
+      perchTop = perch.position.y + 0.667 * perch.scale.y;
       guest.groundY = (gx, gz) => (finished && plan.boss ? y(gx, gz) : perchTop);
       if (!finished) guest.place(0, -1.0);
       for (const t of tiles) t.lean_back(m === 'tall' ? -0.2 : -0.1);
@@ -201,7 +233,7 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
     },
     enter(c) {
       ctx = c;
-      preloadClips(plan.rounds.flatMap((r) => EXERCISES.get(r.exercise)?.clips(r.items) ?? []));
+      preloadClips([FANFARE, ...plan.rounds.flatMap((r) => EXERCISES.get(r.exercise)?.clips(r.items) ?? [])]);
       pips.mount();
       companion.place(kit.sideSpot().x, kit.sideSpot().z);
       pause = 0.5;
@@ -240,6 +272,7 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
       guest.update(dt);
       companion.update(dt);
       dust.update(dt);
+      zoom.step(zoomGoal, 34, 11, dt);
     },
     // For scripted play.
     debug: () => (finished ? { finished: true } : pause > 0 || !run ? { waiting: true } : run.debug?.() ?? { waiting: true }),

@@ -7,6 +7,15 @@ const buffers = new Map<string, AudioBuffer>();
 const raw = new Map<string, ArrayBuffer>();
 const pending = new Map<string, Promise<void>>();
 
+// Clips that are sounding or scheduled, so a new one can take over from them.
+interface Voice {
+  src: AudioBufferSourceNode;
+  gain: GainNode;
+  at: number;
+}
+const voices = new Set<Voice>();
+const FADE = 0.05;
+
 // Decoding needs the context, and the context may only start after a gesture.
 async function decodeAll(): Promise<void> {
   if (!ctx) return;
@@ -66,9 +75,39 @@ export function playClip(url: string, delay = 0): number {
   if (!c || !out || !buf) return 0;
   const src = c.createBufferSource();
   src.buffer = buf;
-  src.connect(out);
-  src.start(c.currentTime + delay);
+  const gain = c.createGain();
+  src.connect(gain).connect(out);
+  const voice: Voice = { src, gain, at: c.currentTime + delay };
+  voices.add(voice);
+  src.onended = () => {
+    voices.delete(voice);
+    gain.disconnect();
+  };
+  src.start(voice.at);
   return buf.duration;
+}
+
+/**
+ * Makes room for what is said next, `delay` seconds from now: clips due to
+ * start after that are dropped, and (unless `pendingOnly`) one still sounding
+ * then fades out quickly instead of talking over it.
+ */
+export function cutClips(delay = 0, pendingOnly = false): void {
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const at = now + delay;
+  for (const v of voices) {
+    if (v.at >= at - 0.001) {
+      voices.delete(v);
+      v.src.stop();
+    } else if (!pendingOnly) {
+      const from = Math.max(now, at - FADE);
+      v.gain.gain.cancelScheduledValues(from);
+      v.gain.gain.setValueAtTime(1, from);
+      v.gain.gain.linearRampToValueAtTime(0, from + FADE);
+      v.src.stop(from + FADE);
+    }
+  }
 }
 
 /** A short sine glide: the building block for pops and the companion's chirps. */
@@ -97,8 +136,13 @@ export const sfx = {
   },
   cheer: () => [0, 0.11, 0.22, 0.36].forEach((d, i) => chirp(620 + i * 160, 820 + i * 200, 0.14, 0.11, d)),
   hop: () => chirp(300, 440, 0.08, 0.07),
+  snore: () => chirp(120, 85, 0.8, 0.035),
+  /** Something heavy landing. */
+  thud: () => chirp(150, 55, 0.28, 0.22),
   /** A soft "not that one": low and short, never harsh. */
   oops: () => chirp(330, 240, 0.16, 0.09),
   whoosh: () => chirp(260, 720, 0.22, 0.07),
+  /** A slow rising hum: something is about to happen. */
+  brace: (dur = 1) => chirp(200, 520, dur, 0.07),
   sparkle: () => [0, 0.07, 0.14].forEach((d, i) => chirp(1200 + i * 300, 1500 + i * 300, 0.09, 0.06, d)),
 };

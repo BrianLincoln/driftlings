@@ -59,6 +59,13 @@ html, body {
   transition: color 0.25s;
 }
 
+/* A sleeper's z's: pale with an ink edge, to read against sky, sea and trees alike. */
+.glyph.snore {
+  color: #fff6dc;
+  -webkit-text-stroke: 0.14em var(--ink);
+  paint-order: stroke fill;
+}
+
 .glyph.done {
   color: #2f6f5e;
 }

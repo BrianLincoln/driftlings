@@ -1,12 +1,12 @@
 import { COATS, SPECIES, rescue, type Rescue } from '../cast/species';
 import { CONTENT } from '../content/content';
-import { ISLAND_1, findNode, knownSkills, rescueIndex, rescuesHome, type AreaDef, type NodeDef } from '../learn/curriculum';
+import { ISLAND_1, findNode, knownSkills, rescueIndex, rescuesHome, type AreaDef } from '../learn/curriculum';
 import { attemptsOf, doneNodes, type AttemptDraft, type LogEvent } from '../learn/events';
 import type { GenContext } from '../learn/generator';
 import type { Round } from '../learn/items';
 import { confusions, foldSkills } from '../learn/model';
 import { seeded } from '../learn/rng';
-import { planCheckpoint, planLesson, planPractice } from '../learn/scheduler';
+import { planCheckpoint, planLesson } from '../learn/scheduler';
 import { graphemeOf, type SkillId } from '../learn/skills';
 import type { EventStore } from './store';
 
@@ -21,8 +21,6 @@ export interface NodePlan {
 
 /** The big sleepy creature that blocks the path at an area's end. */
 export const SLEEPER: Rescue = { species: SPECIES.find((s) => s.id === 'tusk')!, coat: COATS.find((c) => c.id === 'slate')! };
-
-export const surpriseId = (area: AreaDef) => `${area.id}-surprise`;
 
 export class Game {
   readonly area: AreaDef = ISLAND_1.areas[0];
@@ -83,20 +81,6 @@ export class Game {
       return { rounds: planLesson(node, ctx, Date.now()), guest: rescue(rescueIndex(node.id)), boss: false };
     }
     return { rounds: planCheckpoint(area, ctx, Date.now()), guest: SLEEPER, boss: true };
-  }
-
-  /** The practice surprise: aimed at what is shaky or due, or a general warm-up if nothing is. */
-  planSurprise(): NodePlan | null {
-    const rounds = planPractice(this.context([], this.area), Date.now(), true);
-    const found = this.area.nodes.filter((n: NodeDef) => n.kind === 'lesson' && this.done.has(n.id));
-    if (!rounds || !found.length) return null;
-    return { rounds, guest: rescue(rescueIndex(found[Math.floor(this.rng() * found.length)].id)), boss: false };
-  }
-
-  /** A surprise shows once the second node is done, until it has been played. */
-  get surpriseWaiting(): boolean {
-    const d = this.done;
-    return d.has(this.area.nodes[1].id) && !d.has(surpriseId(this.area)) && !d.has(this.area.nodes[this.area.nodes.length - 1].id);
   }
 
   async reset(): Promise<void> {

@@ -125,3 +125,14 @@ export function buildFarIsles(water: string, seeds: Array<[number, number, numbe
   }
   return g;
 }
+
+/** The trees, bushes and rock of an area map: where each stands in a wide and a tall layout, and how much room it takes. */
+export const mapScenery = () => [
+  { geo: treeGeo(15), wide: [-5.2, -3.2], tall: [-2.6, -4.6], r: 0.95 },
+  { geo: treeGeo(27), wide: [-3.9, -4.5], tall: [2.5, -2.2], r: 0.95 },
+  { geo: treeGeo(39), wide: [3.4, -3.9], tall: [-2.7, 0.4], r: 0.95 },
+  { geo: treeGeo(51), wide: [5.6, -3.0], tall: [2.6, 2.6], r: 0.95 },
+  { geo: bushGeo(63), wide: [-3.4, 2.6], tall: [2.4, 0.2], r: 0.55 },
+  { geo: bushGeo(75), wide: [3.8, 2.4], tall: [-2.5, -2.2], r: 0.55 },
+  { geo: rockGeo(87, 0.4), wide: [0.4, 2.9], tall: [-2.4, 2.9], r: 0.45 },
+];

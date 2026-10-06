@@ -15,7 +15,7 @@ const SIZES = [
   { name: 'phone', width: 390, height: 844, dpr: 3, touch: true },
   { name: 'desktop', width: 1600, height: 900, dpr: 1, touch: false },
 ];
-const NODES = ['i1a1-a', 'i1a1-m', 'i1a1-surprise', 'i1a1-s', 'i1a1-t', 'i1a1-blend', 'i1a1-boss'];
+const NODES = ['i1a1-a', 'i1a1-m', 'i1a1-s', 'i1a1-t', 'i1a1-blend', 'i1a1-boss'];
 const SHOOT = new Set(['i1a1-a', 'i1a1-blend', 'i1a1-boss']);
 
 if (!flags.has('--no-build')) execSync('npx vite build', { stdio: 'inherit' });
@@ -41,7 +41,7 @@ for (const size of SIZES) {
   await shot('00-map-start');
 
   for (const node of NODES) {
-    const ok = await page.evaluate((id) => window.__dl.tap(id === 'i1a1-surprise' ? 'surprise' : `node:${id}`), node);
+    const ok = await page.evaluate((id) => window.__dl.tap(`node:${id}`), node);
     if (!ok) { fail(`${size.name} could not tap ${node} on the map`); break; }
     await page.waitForTimeout(450);
     await step(30);
@@ -72,8 +72,32 @@ for (const size of SIZES) {
     await step(70);
     console.log(`ok ${size.name} ${node} -> ${await scene()}`);
     if (node === 'i1a1-a' || node === 'i1a1-m' || node === 'i1a1-blend') await shot(`map-after-${node}`);
+    if (node === 'i1a1-blend') {
+      // The last little one goes aboard, the companion follows, and the sleeper flops into the way.
+      for (let i = 0; i < 10; i++) {
+        await step(i < 9 ? 50 : 300);
+        await shot(`map-sleeper-${i}`);
+      }
+    }
   }
 
+  // The sleeper gives the plank back and everyone boards; then home.
+  // Then the crossing: the ship pulls away, the chart, and landfall at home.
+  let seen = 'map';
+  let leg = 0;
+  for (let i = 0; i < 90 && (await scene()) !== 'home'; i++) {
+    await step(40);
+    await page.waitForTimeout(40);
+    if (i === 2 || i === 6 || i === 10 || i === 13) await shot(`map-friends-${i}`);
+    const now = await scene();
+    if (now !== seen && now !== 'home') {
+      seen = now;
+      await step(70);
+      await shot(`sail-${leg++}-${now}`);
+    }
+  }
+  if (leg !== 3) fail(`${size.name} expected the three legs of the crossing, saw ${leg}`);
+  await page.waitForTimeout(450);
   await step(60);
   await shot('90-home-arriving');
   await step(420);

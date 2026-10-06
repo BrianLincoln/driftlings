@@ -5,7 +5,8 @@ import { blend, gpc, graphemeOf, shapeOf, type SkillId } from './skills';
 
 // Builds items from what the child knows and what audio exists. Two rules it
 // never breaks: an item only asks about taught skills, and an item is only
-// generated if every clip it needs exists.
+// generated if every clip it needs exists. (A word that is only sounded out
+// and heard asks nothing, so it needs its letters taught but not its shape.)
 
 export interface GenContext {
   /** Skills the child has been taught (including the lesson in progress). */
@@ -61,17 +62,19 @@ export function pickLetterItem(target: string, ctx: GenContext, nChoices = 3): P
   };
 }
 
-/** Words the child can sound out: every letter taught and heard, and the word's shape taught. */
-export function decodableWords(ctx: GenContext): Array<{ text: string; graphemes: string[] }> {
-  return ctx.content.words.filter(
-    (w) =>
-      ctx.known.has(blend(shapeOf(w.graphemes))) &&
-      w.graphemes.every((g) => ctx.known.has(gpc(g)) && ctx.content.hasSound(g)),
-  );
+/** Words the child can sound out letter by letter: every letter taught and heard. */
+export function readableWords(ctx: GenContext): Array<{ text: string; graphemes: string[] }> {
+  return ctx.content.words.filter((w) => w.graphemes.every((g) => ctx.known.has(gpc(g)) && ctx.content.hasSound(g)));
 }
 
+/** Words the child can be asked to build: readable, and the word's shape taught. */
+export function decodableWords(ctx: GenContext): Array<{ text: string; graphemes: string[] }> {
+  return readableWords(ctx).filter((w) => ctx.known.has(blend(shapeOf(w.graphemes))));
+}
+
+/** A word of a shape not yet taught can only be read, never rebuilt. */
 export function blendItem(word: string, ctx: GenContext, stage: BlendStage = 'free'): BlendItem | null {
-  const w = decodableWords(ctx).find((x) => x.text === word);
+  const w = (stage === 'read' ? readableWords(ctx) : decodableWords(ctx)).find((x) => x.text === word);
   if (!w) return null;
   return {
     kind: 'blend',

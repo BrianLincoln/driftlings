@@ -22,7 +22,7 @@ export function faceUniforms(look: FaceLook) {
     uFaceOrigin: { value: new THREE.Vector3(...look.origin) },
     uEye: { value: new THREE.Vector4(...look.eye) },
     uPupil: { value: new THREE.Vector4(...look.pupil) },
-    /** look x, look y, lid (1 open, 0.05 blink, negative = happy arcs), unused */
+    /** look x, look y, lid (1 open, 0.05 blink, negative = happy arcs), one eye's own lid */
     uLook: { value: new THREE.Vector4(0, 0, 1, 0) },
     /** pitch, half-width, curve (positive smile), unused */
     uMouth: { value: new THREE.Vector4(look.mouth[0], look.mouth[1], 0.03, 0) },
@@ -71,7 +71,8 @@ void paintFace(inout vec3 base, inout float flag, inout float unlit) {
   float de = ellipse(q, uEye.zw);
   float aE = edgeAA(de, cap);
   float hw = inkHalf(aE);
-  float lid = uLook.z;
+  // uLook.w opens one eye on its own, for a peek while the other stays shut.
+  float lid = side > 0.0 && uLook.w > 0.0 ? max(uLook.z, uLook.w) : uLook.z;
 
   if (lid < 0.0) {
     // Happy: the upper arc of each eye, drawn as an ink line.

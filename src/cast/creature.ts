@@ -13,7 +13,13 @@ import type { Rescue } from './species';
 type Mood = 'idle' | 'happy' | 'sit';
 
 /** Seconds for each part of the whirlwind, and how many times round it goes. */
-const WHIRL = { down: 0.26, spin: 0.55, back: 0.3, turns: 3 };
+const WHIRL = { down: 0.26, spin: 1.5, back: 0.3, turns: 8 };
+/** Creatures are little ones beside the companion, everywhere. */
+const LITTLE = 0.62;
+/** Waking: how long the colour sinks back before it bursts out, unless told to hold it longer. */
+const WAKE_DIP = 0.5;
+/** How fast a sleeper breathes, in radians a second. */
+export const BREATH = 1.6;
 
 export class Creature {
   readonly root = new THREE.Group();
@@ -21,6 +27,15 @@ export class Creature {
   private body = new THREE.Group();
   private ears: THREE.Group[] = [];
   private headMat: ToonMaterial;
+  private mats: ToonMaterial[];
+  /** Standing height, before the root's scale. */
+  readonly height: number;
+  private colourNow = new Spring(1);
+  private dip = 0;
+  private flash = 0;
+  private waking = -1;
+  private wakeFor = WAKE_DIP;
+  private woke: (() => void) | null = null;
   private sq = new Spring(1);
   private earSpring = new Spring(0);
   private blink = new Blinker();
@@ -40,8 +55,21 @@ export class Creature {
   mood: Mood = 'idle';
   /** Null when wide awake. Otherwise 0 (fast asleep) to 1 (nearly awake): lids droop and the body sags. */
   drowse: number | null = null;
+  /** Something is wrong: a turned-down mouth and no smiles. */
+  worried = false;
+  /** One eye open this far (0 to 1) whatever the other is doing. */
+  peek = 0;
+  /** Seconds it has been around; a sleeper's breathing runs on this. */
+  age = 0;
+  /**
+   * How much of it has its colour, from the feet up. 1 is wide awake, as at home;
+   * 0 is dormant, as they all are far from it.
+   */
+  colour = 1;
   /** What the eyes follow. Null looks straight ahead. */
   lookTarget: THREE.Vector3 | null = null;
+  /** How fast it hops along: 1 is an amble. */
+  pace = 1;
   /** If set, the creature picks new spots to hop to inside this radius. */
   wanderRadius = 0;
   groundY: (x: number, z: number) => number = () => 0;
@@ -49,6 +77,8 @@ export class Creature {
   /** If set, wandering stays around this spot rather than the scene origin. */
   home = new THREE.Vector3();
   readonly size: number;
+  /** Its body material, for anything extra that should share its colour and its greyness. */
+  readonly skin: ToonMaterial;
 
   constructor(readonly who: Rescue) {
     const geo = creatureGeo(who.species, who.coat);
@@ -74,7 +104,10 @@ export class Creature {
     }
     this.body.add(this.head);
     this.root.add(this.body);
-    this.size = who.species.size;
+    this.mats = [bodyMat, this.headMat];
+    this.skin = bodyMat;
+    this.height = new THREE.Box3().setFromObject(this.root).max.y;
+    this.size = who.species.size * LITTLE;
     this.root.scale.setScalar(this.size);
     this.yaw = this.root.rotation.y;
   }
@@ -103,17 +136,18 @@ export class Creature {
   /**
    * A quick whirlwind: leap down to a spot, spin there like a top, leap back.
    * `kick` is called on landing and again and again through the spin, for
-   * whatever the feet throw up. Returns the seconds until it lands.
+   * whatever the feet throw up. Returns the seconds until it lands, and until
+   * it is off the spot again and on its way back.
    */
-  whirl(to: THREE.Vector3, kick: () => void): number {
-    if (this.whirling) return 0;
+  whirl(to: THREE.Vector3, kick: () => void): { lands: number; clear: number } {
+    if (this.whirling) return { lands: 0, clear: 0 };
     this.goal = null;
     this.spin = 0;
     this.whirling = { t: 0, home: this.root.position.clone(), to: to.clone(), puffAt: WHIRL.down, kick };
     this.happyFor = WHIRL.down + WHIRL.spin + WHIRL.back;
     this.sq.kick(4);
     sfx.whoosh();
-    return WHIRL.down;
+    return { lands: WHIRL.down, clear: WHIRL.down + WHIRL.spin + WHIRL.back * 0.6 };
   }
 
   private stepWhirl(dt: number): void {
@@ -143,6 +177,43 @@ export class Creature {
         this.sq.kick(-3);
       }
     }
+  }
+
+  /** Set how much colour it has at once, with no rise. */
+  setColour(k: number): void {
+    this.colour = this.colourNow.x = k;
+    this.colourNow.v = 0;
+  }
+
+  /**
+   * Fully awake: the colour sinks back while it braces and shivers for `hold`
+   * seconds, then bursts out with a jump and a spin. `woke` is called at the burst.
+   */
+  wake(hold = WAKE_DIP, woke?: () => void): void {
+    if (this.waking >= 0) return;
+    this.waking = this.wakeFor = hold;
+    this.woke = woke ?? null;
+  }
+
+  private stepColour(dt: number): void {
+    if (this.waking >= 0) {
+      this.waking -= dt;
+      this.dip = Math.min(1, this.dip + dt / (this.wakeFor * 0.6));
+      if (this.waking < 0) {
+        this.setColour(1);
+        this.dip = 0;
+        this.flash = 1;
+        this.spin = 0;
+        this.react();
+        this.woke?.();
+      }
+    }
+    this.flash = Math.max(0, this.flash - dt * 2.2);
+    const k = this.colourNow.step(this.colour, 120, 14, dt);
+    const p = this.root.position;
+    // The line starts under the feet and ends clear of the ear tips.
+    const line = p.y + (k * 1.1 - 0.05) * this.height * this.root.scale.y;
+    for (const m of this.mats) m.uniforms.uDorm.value.set(line, this.colour >= 1 ? 0 : 1, this.dip, this.flash);
   }
 
   /** A small acknowledging bounce. */
@@ -188,12 +259,12 @@ export class Creature {
         this.hopPhase = 0;
         this.restYaw = (Math.random() - 0.5) * 1.3;
       } else {
-        this.yaw += angleDelta(this.yaw, Math.atan2(dx, dz)) * (1 - Math.exp(-8 * dt));
+        this.yaw += angleDelta(this.yaw, Math.atan2(dx, dz)) * (1 - Math.exp(-8 * this.pace * dt));
         const before = this.hopPhase;
-        this.hopPhase += dt * 2.6;
+        this.hopPhase += dt * 2.6 * Math.sqrt(this.pace);
         const inAir = this.hopPhase % 1;
         lift = Math.sin(inAir * Math.PI) * 0.17;
-        const step = Math.min(dist, 1.5 * dt);
+        const step = Math.min(dist, 1.5 * this.pace * dt);
         p.x += Math.sin(this.yaw) * step;
         p.z += Math.cos(this.yaw) * step;
         if (Math.floor(before) !== Math.floor(this.hopPhase)) this.sq.kick(-2.2); // landing
@@ -223,7 +294,14 @@ export class Creature {
 
     const sitting = this.mood === 'sit';
     const breathe = 1 + Math.sin(performance.now() * 0.0022 + p.x) * 0.012;
-    const sag = this.drowse === null ? 1 : 0.78 + 0.2 * this.drowse + Math.sin(performance.now() * 0.0012) * 0.035;
+    this.stepColour(dt);
+    // Bracing to wake: it sinks lower and shivers harder until the burst.
+    const brace = this.waking >= 0 ? 1 - this.waking / this.wakeFor : 0;
+    const crouch = 1 - 0.24 * brace;
+    this.body.position.x = brace * brace * 0.035 * Math.sin(performance.now() * 0.07);
+    this.age += dt;
+    // Asleep, the whole body rises and falls with each slow breath; deepest when fast asleep.
+    const sag = crouch * (this.drowse === null ? 1 : 0.78 + 0.2 * this.drowse + Math.sin(this.age * BREATH) * (0.07 - 0.04 * this.drowse));
     squash(this.body, this.sq.step((sitting ? 0.8 : 1) * breathe * sag, 180, 13, dt));
     this.head.position.y = ease(this.head.position.y, this.headY - (sitting ? 0.06 : 0), 10, dt);
 
@@ -240,11 +318,11 @@ export class Creature {
     else this.gaze.x = this.gaze.y = 0;
     this.gazeNow.x = ease(this.gazeNow.x, this.gaze.x, 9, dt);
     this.gazeNow.y = ease(this.gazeNow.y, this.gaze.y, 9, dt);
-    const happy = this.happyFor > 0;
+    const happy = this.happyFor > 0 && !this.worried;
     const awake = this.blink.step(dt);
     const lid = this.drowse === null ? awake : Math.min(awake, 0.06 + 0.7 * this.drowse * this.drowse);
-    u.uLook!.value.set(this.gazeNow.x, this.gazeNow.y, happy ? -1 : lid, 0);
-    u.uMouth!.value.z = ease(u.uMouth!.value.z, happy ? 0.07 : 0.035, 10, dt);
+    u.uLook!.value.set(this.gazeNow.x, this.gazeNow.y, happy ? -1 : lid, happy ? 0 : this.peek);
+    u.uMouth!.value.z = ease(u.uMouth!.value.z, this.worried ? -0.05 : happy ? 0.07 : 0.035, 10, dt);
     u.uBlush!.value.w = ease(u.uBlush!.value.w, happy ? 0.85 : 0.45, 6, dt);
 
     pushBlob(p.x, p.z, 0.27 * this.size * (1 - Math.min(0.5, lift)), 1.25);

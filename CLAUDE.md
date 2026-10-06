@@ -14,7 +14,9 @@ the conversation history; the reference look is in `references/`.
 - `npm run audio` : take in clips from `audio-inbox/`, rebuild `public/audio/` and the manifest
 - `npm run audio:wanted` : write `audio-inbox/WANTED.md`, the clips the game could use but lacks
 
-URL switches: `?reset` clears progress, `?demo` fills the home island, `?scene=map|home|<node id>`,
+URL switches: `?reset` clears progress, `?demo` fills the home island, `?scene=map|home|sleeper|friends|<node id>`
+(`sleeper` replays the map scene where the sleeper takes the plank, `friends` the one where it gives it back;
+`leave`, `chart` and `arrive` hold one leg of the crossing home, `sail` plays all three),
 `?q=low`.
 
 Pushing to `main` deploys `dist/` to GitHub Pages. Tell the owner a change is ready locally
@@ -41,7 +43,8 @@ before committing and deploying.
 - `src/content` : word list, audio manifest (generated), and the adapter the generator reads
 - `src/exercises` : one module per exercise, all satisfying `contract.ts`; `index.ts` is the catalogue
 - `src/game` : one child's game (event log + everything derived) and the device store
-- `src/scenes` : dioramas (home island, area map, exercise host), letter tile, scenery recipes
+- `src/scenes` : dioramas (home island, area map, exercise host, the crossing: `voyage.ts` at sea,
+  `chart.ts` in between, `landfall.ts` for getting off at home), the ship and the raft it tows, letter tile, scenery recipes
 - `src/gfx` : palette, shared uniforms, shader chunks, materials, post chain, ground, sky
 - `src/stage` : renderer loop, framing rule, quality tiers, tap picking, DOM glyph layer
 - `src/cast` : creature rig, species and coats, companion (want + queued acts), springs

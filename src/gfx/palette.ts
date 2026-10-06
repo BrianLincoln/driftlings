@@ -54,6 +54,10 @@ export const C = {
   buttercup: '#f0d25a',
   harebell: '#9ea6e0',
   cutWood: '#e9cf9c',
+  shipHull: '#6b3f30',
+  shipTrim: '#d39a55',
+  sail: '#fdf8ec',
+  pennant: '#dc6450',
   // UI and painted features
   ink: '#4a2e36',
   faceInk: '#2e1f28',

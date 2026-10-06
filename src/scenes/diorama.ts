@@ -19,6 +19,8 @@ export interface Diorama {
   readonly touchables: Touchable[];
   /** If set, the scene is wider than the screen and a sideways drag pans it this far each way. */
   readonly panRange?: (mode: LayoutMode) => number;
+  /** True while the stage box itself is moving: the stage re-aims the camera every frame. */
+  readonly reframing?: boolean;
   /** The stage box for this viewport shape (see stage/framing.ts). */
   framing(mode: LayoutMode): Framing;
   /** Move actors for a tall or wide viewport. Called before framing is applied. */

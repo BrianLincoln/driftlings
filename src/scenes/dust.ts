@@ -34,8 +34,8 @@ export class Dust {
     }
   }
 
-  /** Throw `count` puffs out in a ring `radius` wide around a point on the ground. */
-  burst(at: THREE.Vector3, count: number, radius: number): void {
+  /** Throw `count` puffs out in a ring `radius` wide around a point on the ground. `size` scales the puffs. */
+  burst(at: THREE.Vector3, count: number, radius: number, size = 1): void {
     const turn = Math.random() * Math.PI * 2;
     for (let i = 0; i < count; i++) {
       const p = this.puffs[this.next];
@@ -46,7 +46,7 @@ export class Dust {
       p.mesh.rotation.y = Math.random() * 6.28;
       p.vel.set(Math.sin(a) * speed, 0.7 + Math.random() * 0.9, Math.cos(a) * speed);
       p.age = 0;
-      p.size = 0.8 + Math.random() * 0.9;
+      p.size = (0.8 + Math.random() * 0.9) * size;
       p.mesh.visible = true;
     }
   }

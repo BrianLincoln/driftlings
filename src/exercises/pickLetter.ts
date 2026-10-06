@@ -5,15 +5,18 @@ import type { LetterTile } from '../scenes/letterTile';
 import type { Touchable } from '../stage/touch';
 import type { ExerciseModule } from './contract';
 
-// Hear a sound, pick the letter. A wrong pick dims that tile and the sound
-// plays again; after two, or a long pause, the companion shows the answer.
+// Hear a sound, pick the letter. A wrong pick dims that tile, which says its
+// own sound, and the question plays again; after two, or a long pause, the
+// companion shows the answer.
 
 const REPLAY_AFTER = 6;
 const HELP_AFTER = 14;
+const OWN_SOUND_AFTER = 0.3; // after the "oops"
+const BEFORE_REASK = 2; // long enough that the two sounds are not heard as a pair
 
 export const pickLetter: ExerciseModule<PickLetterItem> = {
   kind: 'pick-letter',
-  clips: (items) => [promptClip('which-letter-makes-the-sound'), ...items.map((i) => soundClip(i.target))],
+  clips: (items) => [promptClip('which-letter-makes-the-sound'), ...items.flatMap((i) => i.choices.map(soundClip))],
 
   start(items, kit, hooks) {
     let index = -1;
@@ -78,6 +81,7 @@ export const pickLetter: ExerciseModule<PickLetterItem> = {
       tile.press();
       if (correct) {
         answered = true;
+        kit.hush(); // answered before the question was over: leave the rest unsaid
         tile.done = true;
         tile.active = false;
         tile.hop();
@@ -88,7 +92,9 @@ export const pickLetter: ExerciseModule<PickLetterItem> = {
         tile.shake();
         tile.dim = true;
         sfx.oops();
-        ask(0.45);
+        // The tile says what it is, so the tap is never paired with the wrong sound; then the question again.
+        const own = kit.say(soundClip(tile.text), OWN_SOUND_AFTER);
+        ask(OWN_SOUND_AFTER + own + BEFORE_REASK);
         if (tries >= 2) giveHelp();
       }
     };

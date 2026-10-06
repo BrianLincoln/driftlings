@@ -5,7 +5,7 @@ import { askableGraphemes, blendItem, decodableWords, pickLetterItem, type GenCo
 import type { Content, Item, Round } from './items';
 import { TUNING, applyOutcome, confusions, emptyState, foldSkills, isDue, quality, statusOf, type SkillState } from './model';
 import { seeded } from './rng';
-import { gate, need, planCheckpoint, planLesson, planPractice, practiceTargets } from './scheduler';
+import { SIZES, gate, need, planCheckpoint, planLesson, planPractice, practiceTargets } from './scheduler';
 import { blend, gpc, graphemeOf, shapeOf, type SkillId } from './skills';
 
 const HOUR = 3_600_000;
@@ -220,7 +220,7 @@ describe('scheduler', () => {
     if (item.kind === 'meet') return ctx.known.has(gpc(item.grapheme)) && sounds.includes(item.grapheme);
     if (item.kind === 'pick-letter') return ctx.known.has(gpc(item.target)) && sounds.includes(item.target) && item.choices.includes(item.target);
     return item.graphemes.every((g) => ctx.known.has(gpc(g)) && sounds.includes(g)) &&
-      ctx.known.has(blend(shapeOf(item.graphemes))) && WORDS.includes(item.word);
+      (item.stage === 'read' || ctx.known.has(blend(shapeOf(item.graphemes)))) && WORDS.includes(item.word);
   };
 
   it('holds its invariants across every node and many seeds', () => {
@@ -244,6 +244,8 @@ describe('scheduler', () => {
     const rounds = planLesson(A1.nodes[0], ctxFor([ids[0]], { foils: ['m', 's'] }), T0);
     expect(rounds.map((r) => r.exercise)).toEqual(['meet', 'pick-letter']);
     expect(rounds[1].items.every((i) => i.kind === 'pick-letter' && i.target === 'a')).toBe(true);
+    expect(rounds[1].items.length).toBe(SIZES.soloPicks);
+    expect(SIZES.soloPicks).toBeLessThan(SIZES.lessonPicks);
   });
 
   it('mixes old letters into a new lesson, but mostly the new one', () => {
@@ -285,9 +287,29 @@ describe('scheduler', () => {
     expect(new Set(words).size).toBe(words.length);
   });
 
-  it('only sounds words out in the lesson that introduces them', () => {
-    const rounds = planLesson(A1.nodes[4], ctxFor(ids.slice(0, 5)), T0);
-    expect(rounds[0].items.every((i) => i.kind === 'blend' && i.stage === 'read')).toBe(true);
+  it('sounds words out in letter lessons as soon as their letters are known, asking nothing', () => {
+    const words = (n: number) => itemsOf(planLesson(A1.nodes[n], ctxFor(ids.slice(0, n + 1), { foils: ['m', 's'] }), T0))
+      .flatMap((i) => (i.kind === 'blend' ? [i] : []));
+    expect(words(0)).toEqual([]);
+    expect(words(1).map((i) => i.word)).toEqual(['am']);
+    expect(words(2).map((i) => i.word)).toEqual(['am']);
+    expect(words(3).length).toBe(SIZES.lessonBlends);
+    for (const n of [1, 2, 3]) expect(words(n).every((i) => i.stage === 'read')).toBe(true);
+  });
+
+  it('never asks for a word to be rebuilt before its shape is taught', () => {
+    const ctx = ctxFor(ids.slice(0, 4));
+    expect(blendItem('am', ctx, 'read')).not.toBeNull();
+    expect(blendItem('am', ctx, 'guided')).toBeNull();
+    expect(blendItem('am', ctx)).toBeNull();
+  });
+
+  it('opens the word-building lesson on the first word in the list and shows how once per shape', () => {
+    for (let i = 0; i < 20; i++) {
+      const items = planLesson(A1.nodes[4], ctxFor(ids.slice(0, 5)), T0)[0].items as Array<{ word: string; stage: string }>;
+      expect(items.map((x) => x.word)).toEqual(['am', 'at', 'mat', 'sat']);
+      expect(items.map((x) => x.stage)).toEqual(['guided', 'free', 'guided', 'free']);
+    }
   });
 
   it('shows how to rebuild the first word of a checkpoint, then leaves the child to it', () => {

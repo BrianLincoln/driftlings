@@ -18,10 +18,12 @@ export interface Want {
   /** What to keep glancing and pointing at. */
   face: THREE.Vector3 | null;
   pose: 'stand' | 'point' | 'settled';
+  /** Something to eye without turning to it. */
+  glance?: THREE.Vector3 | null;
 }
 
 /** 'show' is "like this": it reaches out and touches what it is facing. */
-export type Act = 'celebrate' | 'greet' | 'show';
+export type Act = 'celebrate' | 'greet' | 'show' | 'startle';
 
 const POINT_FOR = 1.7;
 const REST_FOR = 2.4;
@@ -45,6 +47,8 @@ export class Companion {
   private gaze = { x: 0, y: 0 };
   private gazeNow = { x: 0, y: 0 };
   want: Want = { at: new THREE.Vector3(), face: null, pose: 'stand' };
+  /** Celebrate without its own cheer: something louder is playing. */
+  quiet = false;
   /** Where "you" are: it looks here between glances at its target. */
   viewer = new THREE.Vector3(0, 1.5, 10);
   groundY: (x: number, z: number) => number = () => 0;
@@ -107,7 +111,7 @@ export class Companion {
     this.bob += dt;
     let lift = 0.035 + Math.abs(Math.sin(this.bob * 2.1)) * 0.02;
     let faceYaw = Math.atan2(this.viewer.x - p.x, this.viewer.z - p.z);
-    let lookAt: THREE.Vector3 = this.viewer;
+    let lookAt: THREE.Vector3 = w.glance ?? this.viewer;
     const armTarget = [0, 0];
     let spin = 0;
 
@@ -127,11 +131,12 @@ export class Companion {
     if (act) {
       if (this.actT === 0) {
         this.sq.kick(4);
-        if (act === 'celebrate') sfx.cheer();
+        if (act === 'celebrate' && !this.quiet) sfx.cheer();
         else if (act === 'greet') sfx.coo();
+        else if (act === 'startle') sfx.oops();
       }
       this.actT += dt;
-      const len = act === 'celebrate' ? 1.8 : act === 'show' ? 0.8 : 1.0;
+      const len = act === 'celebrate' ? 1.8 : act === 'greet' ? 1.0 : 0.8;
       const k = this.actT / len;
       if (act === 'celebrate') {
         armTarget[0] = armTarget[1] = 1;
@@ -145,6 +150,10 @@ export class Companion {
         faceYaw += angleDelta(faceYaw, toward) * 0.7;
         lookAt = w.face;
         lift += Math.sin(Math.min(1, this.actT / 0.5) * Math.PI) * 0.22;
+      } else if (act === 'startle') {
+        // Both arms up and a jump on the spot: something just got in the way.
+        armTarget[0] = armTarget[1] = 1;
+        lift += Math.sin(Math.min(1, this.actT / 0.45) * Math.PI) * 0.3;
       } else {
         armTarget[1] = 0.5 + 0.5 * Math.sin(this.actT * 16); // a wave
         this.happyFor = 0.4;

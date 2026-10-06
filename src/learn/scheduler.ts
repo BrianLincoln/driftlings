@@ -1,5 +1,5 @@
 import { areaSkills, type AreaDef, type NodeDef } from './curriculum';
-import { askableGraphemes, blendItem, decodableWords, meetItem, pickLetterItem, type GenContext } from './generator';
+import { askableGraphemes, blendItem, decodableWords, meetItem, pickLetterItem, readableWords, type GenContext } from './generator';
 import type { BlendItem, Item, PickLetterItem, Round } from './items';
 import { isDue, statusOf, type SkillState } from './model';
 import { shuffle, weighted } from './rng';
@@ -12,6 +12,8 @@ import { blend, gpc, graphemeOf, shapeOf, type SkillId } from './skills';
 
 export const SIZES = {
   lessonPicks: 6,
+  /** Picks when the new letter is the only one there is: every question has the same answer. */
+  soloPicks: 3,
   /** Share of a letter lesson's picks spent on the new letter. */
   newShare: 0.6,
   lessonBlends: 2,
@@ -64,28 +66,35 @@ function picks(n: number, pool: string[], ctx: GenContext, now: number): PickLet
 }
 
 /**
- * Words to build. `intro` is the lesson that first shows words are made of
- * letters: every word there is only sounded out and heard. Anywhere else the
- * child rebuilds each word, and is shown how on the first one unless that
- * word shape is already going well.
+ * Words to build. A word whose shape has not been taught yet is only sounded
+ * out and heard; letter lessons use these from the start (`early`), so words
+ * being made of letters is familiar long before anything is asked.
+ *
+ * `intro` is the lesson that teaches the shapes, where the watcher first
+ * jumbles the letters. It goes through the word list in order (the list starts
+ * with the simplest), so it always opens on the same word, and the child is
+ * shown how on the first word of each shape. Anywhere else the child is shown
+ * how on the first word unless that word shape is already going well.
  */
-function blends(n: number, ctx: GenContext, now: number, favour: ReadonlySet<string> = new Set(), intro = false): BlendItem[] {
-  let pool = decodableWords(ctx);
+function blends(n: number, ctx: GenContext, now: number, opts: { favour?: readonly string[]; intro?: boolean; early?: boolean } = {}): BlendItem[] {
+  let pool = opts.early ? readableWords(ctx) : decodableWords(ctx);
   const out: BlendItem[] = [];
+  const shown = new Set<SkillId>();
   while (out.length < n && pool.length > 0) {
-    const w = weighted(
+    const w = opts.intro ? pool[0] : weighted(
       pool,
-      (x) => need(ctx.states.get(blend(shapeOf(x.graphemes))), now) * (x.graphemes.some((g) => favour.has(g)) ? 3 : 1),
+      (x) => need(ctx.states.get(blend(shapeOf(x.graphemes))), now) * (x.graphemes.some((g) => opts.favour?.includes(g)) ? 3 : 1),
       ctx.rng,
     );
     pool = pool.filter((x) => x.text !== w.text); // each word once per round
-    const item = blendItem(w.text, ctx);
-    if (item) out.push(item);
+    const shape = blend(shapeOf(w.graphemes));
+    const status = statusOf(ctx.states.get(shape));
+    const guide = opts.intro ? !shown.has(shape) : out.length === 0 && (status === 'new' || status === 'shaky');
+    const item = blendItem(w.text, ctx, !ctx.known.has(shape) ? 'read' : guide ? 'guided' : 'free');
+    if (!item) continue;
+    shown.add(shape);
+    out.push(item);
   }
-  out.forEach((item, i) => {
-    const status = statusOf(ctx.states.get(item.skills[0]));
-    item.stage = intro ? 'read' : i === 0 && (status === 'new' || status === 'shaky') ? 'guided' : 'free';
-  });
   return out;
 }
 
@@ -93,7 +102,8 @@ const round = (items: Item[]): Round[] => (items.length ? [{ exercise: items[0].
 
 /**
  * A lesson. `ctx.known` must already include what the node teaches.
- * New letters are met, then practised with older letters mixed in, then used in words.
+ * New letters are met, then practised with older letters mixed in, then used in words
+ * (only sounded out and heard until the lesson that teaches word building).
  * The first question after meeting a letter is always about that letter.
  */
 export function planLesson(node: NodeDef, ctx: GenContext, now: number): Round[] {
@@ -103,12 +113,12 @@ export function planLesson(node: NodeDef, ctx: GenContext, now: number): Round[]
 
   if (teachesBlending) {
     return [
-      ...round(blends(SIZES.blendLessonBlends, ctx, now, undefined, true)),
+      ...round(blends(SIZES.blendLessonBlends, ctx, now, { intro: true })),
       ...round(spread(picks(SIZES.blendLessonPicks, older, ctx, now), ctx)),
     ];
   }
 
-  const nNew = older.length ? Math.ceil(SIZES.lessonPicks * SIZES.newShare) : SIZES.lessonPicks;
+  const nNew = older.length ? Math.ceil(SIZES.lessonPicks * SIZES.newShare) : SIZES.soloPicks;
   const practice = [
     ...nonNull(Array.from({ length: fresh.length ? nNew : 0 }, (_, i) => pickLetterItem(fresh[i % fresh.length], ctx))),
     ...picks(SIZES.lessonPicks - (fresh.length ? nNew : 0), older, ctx, now),
@@ -116,7 +126,7 @@ export function planLesson(node: NodeDef, ctx: GenContext, now: number): Round[]
   return [
     ...round(nonNull(fresh.map((g) => meetItem(g, ctx)))),
     ...round(spread(practice, ctx, fresh[fresh.length - 1])),
-    ...round(blends(SIZES.lessonBlends, ctx, now, new Set(fresh))),
+    ...round(blends(SIZES.lessonBlends, ctx, now, { favour: fresh, early: true })),
   ];
 }
 

@@ -1,15 +1,28 @@
 import { clipSeconds, clipUrl, hasClip, type ClipId } from '../content/content';
-import { playClip, preload } from './sound';
+import { cutClips, playClip, preload } from './sound';
+
+function play(id: ClipId, delay: number): number {
+  playClip(clipUrl(id), delay);
+  return clipSeconds(id);
+}
 
 /**
  * Plays a narration clip by id. Returns how long it lasts so callers can
  * sequence what follows, even if the clip has not finished loading (or audio
  * is off): the game must keep its timing either way.
+ *
+ * The narrator has one voice: whatever was being said, or was about to be,
+ * gives way when this clip starts.
  */
 export function say(id: ClipId, delay = 0): number {
   if (!hasClip(id)) return 0;
-  playClip(clipUrl(id), delay);
-  return clipSeconds(id);
+  cutClips(delay);
+  return play(id, delay);
+}
+
+/** Drops narration that has not started yet; a clip already sounding finishes. */
+export function hush(): void {
+  cutClips(0, true);
 }
 
 // Clips are trimmed tight at both ends, so any breath between them has to be
@@ -31,11 +44,14 @@ export function sayLine(ids: ClipId[], delay = 0): Line {
   let prev: ClipId | null = null;
   let lastAt = delay;
   let end = delay;
+  let first = true;
   for (const id of ids) {
     if (!hasClip(id)) continue;
+    if (first) cutClips(delay);
+    first = false;
     if (prev) end += !isCue(id) ? BEFORE_ANSWER : isCue(prev) ? BETWEEN_PROMPTS : BEFORE_PROMPT;
     lastAt = end;
-    end += say(id, end);
+    end += play(id, end);
     prev = id;
   }
   return { lastAt, end };
