@@ -17,7 +17,7 @@ type Phase = 'arrive' | 'tell' | 'show' | 'yours' | 'leave';
 export const meet: ExerciseModule<MeetItem> = {
   kind: 'meet',
   clips: (items) => [
-    promptClip('this-is-the-letter'), promptClip('it-makes-the-sound'), promptClip('now-you-say-it-with-me'), promptClip('listen'),
+    promptClip('this-is-the-letter'), promptClip('it-makes-the-sound'), promptClip('your-turn'), promptClip('listen'),
     ...items.flatMap((i) => [soundClip(i.grapheme), nameClip(i.grapheme)]),
   ],
 
@@ -106,7 +106,8 @@ export const meet: ExerciseModule<MeetItem> = {
           show();
           go('show', 1.3);
         } else if (phase === 'show') {
-          const d = index === 0 ? kit.say(promptClip('now-you-say-it-with-me')) : 0;
+          // "Your turn", once the clip exists. Nothing that asks the child to speak: the game wants a tap.
+          const d = kit.say(promptClip('your-turn'));
           tile.active = true;
           tile.pips(0, TAPS);
           lastAction = t + d;

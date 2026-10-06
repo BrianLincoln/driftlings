@@ -19,7 +19,16 @@ const lines = [
   '(any audio format; WAV preferred), then run `npm run audio`.',
   '',
 ];
+// Spoken prompts the game will use as soon as they exist. Keep them short and reusable.
+const PROMPTS = { 'your-turn': 'Your turn!' };
 let total = 0;
+const prompts = Object.entries(PROMPTS).filter(([id]) => !(`prompts/${id}` in manifest));
+if (prompts.length) {
+  lines.push('## Prompts', '');
+  for (const [id, text] of prompts) lines.push(`- [ ] \`audio-inbox/prompts/${id}.wav\` : "${text}"`);
+  lines.push('');
+  total += prompts.length;
+}
 for (const [id, area] of Object.entries(AREAS)) {
   const sounds = [...area.letters].filter((g) => !(`letters/${g}-sound` in manifest));
   const missing = words[id].filter((w) => !(`words/${w}` in manifest));
