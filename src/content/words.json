@@ -1,0 +1,8 @@
+{
+  "comment": "Regular words (every letter makes its basic sound), grouped by the first area in which all their letters have been taught. The game only uses a word once its clip exists; scripts/audio-wanted.mjs lists the ones that do not.",
+  "i1a1": ["am", "at", "mat", "sat"],
+  "i1a2": ["an", "in", "it", "if", "map", "nap", "pan", "pin", "tip", "tin", "sit", "fan", "man", "pat", "tap", "sip", "pit", "fit", "fin", "fat", "tan"],
+  "i1a3": ["on", "cat", "cot", "dot", "pot", "top", "mop", "dip", "dim", "nod", "sad", "mad", "dad", "cap", "can", "cod"],
+  "i1a4": ["up", "us", "bat", "bed", "big", "bit", "bud", "bus", "cab", "cob", "cup", "cut", "dig", "dog", "dug", "fun", "gap", "gas", "got", "gum", "mud", "net", "pig", "pun", "sun", "ten", "bug", "peg", "men", "set", "get", "tub", "nut"],
+  "later": ["hat", "hen", "him", "hop", "lip", "log", "rat", "red", "rub", "run", "ant", "elk", "milk", "nest"]
+}

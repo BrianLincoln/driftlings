@@ -4,3 +4,4 @@ shots
 .DS_Store
 .env
 *.local
+audio-inbox/*/*

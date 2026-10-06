@@ -8,7 +8,9 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host",
     "test": "vitest run",
-    "shots": "node scripts/shots.mjs"
+    "shots": "node scripts/shots.mjs",
+    "audio": "node scripts/audio-build.mjs",
+    "audio:wanted": "node scripts/audio-wanted.mjs"
   },
   "devDependencies": {
     "@types/three": "^0.186.0",
