@@ -5,13 +5,20 @@ the conversation history; the reference look is in `references/`.
 
 ## Commands
 
-- `npm run dev` : dev server (also on the LAN, for a phone)
+- `npm run dev` : dev server (the owner keeps one running on :5173)
 - `npm test` : unit tests (Vitest)
 - `npm run build` : type-check and build to `dist/`
-- `npm run shots -- --play` : build, then screenshot every scene at phone-portrait,
-  phone-landscape, tablet and desktop into `shots/` (headless Chromium, real GPU)
+- `npm run play` : build, then play the first area end to end in headless Chromium through
+  real taps and slides; prints ok/FAIL and saves screenshots to `shots/play-*`
+- `npm run shots` : screenshot the map and home island at four sizes into `shots/`
+- `npm run audio` : take in clips from `audio-inbox/`, rebuild `public/audio/` and the manifest
+- `npm run audio:wanted` : write `audio-inbox/WANTED.md`, the clips the game could use but lacks
 
-Pushing to `main` deploys `dist/` to GitHub Pages.
+URL switches: `?reset` clears progress, `?demo` fills the home island, `?scene=map|home|<node id>`,
+`?q=low`.
+
+Pushing to `main` deploys `dist/` to GitHub Pages. Tell the owner a change is ready locally
+before committing and deploying.
 
 ## Rules that are easy to break
 
@@ -29,10 +36,22 @@ Pushing to `main` deploys `dist/` to GitHub Pages.
 
 ## Layout
 
+- `src/learn` : skills, event log, skill model, generator, scheduler. Pure logic: no three.js,
+  no DOM, no imports from the rest of the app (a test enforces this). It has to be right.
+- `src/content` : word list, audio manifest (generated), and the adapter the generator reads
+- `src/exercises` : one module per exercise, all satisfying `contract.ts`; `index.ts` is the catalogue
+- `src/game` : one child's game (event log + everything derived) and the device store
+- `src/scenes` : dioramas (home island, area map, exercise host), letter tile, scenery recipes
 - `src/gfx` : palette, shared uniforms, shader chunks, materials, post chain, ground, sky
 - `src/stage` : renderer loop, framing rule, quality tiers, tap picking, DOM glyph layer
-- `src/cast` : creature, companion (want + queued acts), springs
-- `src/scenes` : dioramas and scenery recipes
-- `src/audio` : WebAudio clips and synthesised effects
-- `src/debug` : `window.__dl` hooks used by `scripts/shots.mjs`
-- `audio/` : raw narration from the owner, not yet normalised
+- `src/cast` : creature rig, species and coats, companion (want + queued acts), springs
+- `src/audio` : WebAudio clips, narration by clip id, synthesised effects
+- `src/ui` : top bar and progress pips (icons only)
+- `src/debug` : `window.__dl` hooks used by the scripts
+- `audio-src/` : narration masters. `audio-inbox/` : where the owner drops new clips
+
+## Adding an exercise
+
+Write one module in `src/exercises/` that satisfies `ExerciseModule`, add its item type to
+`src/learn/items.ts`, and add it to the list in `src/exercises/index.ts`. Exercises know nothing
+about islands, bosses, scheduling or rewards; the host scene (`scenes/exerciseScene.ts`) does.

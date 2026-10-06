@@ -97,4 +97,8 @@ export const sfx = {
   },
   cheer: () => [0, 0.11, 0.22, 0.36].forEach((d, i) => chirp(620 + i * 160, 820 + i * 200, 0.14, 0.11, d)),
   hop: () => chirp(300, 440, 0.08, 0.07),
+  /** A soft "not that one": low and short, never harsh. */
+  oops: () => chirp(330, 240, 0.16, 0.09),
+  whoosh: () => chirp(260, 720, 0.22, 0.07),
+  sparkle: () => [0, 0.07, 0.14].forEach((d, i) => chirp(1200 + i * 300, 1500 + i * 300, 0.09, 0.06, d)),
 };

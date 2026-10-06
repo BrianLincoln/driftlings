@@ -5,7 +5,7 @@
 //   npm run shots -- blend        one scene
 //   npm run shots -- --no-build   reuse dist/
 //
-// Add `--play` to tap through the blend scene and capture the payoff.
+// `npm run play` covers the exercises: it plays the first area end to end.
 
 import { execSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
@@ -15,7 +15,7 @@ import { preview } from 'vite';
 const args = process.argv.slice(2);
 const flags = new Set(args.filter((a) => a.startsWith('--')));
 const only = args.filter((a) => !a.startsWith('--'));
-const SCENES = only.length ? only : ['blend', 'home'];
+const SCENES = only.length ? only : ['map', 'home'];
 const SIZES = [
   { name: 'phone-portrait', width: 390, height: 844, dpr: 3, touch: true },
   { name: 'phone-landscape', width: 844, height: 390, dpr: 3, touch: true },
@@ -52,25 +52,12 @@ for (const size of SIZES) {
     failed = true;
   });
   for (const scene of SCENES) {
-    await page.goto(`${base}?scene=${scene}${flags.has('--low') ? '&q=low' : ''}`);
+    await page.goto(`${base}?scene=${scene}&demo${flags.has('--low') ? '&q=low' : ''}`);
     await page.waitForFunction(() => window.__dl?.ready === true, null, { timeout: 15000 });
     // Fixed steps: the same frame every run, whatever the machine is doing.
     await page.evaluate(() => window.__dl.step(1 / 60, 150));
     const suffix = flags.has('--low') ? '-low' : '';
     await page.screenshot({ path: `shots/${scene}-${size.name}${suffix}.png` });
-    if (flags.has('--play') && scene === 'blend') {
-      for (const id of ['tile-0', 'tile-1', 'tile-2']) {
-        const ok = await page.evaluate((i) => window.__dl.tap(i), id);
-        if (!ok) {
-          console.log(`  FAIL tap ${id} at ${size.name}`);
-          failed = true;
-        }
-        await page.evaluate(() => window.__dl.step(1 / 60, 20));
-      }
-      await page.screenshot({ path: `shots/${scene}-${size.name}-tapped.png` });
-      await page.evaluate(() => window.__dl.step(1 / 60, 100));
-      await page.screenshot({ path: `shots/${scene}-${size.name}-payoff.png` });
-    }
     if (scene === 'home') {
       // The island is wider than the screen: also capture it panned to one side.
       await page.evaluate(() => { window.__dl.pan(-4.5); window.__dl.step(1 / 60, 30); });

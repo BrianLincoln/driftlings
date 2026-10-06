@@ -14,6 +14,7 @@ export interface Glyph {
   scaleY: number;
   tilt: number;
   fontPx: number;
+  opacity: number;
 }
 
 const v = new THREE.Vector3();
@@ -24,14 +25,21 @@ export class GlyphLayer {
 
   constructor(private root: HTMLElement) {}
 
-  add(text: string, anchor: THREE.Object3D, worldHeight: number): Glyph {
+  /** `html` is for icons (inline SVG sized in em); letters always go in as text. */
+  add(text: string, anchor: THREE.Object3D, worldHeight: number, html = false): Glyph {
     const el = document.createElement('div');
     el.className = 'glyph';
-    el.textContent = text;
+    if (html) el.innerHTML = text;
+    else el.textContent = text;
     this.root.appendChild(el);
-    const g: Glyph = { el, anchor, worldHeight, scaleX: 1, scaleY: 1, tilt: 0, fontPx: 0 };
+    const g: Glyph = { el, anchor, worldHeight, scaleX: 1, scaleY: 1, tilt: 0, fontPx: 0, opacity: 1 };
     this.glyphs.push(g);
     return g;
+  }
+
+  remove(g: Glyph): void {
+    g.el.remove();
+    this.glyphs = this.glyphs.filter((x) => x !== g);
   }
 
   clear(): void {
@@ -55,6 +63,7 @@ export class GlyphLayer {
         g.fontPx = px;
         g.el.style.fontSize = `${px.toFixed(2)}px`;
       }
+      g.el.style.opacity = g.opacity.toFixed(2);
       g.el.style.transform =
         `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) translate(-50%, -50%) ` +
         `rotate(${g.tilt.toFixed(4)}rad) scale(${g.scaleX.toFixed(4)}, ${g.scaleY.toFixed(4)})`;

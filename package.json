@@ -10,7 +10,8 @@
     "test": "vitest run",
     "shots": "node scripts/shots.mjs",
     "audio": "node scripts/audio-build.mjs",
-    "audio:wanted": "node scripts/audio-wanted.mjs"
+    "audio:wanted": "node scripts/audio-wanted.mjs",
+    "play": "node scripts/play.mjs"
   },
   "devDependencies": {
     "@types/three": "^0.186.0",

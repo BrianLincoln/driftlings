@@ -34,6 +34,8 @@ export class Creature {
   private gaze = { x: 0, y: 0 };
   private gazeNow = { x: 0, y: 0 };
   mood: Mood = 'idle';
+  /** Null when wide awake. Otherwise 0 (fast asleep) to 1 (nearly awake): lids droop and the body sags. */
+  drowse: number | null = null;
   /** What the eyes follow. Null looks straight ahead. */
   lookTarget: THREE.Vector3 | null = null;
   /** If set, the creature picks new spots to hop to inside this radius. */
@@ -89,6 +91,12 @@ export class Creature {
     this.happyFor = 1.6;
     this.sq.kick(4);
     sfx.coo();
+  }
+
+  /** A small acknowledging bounce. */
+  nod(): void {
+    this.sq.kick(2.6);
+    sfx.hop();
   }
 
   sit(): void {
@@ -161,7 +169,8 @@ export class Creature {
 
     const sitting = this.mood === 'sit';
     const breathe = 1 + Math.sin(performance.now() * 0.0022 + p.x) * 0.012;
-    squash(this.body, this.sq.step((sitting ? 0.8 : 1) * breathe, 180, 13, dt));
+    const sag = this.drowse === null ? 1 : 0.78 + 0.2 * this.drowse + Math.sin(performance.now() * 0.0012) * 0.035;
+    squash(this.body, this.sq.step((sitting ? 0.8 : 1) * breathe * sag, 180, 13, dt));
     this.head.position.y = ease(this.head.position.y, this.headY - (sitting ? 0.06 : 0), 10, dt);
 
     const flop = this.earSpring.step(-this.sq.v * 0.05 + (sitting ? 0.25 : 0), 90, 9, dt);
@@ -178,7 +187,9 @@ export class Creature {
     this.gazeNow.x = ease(this.gazeNow.x, this.gaze.x, 9, dt);
     this.gazeNow.y = ease(this.gazeNow.y, this.gaze.y, 9, dt);
     const happy = this.happyFor > 0;
-    u.uLook!.value.set(this.gazeNow.x, this.gazeNow.y, happy ? -1 : this.blink.step(dt), 0);
+    const awake = this.blink.step(dt);
+    const lid = this.drowse === null ? awake : Math.min(awake, 0.06 + 0.7 * this.drowse * this.drowse);
+    u.uLook!.value.set(this.gazeNow.x, this.gazeNow.y, happy ? -1 : lid, 0);
     u.uMouth!.value.z = ease(u.uMouth!.value.z, happy ? 0.07 : 0.035, 10, dt);
     u.uBlush!.value.w = ease(u.uBlush!.value.w, happy ? 0.85 : 0.45, 6, dt);
 

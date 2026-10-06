@@ -26,6 +26,7 @@ export class Stage {
   private panGoal = 0;
   private panVel = 0;
   private drag: { id: number; x: number; y: number; lastX: number; moved: boolean } | null = null;
+  private held: number | null = null;
   paused = false;
   frames = 0;
 
@@ -50,6 +51,9 @@ export class Stage {
       const range = this.panLimit();
       if (range <= 0) {
         this.tapAt(e.clientX, e.clientY); // nothing to pan: respond on touch-down
+        canvas.setPointerCapture(e.pointerId);
+        this.held = e.pointerId;
+        this.current?.pointer?.('down', e.clientX, e.clientY);
         return;
       }
       canvas.setPointerCapture(e.pointerId);
@@ -57,6 +61,7 @@ export class Stage {
       this.panVel = 0;
     });
     canvas.addEventListener('pointermove', (e) => {
+      if (this.held === e.pointerId) this.current?.pointer?.('move', e.clientX, e.clientY);
       const d = this.drag;
       if (!d || d.id !== e.pointerId) return;
       if (!d.moved && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 12) d.moved = true;
@@ -68,6 +73,10 @@ export class Stage {
       d.lastX = e.clientX;
     });
     const end = (e: PointerEvent) => {
+      if (this.held === e.pointerId) {
+        this.held = null;
+        this.current?.pointer?.('up', e.clientX, e.clientY);
+      }
       const d = this.drag;
       if (!d || d.id !== e.pointerId) return;
       this.drag = null;
@@ -132,13 +141,14 @@ export class Stage {
       this.veil.classList.add('on');
       await new Promise((r) => setTimeout(r, 260));
     }
+    this.current?.exit?.();
     this.glyphs.clear();
     this.current = next;
     this.pan = this.panGoal = this.panVel = 0;
     applyLightBands(next.palette);
     this.post.setPalette(next.palette);
     this.veil.style.background = next.palette.skyHorizon;
-    next.enter({ glyphs: this.glyphs });
+    next.enter({ glyphs: this.glyphs, camera: this.camera, size: () => ({ width: this.cssW, height: this.cssH }) });
     this.resize();
     // Draw once while still veiled so shaders compile out of sight.
     this.step(0);

@@ -4,6 +4,13 @@ import type { Framing, LayoutMode } from '../stage/framing';
 import type { GlyphLayer } from '../stage/glyphs';
 import type { Touchable } from '../stage/touch';
 
+export interface StageContext {
+  glyphs: GlyphLayer;
+  camera: THREE.PerspectiveCamera;
+  /** Current viewport size in CSS pixels. */
+  size(): { width: number; height: number };
+}
+
 /** A small staged scene shown with a fixed camera. */
 export interface Diorama {
   readonly name: string;
@@ -17,6 +24,10 @@ export interface Diorama {
   /** Move actors for a tall or wide viewport. Called before framing is applied. */
   layout(mode: LayoutMode): void;
   /** Called when the scene becomes current. Create glyphs here. */
-  enter(ctx: { glyphs: GlyphLayer }): void;
+  enter(ctx: StageContext): void;
   update(dt: number, camera: THREE.PerspectiveCamera): void;
+  /** Raw pointer positions in CSS pixels, for simple drags. Taps still arrive through touchables. */
+  pointer?(phase: 'down' | 'move' | 'up', x: number, y: number): void;
+  /** Called when the scene stops being current. */
+  exit?(): void;
 }

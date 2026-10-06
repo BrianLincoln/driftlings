@@ -114,3 +114,38 @@ html, body {
   place-items: center;
   font-size: 96px;
 }
+
+.pips {
+  position: absolute;
+  top: calc(22px + var(--sat));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 5px;
+  max-width: calc(100% - 150px);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.pips i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: rgba(251, 243, 228, 0.7);
+  box-shadow: 0 0 0 2px var(--ink);
+  transition: background 0.25s, transform 0.3s cubic-bezier(0.3, 1.8, 0.5, 1);
+}
+
+.pips i.on {
+  background: #ffd27a;
+  transform: scale(1.15);
+}
+
+.round.calling {
+  animation: calling 1.6s ease-in-out infinite;
+}
+
+@keyframes calling {
+  0%, 100% { box-shadow: 0 0 0 2.5px var(--ink), 0 0 0 2.5px rgba(255, 210, 122, 0); }
+  50% { box-shadow: 0 0 0 2.5px var(--ink), 0 0 0 9px rgba(255, 210, 122, 0.75); }
+}

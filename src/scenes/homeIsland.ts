@@ -4,6 +4,7 @@ import { buildIsland, buildWater, islandHeight, type IslandShape } from '../gfx/
 import { buildSky } from '../gfx/sky';
 import { hash } from '../gfx/geo';
 import { pushBlob } from '../gfx/uniforms';
+import { sfx } from '../audio/sound';
 import { Creature } from '../cast/creature';
 import { rescue } from '../cast/species';
 import { Companion } from '../cast/companion';
@@ -12,17 +13,24 @@ import type { Touchable } from '../stage/touch';
 import type { Diorama } from './diorama';
 import { FLOWER_MAT, PROP_MAT, buildFarIsles, bushGeo, flowersGeo, rockGeo, treeGeo } from './props';
 
-// The home island: no teaching job, just rescued creatures milling about and
-// reacting when tapped. It is wider than the screen; a sideways drag pans it.
-// STYLE TEST: the residents are a fixed sample, not a child's real rescues.
+// The home island: no teaching job. It starts empty and fills with the
+// creatures the child has rescued, who mill about and react when tapped.
+// It is wider than the screen; a sideways drag pans it.
+
+export interface HomePlan {
+  /** Rescue numbers living here, in the order they came. */
+  residents: number[];
+  /** How many of them have been here before. The rest hop in from the shore now. */
+  welcomed: number;
+  onWelcomed(count: number): void;
+}
 
 const SHAPE: IslandShape = { radius: 10.5, rise: 0.7, sand: 1.3, seed: 1.7 };
-const RESIDENTS = 24;
 /** The band of the island the camera looks at, and creatures live in. */
 const LIVE = { halfWidth: 7.6, zBack: -6.2, zFront: 0.6 };
 const CENTER_Z = -2.6;
 
-export function createHomePatch(): Diorama {
+export function createHomeIsland(plan: HomePlan): Diorama {
   const scene = new THREE.Scene();
   const palette = PALETTES.goldenNoon;
   const y = (x: number, z: number) => islandHeight(SHAPE, x, z);
@@ -66,19 +74,31 @@ export function createHomePatch(): Diorama {
   // Residents on a loose grid, each with a small patch of its own to wander.
   const creatures: Creature[] = [];
   const cols = 8;
-  for (let i = 0; i < RESIDENTS; i++) {
-    const c = new Creature(rescue(i));
-    const col = i % cols;
+  const arrivals: Array<{ c: Creature; at: number; x: number; z: number }> = [];
+  plan.residents.forEach((who, i) => {
+    const c = new Creature(rescue(who));
+    // Fill from the middle outward, so the first arrivals are in view without panning.
+    const col = [3, 4, 2, 5, 1, 6, 0, 7][i % cols];
     const row = Math.floor(i / cols);
     const hx = -LIVE.halfWidth + ((col + 0.5 + (row % 2) * 0.35) / cols) * LIVE.halfWidth * 2 + (hash(i * 4.4) - 0.5) * 0.6;
     const hz = LIVE.zBack + 0.8 + row * 2.3 + (hash(i * 6.1) - 0.5) * 0.7;
     c.groundY = y;
     c.home.set(hx, 0, hz);
-    c.wanderRadius = 0.85;
-    c.place(hx, hz, (hash(i * 2.2) - 0.5) * 1.4);
+    if (i < plan.welcomed) {
+      c.wanderRadius = 0.85;
+      c.place(hx, hz, (hash(i * 2.2) - 0.5) * 1.4);
+    } else {
+      // A new arrival: it comes up from the near shore, one after another.
+      const n = i - plan.welcomed;
+      c.place((n - (plan.residents.length - plan.welcomed - 1) / 2) * 0.9, 5.2, Math.PI);
+      c.root.visible = false;
+      arrivals.push({ c, at: 0.8 + n * 0.55, x: hx, z: hz });
+    }
     scene.add(c.root);
     creatures.push(c);
-  }
+  });
+  let t = 0;
+  let told = false;
 
   const companion = new Companion();
   companion.groundY = y;
@@ -108,7 +128,8 @@ export function createHomePatch(): Diorama {
     palette,
     scene,
     touchables,
-    panRange: (mode) => Math.max(0, LIVE.halfWidth + 0.6 - box(mode).width / 2),
+    // Nothing to pan to until the island has filled up a little.
+    panRange: (mode) => (plan.residents.length > 8 ? Math.max(0, LIVE.halfWidth + 0.6 - box(mode).width / 2) : 0),
     framing(mode: LayoutMode): Framing {
       return mode === 'tall'
         ? { center: new THREE.Vector3(0, 0.9, CENTER_Z - 0.4), ...box(mode), elevation: 30, fov: 34 }
@@ -119,7 +140,23 @@ export function createHomePatch(): Diorama {
     update(dt, camera) {
       for (const [x, z, r, stretch] of shadows) pushBlob(x, z, r, stretch);
       companion.viewer.copy(camera.position);
+      t += dt;
+      for (const a of arrivals) {
+        if (a.at > 0 && t >= a.at) {
+          a.at = -1;
+          a.c.root.visible = true;
+          a.c.hopTo(a.x, a.z);
+          a.c.wanderRadius = 0.85;
+          sfx.sparkle();
+        }
+      }
+      if (arrivals.length && !told && t > arrivals[arrivals.length - 1].at + 3 && arrivals.every((a) => a.at < 0)) {
+        told = true;
+        companion.act('celebrate');
+        plan.onWelcomed(plan.residents.length);
+      }
       for (const c of creatures) {
+        if (!c.root.visible) continue;
         c.lookTarget = camera.position;
         c.update(dt);
       }
