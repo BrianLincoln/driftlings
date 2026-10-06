@@ -20,7 +20,8 @@ export interface Want {
   pose: 'stand' | 'point' | 'settled';
 }
 
-export type Act = 'celebrate' | 'greet';
+/** 'show' is "like this": it reaches out and touches what it is facing. */
+export type Act = 'celebrate' | 'greet' | 'show';
 
 const POINT_FOR = 1.7;
 const REST_FOR = 2.4;
@@ -127,16 +128,23 @@ export class Companion {
       if (this.actT === 0) {
         this.sq.kick(4);
         if (act === 'celebrate') sfx.cheer();
-        else sfx.coo();
+        else if (act === 'greet') sfx.coo();
       }
       this.actT += dt;
-      const len = act === 'celebrate' ? 1.8 : 1.0;
+      const len = act === 'celebrate' ? 1.8 : act === 'show' ? 0.8 : 1.0;
       const k = this.actT / len;
       if (act === 'celebrate') {
         armTarget[0] = armTarget[1] = 1;
         lift += Math.abs(Math.sin(this.actT * 7)) * 0.16;
         spin = Math.min(1, this.actT / 0.8) * Math.PI * 2;
         this.happyFor = 1.5;
+      } else if (act === 'show' && w.face) {
+        // Turn to the thing, hop at it and reach out with the nearer arm.
+        const toward = Math.atan2(w.face.x - p.x, w.face.z - p.z);
+        armTarget[angleDelta(faceYaw, toward) > 0 ? 1 : 0] = 1;
+        faceYaw += angleDelta(faceYaw, toward) * 0.7;
+        lookAt = w.face;
+        lift += Math.sin(Math.min(1, this.actT / 0.5) * Math.PI) * 0.22;
       } else {
         armTarget[1] = 0.5 + 0.5 * Math.sin(this.actT * 16); // a wave
         this.happyFor = 0.4;
@@ -179,7 +187,7 @@ export class Companion {
       const pivot = this.arms[i];
       const rest = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, side * 0.55));
       let raised: THREE.Quaternion;
-      if (!act && w.face) {
+      if ((!act || act === 'show') && w.face) {
         // Aim the arm's axis (it hangs along -Y) straight at the target.
         const local = pivot.parent!.worldToLocal(w.face.clone()).sub(pivot.position).normalize();
         raised = new THREE.Quaternion().setFromUnitVectors(DOWN, local);

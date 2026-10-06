@@ -14,6 +14,8 @@ export class LetterTile {
   readonly anchor: THREE.Object3D;
   private tile: Tile;
   private glyph: Glyph;
+  private pipGlyph: Glyph | null = null;
+  private pipAnchor = new THREE.Object3D();
   private sq = new Spring(1);
   private lean = new Spring(0);
   private pop = new Spring(0);
@@ -32,6 +34,16 @@ export class LetterTile {
     this.anchor = this.tile.anchor;
     this.glyph = glyphs.add(text, this.anchor, 0.74 * scale, icon);
     this.root.scale.setScalar(0.001);
+  }
+
+  /** Show a row of dots above the tile, `done` of them filled: "this many taps". */
+  pips(done: number, total: number): void {
+    if (!this.pipGlyph) {
+      this.pipAnchor.position.set(0, 1.22, 0);
+      this.root.add(this.pipAnchor);
+      this.pipGlyph = this.glyphs.add("", this.pipAnchor, 0.11 * this.scale, true);
+    }
+    this.pipGlyph.el.innerHTML = `<span class="taps">${Array.from({ length: total }, (_, i) => `<i class="${i < done ? 'on' : ''}"></i>`).join('')}</span>`;
   }
 
   /** Place immediately, with no glide. */
@@ -88,10 +100,12 @@ export class LetterTile {
     g.tilt = -this.tile.slab.rotation.z;
     g.opacity = ease(g.opacity, this.dim ? 0.3 : 1, 10, dt);
     g.el.classList.toggle('done', this.done);
+    if (this.pipGlyph) this.pipGlyph.scaleX = this.pipGlyph.scaleY = pop;
   }
 
   dispose(): void {
     this.glyphs.remove(this.glyph);
+    if (this.pipGlyph) this.glyphs.remove(this.pipGlyph);
     this.root.removeFromParent();
   }
 }
