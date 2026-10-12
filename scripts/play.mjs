@@ -1,7 +1,7 @@
 // Plays the game from a clean start through the real taps and slides: the
-// first area, the crossing home, out again to the second area with the map
-// button, that area, and home again. Prints ok/FAIL per step. Screenshots of
-// each stage of play go to shots/play-*.
+// first area, the crossing home, then out again with the map button to each
+// area after it, and home again every time. Prints ok/FAIL per step.
+// Screenshots of each stage of play go to shots/play-*.
 //
 //   npm run play                 phone portrait and desktop
 //   npm run play -- --no-build
@@ -19,10 +19,13 @@ const SIZES = [
 const AREAS = [
   ['i1a1-a', 'i1a1-m', 'i1a1-s', 'i1a1-t', 'i1a1-blend', 'i1a1-boss'],
   ['i1a2-p', 'i1a2-f', 'i1a2-i', 'i1a2-n', 'i1a2-boss'],
+  ['i1a3-o', 'i1a3-d', 'i1a3-c', 'i1a3-boss'],
+  ['i1a4-u', 'i1a4-g', 'i1a4-b', 'i1a4-e', 'i1a4-boss'],
+  ['i2a1-k', 'i2a1-h', 'i2a1-r', 'i2a1-l', 'i2a1-boss'],
 ];
-const SHOOT = new Set(['i1a1-a', 'i1a1-blend', 'i1a1-boss', 'i1a2-p', 'i1a2-boss']);
+const SHOOT = new Set(['i1a1-a', 'i1a1-blend', 'i1a1-boss', 'i1a2-p', 'i1a2-boss', 'i1a3-c', 'i1a3-boss', 'i1a4-boss', 'i2a1-k', 'i2a1-boss']);
 /** How many little ones are home after each area. */
-const HOME = [5, 9];
+const HOME = [5, 9, 12, 16, 20];
 
 if (!flags.has('--no-build')) execSync('npx vite build', { stdio: 'inherit' });
 mkdirSync('shots', { recursive: true });

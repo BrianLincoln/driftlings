@@ -4,7 +4,7 @@ import { unlockAudio } from './audio/sound';
 import { preloadClips } from './audio/narrate';
 import { CONTENT, soundClip } from './content/content';
 import { installHooks } from './debug/hooks';
-import { BIG_ONES, OPEN_AREAS, closerOf, isFinished, lessonsOf } from './game/areas';
+import { BIG_ONES, OPEN_AREAS, closerOf, isFinished, lessonsOf, watersOf } from './game/areas';
 import { Game } from './game/game';
 import { openStore } from './game/store';
 import { findNode, rescueIndex, type AreaDef } from './learn/curriculum';
@@ -62,10 +62,10 @@ async function boot(): Promise<void> {
   /** The little ones waiting on deck: everyone woken so far on an island that is not finished with. */
   const onDeck = (area: AreaDef): Rescue[] =>
     isFinished(area, game.done) ? [] : lessonsOf(area).filter((n) => game.done.has(n.id)).map((n) => rescue(rescueIndex(n.id)));
-  /** What the chart shows on a crossing to or from `area`: every island up to it, ticked if finished. */
+  /** What the chart shows on a crossing to or from `area`: its island's sheet, with every area up to it, ticked if finished. */
   const charted = (area: AreaDef, done = game.done) => {
-    const isle = OPEN_AREAS.indexOf(area);
-    return { isle, isles: OPEN_AREAS.slice(0, isle + 1).map((a) => ({ place: PLACES[a.id], finished: isFinished(a, done) })) };
+    const { island, areas, isle } = watersOf(area);
+    return { sheet: island.id, isle, isles: areas.slice(0, isle + 1).map((a) => ({ place: PLACES[a.id], finished: isFinished(a, done) })) };
   };
   const allDone = (area: AreaDef) => new Set([...game.done, ...OPEN_AREAS.slice(0, OPEN_AREAS.indexOf(area) + 1).flatMap((a) => a.nodes.map((n) => n.id))]);
 

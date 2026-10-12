@@ -9,8 +9,6 @@ import { rockGeo, treeGeo } from './props';
 
 /** How far from an island's middle its shore is, at the size the islands are built. */
 export const SHORE = 1.25;
-/** The outline of each area's island on the chart, found or not, in the order the areas come. */
-export const CHART_SEEDS = [2.6, 3.1, 5.4, 0.6];
 
 const small = (g: THREE.BufferGeometry, k: number, at: [number, number, number]) => place(g.scale(k, k, k), at);
 

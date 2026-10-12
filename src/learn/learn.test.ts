@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { ISLAND_1, allNodes, currentNode, knownSkills, rescueIndex, rescuesHome } from './curriculum';
+import { ISLAND_1, ISLAND_2, allNodes, currentNode, findNode, knownSkills, rescueIndex, rescuesHome } from './curriculum';
 import type { Attempt } from './events';
 import { askableGraphemes, blendItem, catchItem, decodableWords, pickLetterItem, type GenContext } from './generator';
 import type { Content, Item, Round } from './items';
 import { TUNING, applyOutcome, confusions, emptyState, foldSkills, isDue, quality, statusOf, type SkillState } from './model';
 import { seeded } from './rng';
 import { SIZES, gate, need, planCheckpoint, planLesson, planPractice, practiceTargets } from './scheduler';
-import { blend, gpc, graphemeOf, shapeOf, type SkillId } from './skills';
+import { blend, gpc, graphemeOf, shapeOf, soundsLike, type SkillId } from './skills';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -250,7 +250,7 @@ describe('scheduler', () => {
     for (let seed = 1; seed <= 60; seed++) {
       nodes.forEach((node, i) => {
         const ctx = ctxFor(nodes.slice(0, i + 1).map((x) => x.id), { seed, foils: ['m', 's'] });
-        const rounds = node.kind === 'lesson' ? planLesson(node, ctx, T0) : planCheckpoint(ISLAND_1.areas.find((a) => a.nodes.includes(node))!, ctx, T0);
+        const rounds = node.kind === 'lesson' ? planLesson(node, ctx, T0) : planCheckpoint(findNode(node.id)!.area, ctx, T0);
         for (const r of rounds) {
           expect(r.items.length).toBeGreaterThan(0);
           for (const item of r.items) {
@@ -389,6 +389,58 @@ describe('scheduler', () => {
 
   it('only asks about letters that have audio', () => {
     expect(askableGraphemes(ctxFor(ids.slice(0, 4), { content: content('am') })).sort()).toEqual(['a', 'm']);
+  });
+});
+
+describe('the k h r l area', () => {
+  const A = ISLAND_2.areas[0];
+  const before = allNodes().slice(0, allNodes().indexOf(A.nodes[0])).map((x) => x.id);
+  // As the game has it: one word to build with k, two with l, and a long list of older words.
+  const older = ['am', 'at', 'mat', 'sat', 'map', 'pin', 'dog', 'cat', 'cot', 'bed', 'sun', 'pig', 'net', 'cup', 'bus', 'top'];
+  const words = [...older, 'kid', 'hat', 'hen', 'rat', 'red', 'lip', 'log', 'elk', 'milk'];
+  const ctxAt = (n: number, seed: number) =>
+    ctxFor([...before, ...A.nodes.slice(0, n + 1).map((x) => x.id)], { seed, content: { ...content('amstpfinodcugbekhrl', words), hasName: () => true } });
+  const blendsOf = (rounds: Round[]) => itemsOf(rounds).flatMap((i) => (i.kind === 'blend' ? [i] : []));
+
+  it('follows the island 1 boss and skips the plural lessons', () => {
+    expect(A.nodes.map((x) => x.ufli)).toEqual([22, 23, 24, 26, null]);
+    expect(rescueIndex(A.nodes[0].id)).toBe(16);
+  });
+
+  it('always uses the new letter in a word, however few words it has', () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      A.nodes.slice(0, 4).forEach((node, n) => {
+        const rounds = planLesson(node, ctxAt(n, seed), T0);
+        expect(rounds.map((r) => r.exercise)).toEqual(['meet', 'pick-letter', 'catch', 'blend']);
+        const built = blendsOf(rounds);
+        expect(built.length).toBe(SIZES.lessonBlends);
+        expect(built[0].graphemes).toContain(graphemeOf(node.teaches[0]));
+      });
+    }
+  });
+
+  it('only sounds out a word whose shape is not taught, and keeps it out of the checkpoint', () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      for (const i of blendsOf(planLesson(A.nodes[3], ctxAt(3, seed), T0))) expect(i.stage === 'read').toBe(i.word === 'elk' || i.word === 'milk');
+      const check = blendsOf(planCheckpoint(A, ctxAt(4, seed), T0));
+      expect(check.length).toBe(SIZES.checkpointBlends);
+      // Three words, each bringing one of the area's letters the others have not.
+      expect(new Set(check.flatMap((i) => i.graphemes.filter((g) => 'khrl'.includes(g)))).size).toBe(3);
+      expect(check.every((i) => older.concat(words).includes(i.word) && i.word !== 'elk' && i.word !== 'milk')).toBe(true);
+    }
+  });
+
+  it('never sets c beside k: the sound cannot tell them apart', () => {
+    expect(soundsLike('c', 'k')).toBe(true);
+    expect(soundsLike('c', 'd')).toBe(false);
+    for (let seed = 1; seed <= 80; seed++) {
+      const ctx = ctxAt(4, seed);
+      for (const i of itemsOf([...planLesson(A.nodes[0], ctxAt(0, seed), T0), ...planCheckpoint(A, ctx, T0)])) {
+        if (i.kind === 'pick-letter' && 'ck'.includes(i.target)) expect(i.choices.filter((g) => 'ck'.includes(g))).toEqual([i.target]);
+      }
+      expect(pickLetterItem('c', ctx)!.choices).not.toContain('k');
+      expect(catchItem('k', ctx)!.others).not.toContain('c');
+    }
   });
 });
 

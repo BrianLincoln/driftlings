@@ -41,7 +41,7 @@ const CENTER_Z = -2.6;
 /** Where the ship lies, and the tree that would stand in front of it. */
 const SHIP = { x: 2.8, z: -14.9, gap: 5 };
 /** Where the big ones settle: at the back, to the ship's side of the island. */
-const BIG_AT: Array<[number, number]> = [[5.6, -6.7], [-5.8, -6.9], [0.4, -7.2]];
+const BIG_AT: Array<[number, number]> = [[5.6, -6.7], [-5.8, -6.9], [-0.4, -7.2], [-3.1, -7.3], [8.7, -4.8], [-8.8, -4.6]];
 
 export function createHomeIsland(plan: HomePlan): Diorama {
   const scene = new THREE.Scene();

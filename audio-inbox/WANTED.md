@@ -21,11 +21,11 @@ Complete.
 
 Complete.
 
-## Next: k h r l
+## Island 2, area 1
 
 Complete.
 
-## Then: w j y x qu v z
+## Next: w j y x qu v z
 
 - [ ] `letters/w-sound` : the sound of "w" alone, no trailing "uh"
 - [ ] `letters/w-name` : the name of the letter "w"

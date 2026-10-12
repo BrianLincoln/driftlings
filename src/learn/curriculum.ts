@@ -74,7 +74,25 @@ export const ISLAND_1: IslandDef = {
   ],
 };
 
-export const ISLANDS: IslandDef[] = [ISLAND_1];
+export const ISLAND_2: IslandDef = {
+  id: 'i2',
+  areas: [
+    {
+      id: 'i2a1',
+      nodes: [
+        // UFLI 20 and 21 (plural -s) are a suffix, not a new correspondence, and have no narration yet.
+        lesson('i2a1-k', 22, gpc('k')),
+        lesson('i2a1-h', 23, gpc('h')),
+        // UFLI gives r and l two lessons each (24 and 25, 26 and 27); each is one node here.
+        lesson('i2a1-r', 24, gpc('r')),
+        lesson('i2a1-l', 26, gpc('l')),
+        check('i2a1-boss', 'miniboss', null),
+      ],
+    },
+  ],
+};
+
+export const ISLANDS: IslandDef[] = [ISLAND_1, ISLAND_2];
 
 export const allNodes = (): NodeDef[] => ISLANDS.flatMap((i) => i.areas.flatMap((a) => a.nodes));
 

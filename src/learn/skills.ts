@@ -24,3 +24,8 @@ export function shapeOf(graphemes: string[]): WordShape {
   const s = graphemes.map((g) => (VOWELS.has(g[0]) ? 'v' : 'c')).join('');
   return s === 'vc' || s === 'cvc' || s === 'ccvc' || s === 'cvcc' ? s : 'other';
 }
+
+/** Letters that make the same sound. Hearing the sound cannot tell them apart, so neither is offered beside the other. */
+const SAME_SOUND = [['c', 'k']];
+
+export const soundsLike = (a: string, b: string): boolean => a === b || SAME_SOUND.some((set) => set.includes(a) && set.includes(b));

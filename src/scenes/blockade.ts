@@ -2,21 +2,25 @@ import * as THREE from 'three';
 import { sfx } from '../audio/sound';
 import { BREATH, Creature } from '../cast/creature';
 import { ease } from '../cast/spring';
-import { capsule, ellipsoid, place } from '../gfx/geo';
-import type { BigOne } from '../game/areas';
+import type { BigOne, Manner } from '../game/areas';
 import type { LayoutMode } from '../stage/framing';
 import type { Glyph, GlyphLayer } from '../stage/glyphs';
 import type { Blocker } from './detour';
 import { Dust } from './dust';
+import { Reach } from './reach';
 
-// The big one's part on the map. A sleepy one snores at the side of the island
-// while the little ones are woken and hurry aboard, opening one eye to watch
-// each of them go; a watchful one sits there wide awake and glum, and turns to
-// see each of them off. When the last is aboard and the companion sets off
-// after them, it starts up, bounds over to the foot of the plank, reaches out,
-// and lifts the plank over its head (mapCut.ts). It is the one nobody came
-// for: grey like the little ones were, and put out about it. Nobody leaves
-// until it has had its turn and got its colour back.
+// The big one's part on the map. Until the end it keeps to the side of the
+// island while the little ones are woken and hurry aboard, each in its own
+// manner (game/areas.ts): a sleepy one snores, and opens one eye to watch each
+// of them go; a watchful one sits there wide awake and glum, and turns to see
+// each of them off; a restless one paces its bit of shore and stops short to
+// stare; a huffy one has its back to the lot of them, and only looks round
+// when it thinks nobody will see; a stirring one starts asleep and works its
+// way through the rest as the ship fills. When the last is aboard and the
+// companion sets off after them, it starts up, bounds over to the foot of the
+// plank, reaches out, and lifts the plank over its head (mapCut.ts). It is the
+// one nobody came for: grey like the little ones were, and put out about it.
+// Nobody leaves until it has had its turn and got its colour back.
 
 /** Asleep at the side, awake at the plank's foot, or no longer the map's to move. */
 export type SleeperState = 'beside' | 'across' | 'gone';
@@ -27,9 +31,13 @@ export const SIZE = 2.7;
 const PEEK = 1.5;
 /** Snores are heard for the first few breaths only, so they do not nag. */
 const SNORES = 3;
-const UP = new THREE.Vector3(0, 1, 0);
-/** How far either side of the middle of its grip each hand goes: wide enough to clear its head. */
-const HANDS = 1.1;
+/** What it is doing at the side for now. A stirring one goes through the first three as the little ones go. */
+type Mood = Exclude<Manner, 'stirring'>;
+const STIRS: Mood[] = ['sleepy', 'sleepy', 'watchful', 'restless'];
+/** A restless one's beat: how far each way along its shore it goes (toward the middle of a wide screen, toward us on a tall one), and how often it turns. */
+const BEAT = { wide: [-0.2, 1.3], tall: [-0.2, 1.3], every: 2.5 };
+/** How far round a huffy one is turned from facing us. */
+const BACK = Math.PI - 0.55;
 
 type Ground = (x: number, z: number) => number;
 
@@ -51,39 +59,29 @@ export class Blockade {
   private watching: THREE.Vector3 | null = null;
   private zs: Array<{ glyph: Glyph; anchor: THREE.Object3D }> = [];
   private landed: (() => void) | null = null;
-  // Two arms that stretch as far as they need to: from its shoulders to whatever it has hold of.
-  private arms: THREE.Mesh[] = [];
-  private mitts: THREE.Mesh[] = [];
-  private grip: THREE.Object3D | null = null;
-  private reach = 0;
-  private reachFor = 0;
-  private took: (() => void) | null = null;
+  private reach: Reach;
+  private mood: Mood;
+  /** Which way its beat runs, and which end of it comes next and when. */
+  private beat = { x: 1, z: 0, ends: BEAT.wide, next: 1, turn: 1 };
   /** True once it has noticed it is being left behind: from then on it has eyes only for whoever it noticed. */
   private roused: boolean;
   private sleepy: boolean;
 
-  /** `left` is true until it has had its turn: no colour yet, and sulking whenever it is awake. */
-  constructor(big: BigOne, private state: SleeperState, private left = true) {
-    const who = big.who;
-    this.sleepy = big.manner === 'sleepy';
+  /**
+   * `left` is true until it has had its turn: no colour yet, and sulking whenever it is awake.
+   * `gone` is how many of the little ones have been woken, as a share of them all.
+   */
+  constructor(big: BigOne, private state: SleeperState, private left = true, gone = 0) {
+    this.mood = big.manner === 'stirring' ? STIRS[Math.min(STIRS.length - 1, Math.floor(gone * STIRS.length))] : big.manner;
+    this.sleepy = this.mood === 'sleepy';
     this.roused = state !== 'beside';
-    this.who = new Creature(who);
+    this.who = new Creature(big.who);
     this.who.root.scale.multiplyScalar(SIZE);
     this.who.drowse = state === 'beside' && this.sleepy ? 0 : null;
     if (left) this.who.setColour(0);
     this.who.worried = left && this.who.drowse === null;
-    // A unit-long arm from the shoulder up, stretched to length each frame, and a round mitt for its end.
-    const arm = place(capsule(0.13, 1, who.coat.coat), [0, 0.5, 0]);
-    const mitt = ellipsoid(0.21, 0.19, 0.21, who.coat.coat, 14);
-    for (let i = 0; i < 2; i++) {
-      this.arms.push(new THREE.Mesh(arm, this.who.skin));
-      this.mitts.push(new THREE.Mesh(mitt, this.who.skin));
-    }
-    for (const part of [...this.arms, ...this.mitts]) {
-      part.visible = false;
-      this.root.add(part);
-    }
-    this.root.add(this.who.root, this.dust.root);
+    this.reach = new Reach(this.who);
+    this.root.add(...this.reach.parts, this.who.root, this.dust.root);
     this.root.visible = state !== 'gone';
   }
 
@@ -115,7 +113,10 @@ export class Blockade {
     this.who.root.rotation.z = 0;
     this.who.groundY = ground;
     const p = this.state === 'across' ? this.across : this.beside;
-    this.who.place(p.x, p.z);
+    // With its back to everyone, but turned a little toward the middle, so its face is not quite hidden.
+    this.who.place(p.x, p.z, this.aloof ? (p.x > 0 ? -BACK : BACK) : 0);
+    const tall = mode === 'tall';
+    Object.assign(this.beat, { x: tall ? 0 : -Math.sign(this.beside.x), z: tall ? 1 : 0, ends: tall ? BEAT.tall : BEAT.wide });
     this.raise();
   }
 
@@ -132,48 +133,18 @@ export class Blockade {
     });
   }
 
-  /**
-   * Reach out with both arms and take hold of `thing`. `took` is called once it has a grip;
-   * from then on the arms follow the thing wherever it is carried. `atOnce` skips the reaching.
-   */
+  /** Reach out with both arms and take hold of `thing`: see reach.ts. */
   grab(thing: THREE.Object3D, took?: () => void, atOnce = false): void {
-    this.grip = thing;
-    this.reachFor = 1;
-    this.took = took ?? null;
-    if (atOnce) this.reach = 1;
+    this.reach.grab(thing, took, atOnce);
   }
 
-  /** Let go: the arms draw back in. */
-  letGo(): void {
-    this.reachFor = 0;
+  /** A huffy one that has not been roused yet: back turned, looking at nobody. */
+  private get aloof(): boolean {
+    return this.mood === 'huffy' && this.state === 'beside' && !this.roused;
   }
 
-  private stretch(dt: number): void {
-    const before = this.reach;
-    this.reach = THREE.MathUtils.clamp(this.reach + (this.reachFor > 0 ? dt / 0.28 : -dt / 0.2), 0, 1);
-    if (this.reach >= 1 && before < 1) {
-      this.took?.();
-      this.took = null;
-    }
-    const grip = this.grip;
-    for (const part of [...this.arms, ...this.mitts]) part.visible = this.reach > 0.02 && !!grip;
-    if (!grip || this.reach <= 0.02) return;
-    const top = this.who.height * this.who.root.scale.y;
-    // It takes hold of the thing where the thing is nearest to it, a hand either side of that
-    // spot, the right hand always on the right however the thing is turned.
-    const along = new THREE.Vector3(1, 0, 0).applyQuaternion(grip.quaternion);
-    if (along.x < 0) along.negate();
-    const half = Math.max(0, grip.scale.x * 0.45 - HANDS);
-    const nearest = THREE.MathUtils.clamp(this.at.clone().sub(grip.position).dot(along), -half, half);
-    this.arms.forEach((arm, i) => {
-      const side = i === 0 ? -1 : 1;
-      // The arm starts inside the body, so it always grows out of it and never floats beside it.
-      const from = arm.position.set(this.at.x + side * 0.62, this.at.y + top * 0.42, this.at.z + 0.1);
-      const to = grip.position.clone().addScaledVector(along, nearest + side * HANDS).sub(from).multiplyScalar(this.reach);
-      this.mitts[i].position.copy(from).add(to);
-      arm.scale.set(1, Math.max(0.05, to.length()), 1);
-      arm.quaternion.setFromUnitVectors(UP, to.normalize());
-    });
+  private face(at: THREE.Vector3 | null): void {
+    this.who.turnTo(at ? Math.atan2(at.x - this.at.x, at.z - this.at.z) * 0.7 : 0);
   }
 
   /** Open one eye on someone going by, then shut it again. One that is awake turns to see them off. */
@@ -181,7 +152,11 @@ export class Blockade {
     if (this.roused || this.leap >= 0) return;
     this.peeking = this.sleepy ? PEEK : PEEK * 2;
     this.watching = at;
-    if (!this.sleepy) this.who.nod();
+    if (this.sleepy) return;
+    // Stopped short in the middle of its beat; or a look over its shoulder, which is all a huffy one will give.
+    this.who.halt();
+    if (this.mood !== 'watchful') this.face(at);
+    if (this.mood !== 'huffy') this.who.nod();
   }
 
   /** Wide awake all at once, and looking straight at `at`. */
@@ -192,6 +167,8 @@ export class Blockade {
     this.peeking = 0;
     this.watching = at;
     this.who.worried = this.left;
+    this.who.halt();
+    this.face(null);
     this.who.nod();
   }
 
@@ -209,7 +186,8 @@ export class Blockade {
     this.wake(this.across);
     this.state = 'across';
     this.leap = 0;
-    // A longer way to go is a longer, higher bound.
+    // From wherever on its beat it has got to. A longer way to go is a longer, higher bound.
+    this.beside.copy(this.at).setY(0);
     this.leapFor = 0.45 + 0.07 * this.beside.distanceTo(this.across);
     this.landed = landed;
     sfx.whoosh();
@@ -218,7 +196,7 @@ export class Blockade {
   /** Hand it over to someone else to move: it is no longer in the way, and the map stops driving it. */
   release(): Creature {
     this.state = 'gone';
-    this.letGo();
+    this.reach.letGo();
     return this.who;
   }
 
@@ -230,7 +208,7 @@ export class Blockade {
     const who = this.who;
     this.dust.update(dt);
     if (this.state === 'gone') {
-      this.stretch(dt);
+      this.reach.update(dt);
       return this.snore(0);
     }
     if (this.leap >= 0) {
@@ -256,12 +234,24 @@ export class Blockade {
     const asleep = who.drowse !== null;
     this.peeking = Math.max(0, this.peeking - dt);
     const idle = !this.roused && this.peeking <= 0;
-    who.lookTarget = asleep ? (idle ? null : this.watching) : idle ? camera.position : this.watching ?? camera.position;
+    if (idle && this.state === 'beside') this.fidget(dt);
+    who.lookTarget = asleep ? (idle ? null : this.watching) : idle ? (this.aloof ? null : camera.position) : this.watching ?? camera.position;
     who.peek = ease(who.peek, asleep && this.peeking > 0.25 ? 0.8 : 0, 14, dt);
     who.update(dt);
     this.raise();
-    this.stretch(dt);
+    this.reach.update(dt);
     this.snore(asleep ? 1 - who.peek / 0.8 : 0);
+  }
+
+  /** What it does with itself while nobody is going by: a restless one walks its beat, a huffy one turns its back again. */
+  private fidget(dt: number): void {
+    const b = this.beat;
+    if (this.mood === 'huffy') this.who.turnTo(this.at.x > 0 ? -BACK : BACK);
+    if (this.mood !== 'restless' || (b.next -= dt) > 0) return;
+    b.next = BEAT.every;
+    b.turn = -b.turn;
+    const far = b.ends[b.turn > 0 ? 1 : 0];
+    this.who.hopTo(this.beside.x + b.x * far, this.beside.z + b.z * far);
   }
 
   /** A trail of z's drifting up from its head, one breath after another. `depth` is 0 when it is not asleep. */

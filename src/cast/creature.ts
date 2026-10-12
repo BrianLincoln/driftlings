@@ -129,6 +129,11 @@ export class Creature {
     this.goal = new THREE.Vector3(x, 0, z);
   }
 
+  /** Stop where it is. */
+  halt(): void {
+    this.goal = null;
+  }
+
   /** The tap reaction: a jump, a spin, happy eyes and a coo. */
   react(): void {
     if (this.spin > 0) return;

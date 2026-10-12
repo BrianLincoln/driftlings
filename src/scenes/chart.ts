@@ -10,7 +10,8 @@ import type { Place } from './places';
 import { shipModel } from './ship';
 import type { Port } from './voyage';
 import { compassGeo, crossGeo, wavesGeo } from './chartMarks';
-import { CHART_SEEDS, SHORE, areaToy, drawn, homeToy } from './chartIsles';
+import { SHORE, areaToy, drawn, homeToy } from './chartIsles';
+import { SHEETS } from './chartSheets';
 
 // The chart, held up in front of the ship as it gets under way (voyage.ts): a
 // scroll that unrolls across the picture. Home is drawn on it under its little
@@ -22,6 +23,8 @@ import { CHART_SEEDS, SHORE, areaToy, drawn, homeToy } from './chartIsles';
 
 export interface ChartPlan {
   to: Port;
+  /** Which sheet: the id of the island in the curriculum (chartSheets.ts). */
+  sheet: string;
   /** The islands found so far, in the order they were found. The rest of the sheet's islands stay blank. */
   isles: Array<{ place: Place; finished: boolean }>;
   /** Which of them this crossing is to or from. */
@@ -48,26 +51,8 @@ const NEAR = 3;
 const MARGIN: Insets = { top: 0.07, bottom: 0.07, left: 0.045, right: 0.045 };
 const UP = new THREE.Vector3(0, 1, 0);
 
-/**
- * Everything on the sheet for each layout, as fractions of the sheet's half-width and half-depth
- * (so -1,-1 is the far left corner): home, each area's island in order as [x, z, size while it is
- * still blank], the compass, and the little wave marks. `box` is what has to fit on screen, and
- * `tilt` how steeply we look down on the sheet, in degrees.
- */
-const SHEET = {
-  wide: {
-    size: [10.4, 5.5], isle: 0.8, home: [-0.66, 0.28], box: [11.2, 5.3], tilt: 68,
-    areas: [[0.16, -0.3, 0.6], [0.72, 0.42, 0.62], [0.76, -0.56, 0.48], [-0.2, -0.74, 0.34]],
-    compass: [-0.8, -0.58], waves: [[-0.3, 0.72], [0.38, 0.6], [-0.42, -0.3], [0.5, -0.82], [0.9, -0.06], [-0.9, 0.82]],
-  },
-  tall: {
-    size: [4.7, 8.0], isle: 0.62, home: [-0.3, 0.7], box: [5.0, 7.9], tilt: 74,
-    areas: [[0.28, -0.1, 0.5], [-0.4, -0.5, 0.5], [0.44, -0.8, 0.4], [-0.62, 0.12, 0.26]],
-    compass: [0.56, 0.74], waves: [[0.5, 0.36], [-0.7, 0.4], [-0.1, -0.78], [0.66, -0.46], [-0.72, -0.86], [0.1, 0.92]],
-  },
-};
-
 export function createChart(plan: ChartPlan): Chart {
+  const SHEET = SHEETS[plan.sheet];
   const root = new THREE.Group();
   root.matrixAutoUpdate = false;
   root.visible = false;
@@ -83,7 +68,7 @@ export function createChart(plan: ChartPlan): Chart {
   root.add(sheet, ...rolls, ...rules);
 
   // Places not found yet are the bare shape of each, the colour of the paper's edge.
-  const areas = CHART_SEEDS.map((seed, i) => {
+  const areas = SHEET.seeds.map((seed, i) => {
     const found = plan.isles[i];
     return new THREE.Mesh(found ? areaToy(seed, found.place.chart, found.finished) : drawn(seed, () => C.parchmentEdge), drawnMat);
   });

@@ -20,8 +20,8 @@ const STEPS = [
   ['Island 1, area 2', ['p', 'f', 'i', 'n']],
   ['Island 1, area 3', ['o', 'd', 'c']],
   ['Island 1, area 4', ['u', 'g', 'b', 'e']],
-  ['Next: k h r l', ['k', 'h', 'r', 'l']],
-  ['Then: w j y x qu v z', ['w', 'j', 'y', 'x', 'qu', 'v', 'z']],
+  ['Island 2, area 1', ['k', 'h', 'r', 'l']],
+  ['Next: w j y x qu v z', ['w', 'j', 'y', 'x', 'qu', 'v', 'z']],
 ];
 
 const VOWELS = 'aeiou';

@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { ISLAND_1 } from '../learn/curriculum';
-import { CHART_SEEDS } from '../scenes/chartIsles';
+import { ISLANDS } from '../learn/curriculum';
+import { SHEETS } from '../scenes/chartSheets';
 import { PLACES } from '../scenes/places';
-import { BIG_ONES, OPEN_AREAS, frontier, lessonsOf } from './areas';
+import { BIG_ONES, OPEN_AREAS, frontier, lessonsOf, watersOf } from './areas';
 
-const all = (ids: string[]) => new Set(ids.flatMap((id) => ISLAND_1.areas.find((a) => a.id === id)!.nodes.map((n) => n.id)));
+const AREAS = ISLANDS.flatMap((i) => i.areas);
+const all = (ids: string[]) => new Set(ids.flatMap((id) => AREAS.find((a) => a.id === id)!.nodes.map((n) => n.id)));
 
 describe('areas', () => {
   it('opens areas in curriculum order with no gaps', () => {
     expect(OPEN_AREAS.length).toBeGreaterThanOrEqual(2);
-    expect(OPEN_AREAS).toEqual(ISLAND_1.areas.slice(0, OPEN_AREAS.length));
+    expect(OPEN_AREAS).toEqual(AREAS.slice(0, OPEN_AREAS.length));
   });
 
   it('gives every open area a place, and the place a stone position for every lesson', () => {
@@ -22,8 +23,37 @@ describe('areas', () => {
     expect(Object.keys(PLACES).sort()).toEqual(Object.keys(BIG_ONES).sort());
   });
 
-  it('has room on the chart for every area there will be', () => {
-    expect(CHART_SEEDS.length).toBeGreaterThanOrEqual(ISLAND_1.areas.length);
+  it('has a sheet of the chart for every island, with room for every area there will be', () => {
+    for (const island of ISLANDS) {
+      const sheet = SHEETS[island.id];
+      expect(sheet, island.id).toBeDefined();
+      for (const part of [sheet.seeds, sheet.wide.areas, sheet.tall.areas]) expect(part.length, island.id).toBe(island.areas.length);
+      expect(sheet.tall.waves.length).toBe(sheet.wide.waves.length);
+    }
+  });
+
+  it('draws a found island clear of the others and of the sheet\'s edge, and far enough from home for a line between', () => {
+    for (const [id, sheet] of Object.entries(SHEETS)) for (const mode of ['wide', 'tall'] as const) {
+      const s = sheet[mode];
+      const at = ([u, v]: number[]) => [(u * s.size[0]) / 2, (v * s.size[1]) / 2];
+      const r = 1.25 * s.isle;
+      const gap = (a: number[], b: number[]) => Math.hypot(at(a)[0] - at(b)[0], at(a)[1] - at(b)[1]);
+      s.areas.forEach((a, i) => {
+        const [x, z] = at(a);
+        expect(Math.abs(x) + r, `${id} ${mode} ${i}`).toBeLessThanOrEqual(s.size[0] / 2);
+        expect(Math.abs(z) + r, `${id} ${mode} ${i}`).toBeLessThanOrEqual(s.size[1] / 2);
+        expect(gap(a, s.home), `${id} ${mode} ${i} from home`).toBeGreaterThan(2 * (r + 0.6) + 0.5);
+        for (const b of s.areas.slice(0, i)) expect(gap(a, b), `${id} ${mode} ${i}`).toBeGreaterThan(2 * r);
+      });
+    }
+  });
+
+  it('keeps each island to its own sheet', () => {
+    for (const a of OPEN_AREAS) {
+      const w = watersOf(a);
+      expect(w.island.areas).toContain(a);
+      expect(w.areas[w.isle]).toBe(a);
+    }
   });
 
   it('gives each area a big one unlike the others', () => {

@@ -1,7 +1,7 @@
 import type { BlendItem, BlendStage, CatchItem, Content, MeetItem, PickLetterItem } from './items';
 import type { SkillState } from './model';
 import { shuffle, weighted, type Rng } from './rng';
-import { blend, gpc, graphemeOf, shapeOf, type SkillId } from './skills';
+import { blend, gpc, graphemeOf, shapeOf, soundsLike, type SkillId } from './skills';
 
 // Builds items from what the child knows and what audio exists. Two rules it
 // never breaks: an item only asks about taught skills, and an item is only
@@ -40,10 +40,10 @@ export function meetItem(grapheme: string, ctx: GenContext): MeetItem | null {
   return { kind: 'meet', key: key('meet', grapheme), grapheme };
 }
 
-/** Up to `n` letters to set beside the target: taught ones and foils, never the target itself. */
+/** Up to `n` letters to set beside the target: taught ones and foils, never the target itself or a letter that sounds the same. */
 function wrongLetters(target: string, n: number, ctx: GenContext): string[] {
-  const taught = [...ctx.known].map(graphemeOf).filter((g): g is string => !!g && g !== target);
-  let pool = [...new Set([...taught, ...ctx.foils.filter((g) => g !== target)])];
+  const taught = [...ctx.known].map(graphemeOf).filter((g): g is string => !!g && !soundsLike(g, target));
+  let pool = [...new Set([...taught, ...ctx.foils.filter((g) => !soundsLike(g, target))])];
   const confused = ctx.confusions.get(target);
   const wrong: string[] = [];
   while (wrong.length < n && pool.length > 0) {

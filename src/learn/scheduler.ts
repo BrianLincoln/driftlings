@@ -82,12 +82,14 @@ function blends(n: number, ctx: GenContext, now: number, opts: { favour?: readon
   let pool = opts.early ? readableWords(ctx) : decodableWords(ctx);
   const out: BlendItem[] = [];
   const shown = new Set<SkillId>();
+  const favoured = (x: { graphemes: string[] }) => x.graphemes.filter((g) => opts.favour?.includes(g));
   while (out.length < n && pool.length > 0) {
-    const w = opts.intro ? pool[0] : weighted(
-      pool,
-      (x) => need(ctx.states.get(blend(shapeOf(x.graphemes))), now) * (x.graphemes.some((g) => opts.favour?.includes(g)) ? 3 : 1),
-      ctx.rng,
-    );
+    // Words with a favoured letter come first, and one with a favoured letter no word has used yet before those:
+    // however long the word list gets, a new letter is seen in a word, and a checkpoint's words go round its letters.
+    const used = new Set(out.flatMap((i) => i.graphemes));
+    const unseen = pool.filter((x) => favoured(x).some((g) => !used.has(g)));
+    const any = unseen.length ? unseen : pool.filter((x) => favoured(x).length > 0);
+    const w = opts.intro ? pool[0] : weighted(any.length ? any : pool, (x) => need(ctx.states.get(blend(shapeOf(x.graphemes))), now), ctx.rng);
     pool = pool.filter((x) => x.text !== w.text); // each word once per round
     const shape = blend(shapeOf(w.graphemes));
     const status = statusOf(ctx.states.get(shape));
@@ -133,14 +135,14 @@ export function planLesson(node: NodeDef, ctx: GenContext, now: number): Round[]
   ];
 }
 
-/** A mini-boss or boss: the cumulative check for an area. Every letter appears at least once. */
+/** A mini-boss or boss: the cumulative check for an area. Every letter appears at least once, and its words use them. */
 export function planCheckpoint(area: AreaDef, ctx: GenContext, now: number): Round[] {
   const letters = nonNull(areaSkills(area).map(graphemeOf)).filter((g) => ctx.known.has(gpc(g)) && ctx.content.hasSound(g));
   const once = nonNull(letters.map((g) => pickLetterItem(g, ctx)));
   const extra = picks(Math.max(0, SIZES.checkpointPicks - once.length), letters, ctx, now);
   return [
     ...round(spread([...once, ...extra], ctx)),
-    ...round(blends(SIZES.checkpointBlends, ctx, now)),
+    ...round(blends(SIZES.checkpointBlends, ctx, now, { favour: letters })),
   ];
 }
 

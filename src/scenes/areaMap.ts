@@ -26,8 +26,8 @@ import { MapCut } from './mapCut';
 // One area of an island: a short path of stepping stones leading to the ship
 // moored off the far shore. The current stone glows and locked ones are
 // visible but greyed, so the child can see what is coming. Whoever has been
-// woken waits aboard. The big one who lives here keeps to one side (asleep, or
-// watching: see game/areas.ts) until the last of them is aboard and the
+// woken waits aboard. The big one who lives here keeps to one side (asleep,
+// watching, pacing: see game/areas.ts) until the last of them is aboard and the
 // companion sets off to join them; then it bounds
 // over and takes the plank away (blockade.ts, mapCut.ts) and its stone
 // appears: nobody leaves until it has been won over.
@@ -78,7 +78,9 @@ export function createAreaMap(plan: AreaMapPlan): Diorama {
   const newcomer = spots.find((s) => s.creature) ?? null;
   const boss = spots.find((s) => s.node.boss) ?? null;
   const lastOne = boss?.node.state === 'current' && !!plan.fresh;
-  const sleeper = new Blockade(plan.big, plan.campEmpty ? 'gone' : boss?.node.state === 'locked' || lastOne ? 'beside' : 'across', !plan.sailed);
+  const little = plan.nodes.filter((n) => !n.boss);
+  const woken = little.filter((n) => n.state === 'done').length / Math.max(1, little.length);
+  const sleeper = new Blockade(plan.big, plan.campEmpty ? 'gone' : boss?.node.state === 'locked' || lastOne ? 'beside' : 'across', !plan.sailed, woken);
   scene.add(sleeper.root);
   /** The sleeper's stone is only there while the sleeper is, or has been, in the way. */
   const stoneOut = () => boss?.node.state === 'done' || sleeper.inTheWay;

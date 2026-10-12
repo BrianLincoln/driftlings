@@ -8,11 +8,11 @@ the conversation history; the reference look is in `references/`.
 - `npm run dev` : dev server (the owner keeps one running on :5173)
 - `npm test` : unit tests (Vitest)
 - `npm run build` : type-check and build to `dist/`
-- `npm run play` : build, then play both open areas end to end in headless Chromium through
-  real taps and slides (area one, home, out to area two, home); prints ok/FAIL and saves
-  screenshots to `shots/play-*`
+- `npm run play` : build, then play every open area end to end in headless Chromium through
+  real taps and slides (area one, home, out to the next, home, and so on; about ten minutes);
+  prints ok/FAIL and saves screenshots to `shots/play-*`
 - `npm run shots` : screenshot each area's map and the home island at four sizes into `shots/`.
-  `npm run shots -- chart@i1a2` takes any `?scene=` at one area; `-- crews` is home with both crews
+  `npm run shots -- chart@i1a2` takes any `?scene=` at one area; `-- crews` is home with every crew
 - `npm run audio` : take in clips from `audio-inbox/`, rebuild `public/audio/` and the manifest
 - `npm run audio:wanted` : write `audio-inbox/WANTED.md`, the clips the lessons ahead are missing,
   nearest lesson first. What a lesson needs follows from the skill it teaches: a grapheme needs its
@@ -50,7 +50,7 @@ before committing and deploying.
 - `src/content` : word list, audio manifest (generated), and the adapter the generator reads
 - `src/exercises` : one module per exercise, all satisfying `contract.ts`; `index.ts` is the catalogue
 - `src/game` : one child's game (event log + everything derived), the device store, and `areas.ts`:
-  which areas are open and the big one who lives on each
+  which areas are open (across every island of the curriculum) and the big one who lives on each, with its manner
 - `src/scenes` : dioramas (home island, area map, exercise host, the crossing: `voyage.ts` at sea
   with `chart.ts` unrolling over it, then `landfall.ts` only when an island's crew come home to stay), the ship and the raft it tows, letter tile, scenery recipes,
   and `places.ts`: what makes each area's island its own (outline, palette, scenery, stone path, chart drawing)
@@ -67,7 +67,9 @@ before committing and deploying.
 The curriculum (`src/learn/curriculum.ts`) already lists it. Give it a big one in `BIG_ONES`
 (`src/game/areas.ts`) and an entry in `PLACES` (`src/scenes/places.ts`); a test checks the two agree.
 Add its nodes to `scripts/play.mjs` and its map to `scripts/shots.mjs`, run `npm run audio:wanted`,
-and look at the chart in both layouts: a found island is drawn bigger than its blank.
+and look at the chart in both layouts: a found island is drawn bigger than its blank. Each island of the
+curriculum has its own sheet of the chart (`src/scenes/chartSheets.ts`), with a spot for every area it lists;
+a new island needs a new sheet, and a sixth big one a spot at home (`BIG_AT` in `homeIsland.ts`).
 
 ## Adding an exercise
 
