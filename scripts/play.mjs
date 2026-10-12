@@ -1,6 +1,7 @@
-// Plays the first area from a clean start to the creatures arriving home,
-// through the real taps and slides, and prints ok/FAIL per step. Screenshots
-// of each stage of play go to shots/play-*.
+// Plays the game from a clean start through the real taps and slides: the
+// first area, the crossing home, out again to the second area with the map
+// button, that area, and home again. Prints ok/FAIL per step. Screenshots of
+// each stage of play go to shots/play-*.
 //
 //   npm run play                 phone portrait and desktop
 //   npm run play -- --no-build
@@ -15,8 +16,13 @@ const SIZES = [
   { name: 'phone', width: 390, height: 844, dpr: 3, touch: true },
   { name: 'desktop', width: 1600, height: 900, dpr: 1, touch: false },
 ];
-const NODES = ['i1a1-a', 'i1a1-m', 'i1a1-s', 'i1a1-t', 'i1a1-blend', 'i1a1-boss'];
-const SHOOT = new Set(['i1a1-a', 'i1a1-blend', 'i1a1-boss']);
+const AREAS = [
+  ['i1a1-a', 'i1a1-m', 'i1a1-s', 'i1a1-t', 'i1a1-blend', 'i1a1-boss'],
+  ['i1a2-p', 'i1a2-f', 'i1a2-i', 'i1a2-n', 'i1a2-boss'],
+];
+const SHOOT = new Set(['i1a1-a', 'i1a1-blend', 'i1a1-boss', 'i1a2-p', 'i1a2-boss']);
+/** How many little ones are home after each area. */
+const HOME = [5, 9];
 
 if (!flags.has('--no-build')) execSync('npx vite build', { stdio: 'inherit' });
 mkdirSync('shots', { recursive: true });
@@ -40,68 +46,92 @@ for (const size of SIZES) {
   await step(90);
   await shot('00-map-start');
 
-  for (const node of NODES) {
-    const ok = await page.evaluate((id) => window.__dl.tap(`node:${id}`), node);
-    if (!ok) { fail(`${size.name} could not tap ${node} on the map`); break; }
-    await page.waitForTimeout(450);
-    await step(30);
-    if ((await scene()) !== 'exercise') { fail(`${size.name} ${node} did not open`); break; }
-    let last = '';
-    let shots = 0;
-    let done = false;
-    for (let i = 0; i < 1500 && !done; i++) {
-      const s = await page.evaluate(() => window.__dl.exercise());
-      const kind = !s ? 'none' : s.finished ? 'finished' : s.slide ? 'slide' : s.tap ? `tap:${s.tap[0].split(':')[0]}` : 'waiting';
-      if (kind !== last && kind !== 'waiting' && SHOOT.has(node) && shots < 7) {
-        await step(18);
-        await shot(`${node}-${String(shots++).padStart(2, '0')}-${kind.replace(':', '-')}`);
-      }
-      last = kind === 'waiting' ? last : kind;
-      if (s?.tap) for (const id of s.tap) {
-        if (!(await page.evaluate((t) => window.__dl.tap(t), id))) fail(`${size.name} ${node}: tap ${id} missed`);
-      }
-      if (s?.slide) await page.evaluate(() => window.__dl.slide());
-      await step(12);
-      if (!s || s.finished) {
-        await page.waitForTimeout(60);
-        done = (await scene()) !== 'exercise';
+  /** Step through a crossing until `until` is showing, with a screenshot of each of its `legs`. */
+  const crossing = async (from, until, label, legs) => {
+    let seen = from;
+    let leg = 0;
+    for (let i = 0; i < 90 && (await scene()) !== until; i++) {
+      await step(40);
+      await page.waitForTimeout(40);
+      if (from === 'map' && (i === 2 || i === 6 || i === 10 || i === 13)) await shot(`${label}-friends-${i}`);
+      const now = await scene();
+      if (now !== seen && now !== until) {
+        seen = now;
+        await step(70);
+        await shot(`${label}-sail-${leg++}-${now}`);
       }
     }
-    if (!done) { fail(`${size.name} ${node} never finished`); break; }
+    if (leg !== legs) fail(`${size.name} ${label}: expected ${legs} legs to the crossing, saw ${leg}`);
     await page.waitForTimeout(450);
-    await step(70);
-    console.log(`ok ${size.name} ${node} -> ${await scene()}`);
-    if (node === 'i1a1-a' || node === 'i1a1-m' || node === 'i1a1-blend') await shot(`map-after-${node}`);
-    if (node === 'i1a1-blend') {
-      // The last little one goes aboard, the companion follows, and the sleeper flops into the way.
-      for (let i = 0; i < 10; i++) {
-        await step(i < 9 ? 50 : 300);
-        await shot(`map-sleeper-${i}`);
-      }
-    }
-  }
+    await step(60);
+  };
 
-  // The sleeper gives the plank back and everyone boards; then home.
-  // Then the crossing: the ship pulls away, the chart, and landfall at home.
-  let seen = 'map';
-  let leg = 0;
-  for (let i = 0; i < 90 && (await scene()) !== 'home'; i++) {
-    await step(40);
-    await page.waitForTimeout(40);
-    if (i === 2 || i === 6 || i === 10 || i === 13) await shot(`map-friends-${i}`);
-    const now = await scene();
-    if (now !== seen && now !== 'home') {
-      seen = now;
+  const playArea = async (area, nodes) => {
+    const boss = nodes[nodes.length - 1];
+    const lastLesson = nodes[nodes.length - 2];
+    for (const node of nodes) {
+      const ok = await page.evaluate((id) => window.__dl.tap(`node:${id}`), node);
+      if (!ok) { fail(`${size.name} could not tap ${node} on the map`); return false; }
+      await page.waitForTimeout(450);
+      await step(30);
+      if ((await scene()) !== 'exercise') { fail(`${size.name} ${node} did not open`); return false; }
+      let last = '';
+      let shots = 0;
+      let done = false;
+      for (let i = 0; i < 1500 && !done; i++) {
+        const s = await page.evaluate(() => window.__dl.exercise());
+        const kind = !s ? 'none' : s.finished ? 'finished' : s.slide ? 'slide' : s.tap ? `tap:${s.tap[0].split(':')[0]}` : 'waiting';
+        if (kind !== last && kind !== 'waiting' && SHOOT.has(node) && shots < 7) {
+          await step(18);
+          await shot(`${node}-${String(shots++).padStart(2, '0')}-${kind.replace(':', '-')}`);
+        }
+        last = kind === 'waiting' ? last : kind;
+        if (s?.tap) for (const id of s.tap) {
+          if (!(await page.evaluate((t) => window.__dl.tap(t), id))) fail(`${size.name} ${node}: tap ${id} missed`);
+        }
+        if (s?.slide) await page.evaluate(() => window.__dl.slide());
+        await step(12);
+        if (!s || s.finished) {
+          await page.waitForTimeout(60);
+          done = (await scene()) !== 'exercise';
+        }
+      }
+      if (!done) { fail(`${size.name} ${node} never finished`); return false; }
+      await page.waitForTimeout(450);
       await step(70);
-      await shot(`sail-${leg++}-${now}`);
+      console.log(`ok ${size.name} ${node} -> ${await scene()}`);
+      if (node !== boss) await shot(`map-after-${node}`);
+      if (node === lastLesson) {
+        // The last little one goes aboard, the companion follows, and the big one gets in the way.
+        for (let i = 0; i < 10; i++) {
+          await step(i < 9 ? 50 : 300);
+          await shot(`${area}-sleeper-${i}`);
+        }
+      }
     }
+    return true;
+  };
+
+  for (const [n, nodes] of AREAS.entries()) {
+    const area = nodes[0].split('-')[0];
+    if (n > 0) {
+      // At home the map button calls; it takes the ship out to the next island.
+      await page.click('button[data-name="map"]');
+      await crossing('home', 'map', `${area}-out`, 1);
+      await step(60);
+      await shot(`${area}-map-start`);
+    }
+    if (!(await playArea(area, nodes))) break;
+    // The big one gives the plank back and everyone boards; then the crossing:
+    // the ship pulls away under the chart, and landfall at home.
+    await crossing('map', 'home', `${area}-home`, 2);
+    await shot(`${area}-90-home-arriving`);
+    await step(480);
+    await shot(`${area}-91-home-settled`);
+    const welcomed = await page.evaluate(() => window.__dl.events().filter((e) => e.type === 'welcomed').map((e) => e.count));
+    if (welcomed[welcomed.length - 1] !== HOME[n]) fail(`${size.name} ${area}: expected ${HOME[n]} creatures welcomed home, saw ${JSON.stringify(welcomed)}`);
+    else console.log(`ok ${size.name} ${area} home with ${HOME[n]}`);
   }
-  if (leg !== 3) fail(`${size.name} expected the three legs of the crossing, saw ${leg}`);
-  await page.waitForTimeout(450);
-  await step(60);
-  await shot('90-home-arriving');
-  await step(420);
-  await shot('91-home-settled');
   const summary = await page.evaluate(() => {
     const ev = window.__dl.events();
     return {
@@ -112,9 +142,8 @@ for (const size of SIZES) {
     };
   });
   console.log(size.name, JSON.stringify(summary));
-  if (summary.done.length !== NODES.length) fail(`${size.name} expected ${NODES.length} nodes done`);
+  if (summary.done.length !== AREAS.flat().length) fail(`${size.name} expected ${AREAS.flat().length} nodes done`);
   if (summary.wrong !== 0) fail(`${size.name} scripted play should make no mistakes`);
-  if (summary.welcomed[0] !== 5) fail(`${size.name} expected 5 creatures welcomed home`);
   await ctx.close();
 }
 

@@ -119,6 +119,12 @@ export class Creature {
     return this;
   }
 
+  /** Come round to face this way and stay so, or be facing it `atOnce`. */
+  turnTo(yaw: number, atOnce = false): void {
+    this.restYaw = yaw;
+    if (atOnce) this.yaw = yaw;
+  }
+
   hopTo(x: number, z: number): void {
     this.goal = new THREE.Vector3(x, 0, z);
   }

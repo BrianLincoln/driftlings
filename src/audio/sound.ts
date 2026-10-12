@@ -12,6 +12,8 @@ interface Voice {
   src: AudioBufferSourceNode;
   gain: GainNode;
   at: number;
+  /** When it has already been told to fall silent, if it has. */
+  cutAt?: number;
 }
 const voices = new Set<Voice>();
 const FADE = 0.05;
@@ -89,10 +91,10 @@ export function playClip(url: string, delay = 0): number {
 
 /**
  * Makes room for what is said next, `delay` seconds from now: clips due to
- * start after that are dropped, and (unless `pendingOnly`) one still sounding
+ * start after that are dropped, and one still sounding
  * then fades out quickly instead of talking over it.
  */
-export function cutClips(delay = 0, pendingOnly = false): void {
+export function cutClips(delay = 0): void {
   if (!ctx) return;
   const now = ctx.currentTime;
   const at = now + delay;
@@ -100,8 +102,10 @@ export function cutClips(delay = 0, pendingOnly = false): void {
     if (v.at >= at - 0.001) {
       voices.delete(v);
       v.src.stop();
-    } else if (!pendingOnly) {
+    } else {
       const from = Math.max(now, at - FADE);
+      if (v.cutAt !== undefined && v.cutAt <= from) continue; // already going quiet sooner
+      v.cutAt = from;
       v.gain.gain.cancelScheduledValues(from);
       v.gain.gain.setValueAtTime(1, from);
       v.gain.gain.linearRampToValueAtTime(0, from + FADE);

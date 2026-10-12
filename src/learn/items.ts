@@ -38,7 +38,24 @@ export interface BlendItem {
   supports: SkillId[];
 }
 
-export type Item = MeetItem | PickLetterItem | BlendItem;
+/**
+ * Letters drift down: catch every one that is the named letter and let the others go by.
+ * Asked by the letter's name and answered on a moving target, so it is practice, not a test:
+ * a catch is credited a little (`supports`) and a slip is never blamed (`skills` is empty).
+ */
+export interface CatchItem {
+  kind: 'catch';
+  key: string;
+  target: string;
+  /** The other letters that fall. Never the target. */
+  others: string[];
+  /** How many of the target to catch. */
+  count: number;
+  skills: SkillId[];
+  supports: SkillId[];
+}
+
+export type Item = MeetItem | PickLetterItem | BlendItem | CatchItem;
 export type ItemKind = Item['kind'];
 
 /** One exercise's worth of items, played in order. */
@@ -51,6 +68,8 @@ export interface Round {
 export interface Content {
   /** True if an isolated sound clip exists for this grapheme. */
   hasSound(grapheme: string): boolean;
+  /** True if a clip of this letter's name exists. */
+  hasName(grapheme: string): boolean;
   /** Decodable words that have a spoken clip. */
   words: ReadonlyArray<{ text: string; graphemes: string[] }>;
 }

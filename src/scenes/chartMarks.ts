@@ -34,3 +34,13 @@ export function crossGeo(): THREE.BufferGeometry {
   const bar = (turn: number) => place(paint(new THREE.BoxGeometry(0.62, 0.03, 0.14), C.pennant), [0, 0, 0], [0, turn, 0]);
   return merge(bar(Math.PI / 4), bar(-Math.PI / 4));
 }
+
+/** How far the seal reaches from its middle. */
+export const SEAL_RADIUS = 0.34;
+
+/** A tick on a pale round seal: this one is finished. Lies flat, like the rest; stand it up where it should face the viewer. */
+export function tickGeo(): THREE.BufferGeometry {
+  const bar = (len: number, x: number, z: number, turn: number) =>
+    place(paint(new THREE.BoxGeometry(len, 0.04, 0.11), C.done), [x, 0.035, z], [0, turn, 0]);
+  return merge(ellipsoid(SEAL_RADIUS, 0.03, SEAL_RADIUS, C.parchment, 20), bar(0.26, -0.13, 0.06, -0.85), bar(0.46, 0.07, -0.02, 0.95));
+}

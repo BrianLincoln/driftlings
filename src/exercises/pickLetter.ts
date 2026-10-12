@@ -79,9 +79,9 @@ export const pickLetter: ExerciseModule<PickLetterItem> = {
         ms: Math.max(0, Math.round((t - askedAt) * 1000)),
       });
       tile.press();
+      kit.hush(); // a tap during the question ends it there, right or wrong
       if (correct) {
         answered = true;
-        kit.hush(); // answered before the question was over: leave the rest unsaid
         tile.done = true;
         tile.active = false;
         tile.hop();

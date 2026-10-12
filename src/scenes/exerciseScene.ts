@@ -43,6 +43,8 @@ const FANFARE = 'sfx/success';
  * middle one. A boss is big enough to clear the tiles from a low rock, and has to fit under the pips.
  */
 const PERCH = { little: [1.6, 2.55, 1.25], boss: [1.45, 1.95, 1.15] } as const;
+/** How far from the middle of the boulder a boss starts down off it, and how far out it is on the ground. */
+const CLEAR = [0.8, 2.1] as const;
 
 export function createExerciseScene(plan: ExercisePlan): Diorama {
   const scene = new THREE.Scene();
@@ -225,7 +227,13 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
       }
       perch.position.set(0, y(0, -1.1) - 0.1, -1.1);
       perchTop = perch.position.y + 0.667 * perch.scale.y;
-      guest.groundY = (gx, gz) => (finished && plan.boss ? y(gx, gz) : perchTop);
+      // It stands on the boulder as long as it is over it. A boss leaving at the end jumps
+      // down off the edge: its feet stay above the rock until it is clear of it.
+      guest.groundY = (gx, gz) => {
+        if (!finished || !plan.boss) return perchTop;
+        const k = THREE.MathUtils.clamp((Math.hypot(gx - perch.position.x, gz - perch.position.z) - CLEAR[0]) / (CLEAR[1] - CLEAR[0]), 0, 1);
+        return THREE.MathUtils.lerp(perchTop, y(gx, gz), k * k); // falling: slowly at first, then fast
+      };
       if (!finished) guest.place(0, -1.0);
       for (const t of tiles) t.lean_back(m === 'tall' ? -0.2 : -0.1);
       scene.updateMatrixWorld(true);

@@ -20,6 +20,8 @@ export interface Want {
   pose: 'stand' | 'point' | 'settled';
   /** Something to eye without turning to it. */
   glance?: THREE.Vector3 | null;
+  /** A way to stand facing (a yaw), instead of turning to the viewer. */
+  heading?: number | null;
 }
 
 /** 'show' is "like this": it reaches out and touches what it is facing. */
@@ -110,7 +112,7 @@ export class Companion {
     const w = this.want;
     this.bob += dt;
     let lift = 0.035 + Math.abs(Math.sin(this.bob * 2.1)) * 0.02;
-    let faceYaw = Math.atan2(this.viewer.x - p.x, this.viewer.z - p.z);
+    let faceYaw = w.heading ?? Math.atan2(this.viewer.x - p.x, this.viewer.z - p.z);
     let lookAt: THREE.Vector3 = w.glance ?? this.viewer;
     const armTarget = [0, 0];
     let spin = 0;

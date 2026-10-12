@@ -63,6 +63,8 @@ export const C = {
   faceInk: '#2e1f28',
   parchment: '#fbf3e4',
   parchmentEdge: '#ead9bd',
+  /** Finished: the tick on a stone or a charted island. Matches `.glyph.done` in style.css. */
+  done: '#2f6f5e',
   eyeWhite: '#fffdf8',
   blush: '#ef9c93',
   /** The one glow colour. It means "touch this now" and the companion. Nothing else. */

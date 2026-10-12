@@ -20,9 +20,9 @@ export function say(id: ClipId, delay = 0): number {
   return play(id, delay);
 }
 
-/** Drops narration that has not started yet; a clip already sounding finishes. */
+/** The narrator stops mid-word: the child has acted, so what was being said no longer applies. */
 export function hush(): void {
-  cutClips(0, true);
+  cutClips(0);
 }
 
 // Clips are trimmed tight at both ends, so any breath between them has to be

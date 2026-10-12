@@ -11,10 +11,12 @@ export interface IslandShape {
   /** Width of the sand rim. */
   sand: number;
   seed: number;
+  /** How deep the three big bays in the shore are, as a multiple of the usual. Leave out for 1. */
+  bays?: number;
 }
 
 export function shoreRadius(s: IslandShape, angle: number): number {
-  return s.radius * (1 + 0.06 * Math.sin(angle * 3 + s.seed) + 0.035 * Math.sin(angle * 7 + s.seed * 2.3));
+  return s.radius * (1 + 0.06 * (s.bays ?? 1) * Math.sin(angle * 3 + s.seed) + 0.035 * Math.sin(angle * 7 + s.seed * 2.3));
 }
 
 export function islandHeight(s: IslandShape, x: number, z: number): number {
@@ -49,7 +51,7 @@ export function buildIsland(s: IslandShape): THREE.Mesh {
       uGrass: { value: new THREE.Color(C.grass) },
       uGrassDark: { value: new THREE.Color(C.grassDark) },
       uSand: { value: new THREE.Color(C.sand) },
-      uShape: { value: new THREE.Vector3(s.radius, s.seed, 1 - s.sand / s.radius) },
+      uShape: { value: new THREE.Vector4(s.radius, s.seed, 1 - s.sand / s.radius, s.bays ?? 1) },
     },
     vertexShader: COMMON_VERT,
     fragmentShader: /* glsl */ `
@@ -57,7 +59,8 @@ in vec3 vN;
 in vec3 vCol;
 in vec3 vWorld;
 uniform vec4 uBlobs[${MAX_BLOBS}];
-uniform vec3 uGrass, uGrassDark, uSand, uShape;
+uniform vec3 uGrass, uGrassDark, uSand;
+uniform vec4 uShape;
 ${TOON}
 ${WRITE_G}
 
@@ -79,7 +82,7 @@ float marks(vec2 p) {
 void main() {
   vec3 n = normalize(vN);
   float a = atan(vWorld.x, vWorld.z);
-  float shore = uShape.x * (1.0 + 0.06 * sin(a * 3.0 + uShape.y) + 0.035 * sin(a * 7.0 + uShape.y * 2.3));
+  float shore = uShape.x * (1.0 + 0.06 * uShape.w * sin(a * 3.0 + uShape.y) + 0.035 * sin(a * 7.0 + uShape.y * 2.3));
   float r = length(vWorld.xz) / shore + 0.018 * sin(a * 9.0 + uShape.y);
   // Flat, hard-edged zones: sand rim, grass, and a darker patch in the middle.
   vec3 base = r > uShape.z ? uSand : (r < 0.42 + 0.05 * sin(a * 4.0) ? uGrassDark : uGrass);
@@ -113,7 +116,7 @@ export function buildWater(p: ScenePalette, s: IslandShape): THREE.Mesh {
       ...U,
       uWater: { value: new THREE.Color(p.water) },
       uFoam: { value: new THREE.Color(p.foam) },
-      uShore: { value: new THREE.Vector2(s.radius, s.seed) },
+      uShore: { value: new THREE.Vector3(s.radius, s.seed, s.bays ?? 1) },
       uFar: { value: new THREE.Color(p.skyHorizon) },
     },
     vertexShader: /* glsl */ `
@@ -126,12 +129,12 @@ void main() {
     fragmentShader: /* glsl */ `
 in vec3 vWorld;
 uniform vec3 uWater, uFoam, uFar;
-uniform vec2 uShore;
+uniform vec3 uShore;
 ${TOON}
 ${WRITE_G}
 void main() {
   float a = atan(vWorld.x, vWorld.z);
-  float shore = uShore.x * (1.0 + 0.06 * sin(a * 3.0 + uShore.y) + 0.035 * sin(a * 7.0 + uShore.y * 2.3));
+  float shore = uShore.x * (1.0 + 0.06 * uShore.z * sin(a * 3.0 + uShore.y) + 0.035 * sin(a * 7.0 + uShore.y * 2.3));
   float d = length(vWorld.xz) - shore;
   float wob = 0.07 * sin(a * 11.0 + uTime * 0.7) + 0.05 * sin(a * 5.0 - uTime * 0.45);
   // Two flat foam bands that breathe in and out from the shore.

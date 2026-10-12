@@ -1,102 +1,76 @@
 import * as THREE from 'three';
-import { C, PALETTES } from '../gfx/palette';
+import { C } from '../gfx/palette';
 import { TAG } from '../gfx/glsl';
-import { capsule, ellipsoid, lathe, merge, paint, place } from '../gfx/geo';
+import { paint, place } from '../gfx/geo';
 import { toonMaterial } from '../gfx/materials';
 import { sfx } from '../audio/sound';
 import { Spring } from '../cast/spring';
-import type { Framing, LayoutMode } from '../stage/framing';
-import type { Diorama } from './diorama';
-import { treeGeo } from './props';
+import { fitDistance, type Insets, type LayoutMode } from '../stage/framing';
+import type { Place } from './places';
 import { shipModel } from './ship';
 import type { Port } from './voyage';
 import { compassGeo, crossGeo, wavesGeo } from './chartMarks';
+import { CHART_SEEDS, SHORE, areaToy, drawn, homeToy } from './chartIsles';
 
-// The chart, shown in the middle of every crossing: a scroll unrolled on the
-// deck boards and seen from above. Home is drawn on it under its little
-// house, the island being explored under its flag, and further off the pale
-// blank shapes of places nobody has been to yet. A dashed line joins the two
-// we know, a cross marks where we are going, and a toy ship sails the line,
-// rubbing out the dashes as it passes.
+// The chart, held up in front of the ship as it gets under way (voyage.ts): a
+// scroll that unrolls across the picture. Home is drawn on it under its little
+// house, each island found so far under its flag (with a tick once it is
+// finished), and further off the pale blank shapes of places nobody has been
+// to yet. A dashed line joins home and the island this crossing is to or from,
+// a cross marks where we are going, and a toy ship sails the line, rubbing out
+// the dashes as it passes.
 
 export interface ChartPlan {
   to: Port;
-  /** The toy ship has got there. A tap gets there sooner. */
-  done(): void;
+  /** The islands found so far, in the order they were found. The rest of the sheet's islands stay blank. */
+  isles: Array<{ place: Place; finished: boolean }>;
+  /** Which of them this crossing is to or from. */
+  isle: number;
 }
 
-/** Seconds the toy ship takes, and how long the picture holds once it is there. */
-const CROSSING = 2.6;
-const HOLD = 0.7;
+export interface Chart {
+  /** Hangs in front of the camera: add it to the camera, and the camera to the scene. */
+  readonly root: THREE.Group;
+  layout(m: LayoutMode): void;
+  /** Unroll, then sail the toy ship across. True once it is there and the picture has held a moment. */
+  update(dt: number, camera: THREE.PerspectiveCamera): boolean;
+}
+
+/** Seconds to unroll, seconds the toy ship takes, and how long the picture holds once it is there. */
+const UNROLL = 0.4;
+const CROSSING = 1.15;
+const HOLD = 0.4;
 const DASHES = 6;
 const TOY = 0.3;
-/** How far from an island's middle its shore is, at the size the islands are built. */
-const SHORE = 1.25;
+/** How far in front of the camera it hangs: nearer than anything in the scene behind it. */
+const NEAR = 3;
+/** How much of the screen stays clear around it, so the sea still shows at the edges. */
+const MARGIN: Insets = { top: 0.07, bottom: 0.07, left: 0.045, right: 0.045 };
+const UP = new THREE.Vector3(0, 1, 0);
 
 /**
  * Everything on the sheet for each layout, as fractions of the sheet's half-width and half-depth
- * (so -1,-1 is the far left corner): the two known islands, the blank ones as [x, z, size], the
- * compass, and the little wave marks.
+ * (so -1,-1 is the far left corner): home, each area's island in order as [x, z, size while it is
+ * still blank], the compass, and the little wave marks. `box` is what has to fit on screen, and
+ * `tilt` how steeply we look down on the sheet, in degrees.
  */
 const SHEET = {
   wide: {
-    size: [10.4, 5.5], isle: 0.8, home: [-0.66, 0.28], area: [0.16, -0.3],
-    blank: [[0.72, 0.42, 0.62], [0.76, -0.56, 0.48], [-0.2, -0.74, 0.34]],
+    size: [10.4, 5.5], isle: 0.8, home: [-0.66, 0.28], box: [11.2, 5.3], tilt: 68,
+    areas: [[0.16, -0.3, 0.6], [0.72, 0.42, 0.62], [0.76, -0.56, 0.48], [-0.2, -0.74, 0.34]],
     compass: [-0.8, -0.58], waves: [[-0.3, 0.72], [0.38, 0.6], [-0.42, -0.3], [0.5, -0.82], [0.9, -0.06], [-0.9, 0.82]],
   },
   tall: {
-    size: [4.7, 8.0], isle: 0.62, home: [-0.3, 0.7], area: [0.28, -0.1],
-    blank: [[-0.4, -0.5, 0.5], [0.44, -0.8, 0.4], [-0.62, 0.12, 0.26]],
+    size: [4.7, 8.0], isle: 0.62, home: [-0.3, 0.7], box: [5.0, 7.9], tilt: 74,
+    areas: [[0.28, -0.1, 0.5], [-0.4, -0.5, 0.5], [0.44, -0.8, 0.4], [-0.62, 0.12, 0.26]],
     compass: [0.56, 0.74], waves: [[0.5, 0.36], [-0.7, 0.4], [-0.1, -0.78], [0.66, -0.46], [-0.72, -0.86], [0.1, 0.92]],
   },
 };
 
-const small = (g: THREE.BufferGeometry, k: number, at: [number, number, number]) => place(g.scale(k, k, k), at);
-
-/** An island as the chart draws it: nearly flat, with a wandering shore. `tone` takes how far out a point is, 0 to 1. */
-function drawn(seed: number, tone: (far: number) => THREE.ColorRepresentation): THREE.BufferGeometry {
-  const g = lathe([[SHORE, 0], [SHORE * 0.97, 0.035], [SHORE * 0.5, 0.05], [0, 0.055]], (p) => tone(Math.hypot(p.x, p.z) / SHORE), 44, 10);
-  const pos = g.getAttribute('position') as THREE.BufferAttribute;
-  for (let i = 0; i < pos.count; i++) {
-    const a = Math.atan2(pos.getX(i), pos.getZ(i));
-    const k = 1 + 0.09 * Math.sin(a * 3 + seed) + 0.05 * Math.sin(a * 5 + seed * 2.3);
-    pos.setXYZ(i, pos.getX(i) * k, pos.getY(i), pos.getZ(i) * k);
-  }
-  return g;
-}
-const land = (seed: number) => drawn(seed, (far) => (far > 0.8 ? C.sand : C.grass));
-
-function homeToy(): THREE.BufferGeometry {
-  // Four flat faces, so each side of the roof takes the light its own way.
-  const roof = new THREE.ConeGeometry(0.44, 0.5, 4).toNonIndexed();
-  roof.computeVertexNormals();
-  return merge(
-    land(1.7),
-    place(paint(new THREE.BoxGeometry(0.5, 0.44, 0.5), C.parchment), [0, 0.27, 0.15], [0, 0.35, 0]),
-    place(paint(roof, C.pennant), [0, 0.74, 0.15], [0, Math.PI / 4 + 0.35, 0]),
-    small(treeGeo(11), 0.26, [-0.7, 0.04, -0.15]),
-    small(treeGeo(35), 0.26, [0.7, 0.04, -0.1]),
-    small(treeGeo(23), 0.24, [0.15, 0.04, -0.62]),
-  );
-}
-
-function areaToy(): THREE.BufferGeometry {
-  const stone = (x: number, z: number) => place(ellipsoid(0.15, 0.05, 0.15, C.parchment, 14), [x, 0.07, z]);
-  return merge(
-    land(2.6),
-    stone(-0.62, 0.3), stone(-0.2, 0.44), stone(0.25, 0.3),
-    place(capsule(0.025, 0.62, C.trunk), [0.55, 0.36, 0.0]),
-    place(paint(new THREE.BoxGeometry(0.34, 0.2, 0.03), C.pennant), [0.74, 0.6, 0.0]),
-    small(treeGeo(15), 0.26, [-0.5, 0.04, -0.45]),
-    small(treeGeo(39), 0.24, [0.1, 0.04, -0.62]),
-  );
-}
-
-export function createChart(plan: ChartPlan): Diorama {
-  const scene = new THREE.Scene();
-  const palette = PALETTES.goldenNoon;
-  const table = new THREE.PlaneGeometry(240, 240).rotateX(-Math.PI / 2);
-  scene.add(new THREE.Mesh(paint(table, C.shipTrim), toonMaterial({ tag: TAG.prop, flag: -0.45, wood: true })));
+export function createChart(plan: ChartPlan): Chart {
+  const root = new THREE.Group();
+  root.matrixAutoUpdate = false;
+  root.visible = false;
   const paper = toonMaterial({ tag: TAG.tile, flag: -0.92 });
   const sheet = new THREE.Mesh(paint(new THREE.BoxGeometry(1, 0.06, 1), (_p, n) => (n.y > 0.5 ? C.parchment : C.parchmentEdge)), paper);
   sheet.position.y = 0.03;
@@ -106,11 +80,14 @@ export function createChart(plan: ChartPlan): Diorama {
   const ruleGeo = place(paint(new THREE.BoxGeometry(1, 0.012, 0.035), C.parchmentEdge), [0, 0.066, 0]);
   const drawnMat = toonMaterial({ tag: TAG.prop, flag: -0.6 });
   const rules = [0, 1, 2, 3].map(() => new THREE.Mesh(ruleGeo, drawnMat));
-  scene.add(sheet, ...rolls, ...rules);
+  root.add(sheet, ...rolls, ...rules);
 
-  const isles = { home: new THREE.Mesh(homeToy(), drawnMat), area: new THREE.Mesh(areaToy(), drawnMat) };
-  // Places not found yet: the bare shape of each, the colour of the paper's edge.
-  const blanks = [3.1, 5.4, 0.6].map((seed) => new THREE.Mesh(drawn(seed, () => C.parchmentEdge), drawnMat));
+  // Places not found yet are the bare shape of each, the colour of the paper's edge.
+  const areas = CHART_SEEDS.map((seed, i) => {
+    const found = plan.isles[i];
+    return new THREE.Mesh(found ? areaToy(seed, found.place.chart, found.finished) : drawn(seed, () => C.parchmentEdge), drawnMat);
+  });
+  const isles = { home: new THREE.Mesh(homeToy(), drawnMat), area: areas[plan.isle] };
   const compass = new THREE.Mesh(compassGeo(), drawnMat);
   const waveGeo = wavesGeo();
   const waves = SHEET.wide.waves.map(() => new THREE.Mesh(waveGeo, drawnMat));
@@ -120,8 +97,7 @@ export function createChart(plan: ChartPlan): Diorama {
   const dashes = Array.from({ length: DASHES }, () => ({ mesh: new THREE.Mesh(dashGeo, drawnMat), size: new Spring(1), gone: false }));
   const toy = new THREE.Group();
   toy.add(shipModel());
-  toy.scale.setScalar(TOY);
-  scene.add(isles.home, isles.area, compass, cross, toy, ...blanks, ...waves, ...dashes.map((d) => d.mesh));
+  root.add(isles.home, compass, cross, toy, ...areas, ...waves, ...dashes.map((d) => d.mesh));
 
   const from: Port = plan.to === 'home' ? 'area' : 'home';
   // The line between them, bowed: where it starts, where it bends toward, where it ends.
@@ -135,52 +111,74 @@ export function createChart(plan: ChartPlan): Diorama {
   };
   const spot = new THREE.Vector3();
   const next = new THREE.Vector3();
+  const eye = new THREE.Vector3();
+  const view = new THREE.Matrix4();
+  let mode: LayoutMode = 'wide';
+  /** How much of the sheet lies open, from its middle to either roll. */
+  let half = 0;
   let isle = 1;
   let t = 0;
-  let told = false;
   let there = false;
-  const finish = () => {
-    if (told) return;
-    told = true;
-    plan.done();
+
+  /** Hang it square in front of the camera, as big as the screen allows. */
+  const hang = (camera: THREE.PerspectiveCamera) => {
+    const { box, tilt } = SHEET[mode];
+    const center = spot.set(0, 0.2, 0);
+    const el = THREE.MathUtils.degToRad(tilt);
+    const d = fitDistance({ center, width: box[0], height: box[1], elevation: tilt }, camera.fov, camera.aspect, MARGIN);
+    eye.set(0, Math.sin(el), Math.cos(el)).multiplyScalar(d).add(center);
+    // Seen from `eye` it fills the box; shrunk toward the camera it looks the same, and is in front of everything.
+    root.matrix.copy(view.lookAt(eye, center, UP).setPosition(eye)).invert();
+    root.matrix.premultiply(view.makeScale(NEAR / d, NEAR / d, NEAR / d));
+    root.matrixWorldNeedsUpdate = true;
+  };
+
+  /** Lay the sheet open by `k` of its length: sideways on a wide screen, downward on a tall one. */
+  const unroll = (k: number) => {
+    const [w, d] = SHEET[mode].size;
+    const tall = mode === 'tall';
+    const span = Math.max(0.01, (tall ? d : w) * k);
+    half = span / 2;
+    sheet.scale.set(tall ? w : span, 1, tall ? span : d);
+    rolls.forEach((r, i) => {
+      const edge = (i ? 1 : -1) * (half + 0.1);
+      r.position.set(tall ? 0 : edge, 0.2, tall ? edge : 0);
+    });
+    rules.forEach((r, i) => {
+      const across = i < 2;
+      const side = i % 2 ? 1 : -1;
+      // Two run the way it unrolls and grow with it; the other two ride just inside the rolls.
+      const grows = across !== tall;
+      const off = grows ? (tall ? w : d) / 2 - 0.22 : half - 0.22;
+      r.visible = span > 0.7;
+      r.position.set(across ? 0 : side * off, 0, across ? side * off : 0);
+      r.scale.set(Math.max(0.01, (grows ? span : tall ? w : d) - 0.44), 1, 1);
+    });
+  };
+  /** Size something drawn on the sheet: nothing until the paper is open under all of it, about `SHORE` times `x` across. */
+  const ink = (o: THREE.Object3D, x: number, y = x, z = x) => {
+    const tall = mode === 'tall';
+    const full = SHEET[mode].size[tall ? 1 : 0] / 2;
+    const needs = Math.min(Math.abs(tall ? o.position.z : o.position.x) + SHORE * x, full - 0.3);
+    const k = Math.max(1e-3, THREE.MathUtils.clamp((half - needs) / 0.3, 0, 1));
+    o.scale.set(x * k, y * k, z * k);
   };
 
   return {
-    name: 'chart',
-    palette,
-    scene,
-    touchables: [],
-    framing(m: LayoutMode): Framing {
-      return m === 'tall'
-        ? { center: new THREE.Vector3(0, 0.2, 0), width: 5.0, height: 7.9, elevation: 74, fov: 34 }
-        : { center: new THREE.Vector3(0, 0.2, 0), width: 11.2, height: 5.3, elevation: 68 };
-    },
+    root,
     layout(m) {
+      mode = m;
       const s = SHEET[m];
       const [w, d] = s.size;
       const on = ([u, v]: number[], y = 0.06) => new THREE.Vector3((u * w) / 2, y, (v * d) / 2);
-      sheet.scale.set(w, 1, d);
-      // It unrolls sideways on a wide screen and downward on a tall one.
-      rolls.forEach((r, i) => {
-        const side = i ? 1 : -1;
+      rolls.forEach((r) => {
         r.rotation.y = m === 'tall' ? Math.PI / 2 : 0;
-        r.position.set(m === 'tall' ? 0 : side * (w / 2 + 0.1), 0.2, m === 'tall' ? side * (d / 2 + 0.1) : 0);
         r.scale.set(1, 1, (m === 'tall' ? w : d) + 0.3);
       });
-      rules.forEach((r, i) => {
-        const across = i < 2;
-        const side = i % 2 ? 1 : -1;
-        r.rotation.y = across ? 0 : Math.PI / 2;
-        r.position.set(across ? 0 : side * (w / 2 - 0.22), 0, across ? side * (d / 2 - 0.22) : 0);
-        r.scale.set((across ? w : d) - 0.44, 1, 1);
-      });
+      rules.forEach((r, i) => (r.rotation.y = i < 2 ? 0 : Math.PI / 2));
       isle = s.isle;
       isles.home.position.copy(on(s.home));
-      isles.area.position.copy(on(s.area));
-      blanks.forEach((mesh, i) => {
-        mesh.position.copy(on(s.blank[i]));
-        mesh.scale.set(s.blank[i][2], 1, s.blank[i][2]);
-      });
+      areas.forEach((mesh, i) => mesh.position.copy(on(s.areas[i])));
       compass.position.copy(on(s.compass, 0.07));
       waves.forEach((mesh, i) => mesh.position.copy(on(s.waves[i], 0.07)));
 
@@ -198,23 +196,26 @@ export function createChart(plan: ChartPlan): Diorama {
         dash.mesh.rotation.y = heading(k);
       });
     },
-    enter() {},
-    pointer(phase) {
-      if (phase === 'down' && t > 0.5) finish();
-    },
-    update(dt) {
+    update(dt, camera) {
+      if (!root.visible) {
+        root.visible = true;
+        sfx.whoosh();
+      }
       t += dt;
-      const k = THREE.MathUtils.smootherstep(Math.min(1, Math.max(0, t - 0.35) / CROSSING), 0, 1);
+      hang(camera);
+      unroll(THREE.MathUtils.smootherstep(t / UNROLL, 0, 1));
+      const k = THREE.MathUtils.smootherstep((t - UNROLL) / CROSSING, 0, 1);
       toy.rotation.y = heading(k);
       at(k, toy.position);
-      toy.position.y += 0.26 * TOY + 0.02 + Math.abs(Math.sin(t * 7)) * 0.03 * (k > 0 && k < 1 ? 1 : 0);
-      toy.rotation.z = Math.sin(t * 5) * 0.05;
+      toy.position.y += 0.26 * TOY + 0.02 + Math.abs(Math.sin(t * 12)) * 0.03 * (k > 0 && k < 1 ? 1 : 0);
+      toy.rotation.z = Math.sin(t * 8) * 0.05;
+      ink(toy, TOY);
       dashes.forEach((d, i) => {
         if (!d.gone && k > (i + 0.5) / (DASHES + 0.8)) {
           d.gone = true;
           sfx.hop();
         }
-        d.mesh.scale.setScalar(Math.max(0.001, d.size.step(d.gone ? 0 : 1, 260, 22, dt)));
+        ink(d.mesh, Math.max(0.001, d.size.step(d.gone ? 0 : 1, 260, 22, dt)));
       });
       if (k >= 1 && !there) {
         there = true;
@@ -222,10 +223,17 @@ export function createChart(plan: ChartPlan): Diorama {
         sfx.pop();
       }
       const s = bounce.step(1, 170, 11, dt);
-      isles[from].scale.setScalar(isle);
-      isles[plan.to].scale.set(isle * (2 - s), isle * s, isle * (2 - s));
-      cross.scale.setScalar(isle * (1 + 0.12 * Math.sin(t * 5)));
-      if (t > 0.35 + CROSSING + HOLD) finish();
+      areas.forEach((mesh, i) => {
+        // A found island is drawn bigger than its blank, which lies flat at the size the sheet gives it.
+        const size = i < plan.isles.length ? isle : SHEET[mode].areas[i][2];
+        if (mesh !== isles[plan.to]) ink(mesh, size, i < plan.isles.length ? size : 1, size);
+      });
+      if (from === 'home') ink(isles.home, isle);
+      ink(isles[plan.to], isle * (2 - s), isle * s, isle * (2 - s));
+      ink(cross, isle * (1 + 0.12 * Math.sin(t * 5)));
+      ink(compass, 1);
+      for (const w of waves) ink(w, 1);
+      return t > UNROLL + CROSSING + HOLD;
     },
   };
 }

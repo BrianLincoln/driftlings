@@ -54,7 +54,6 @@ function build(s: Species, c: Coat): CreatureGeo {
   for (const side of [-1, 1]) {
     if (s.arms === 'nub') parts.push(place(ellipsoid(0.06, 0.11, 0.06, c.coat), [side * (w - 0.02), mid, 0.04], [0, 0, side * 0.5]));
     if (s.arms === 'flipper') parts.push(place(ellipsoid(0.05, 0.15, 0.09, c.accent), [side * (w + 0.02), mid, 0.02], [0, 0, side * 0.85]));
-    if (s.arms === 'wing') parts.push(place(ellipsoid(0.04, 0.2, 0.13, c.accent), [side * (w + 0.01), mid + 0.02, -0.02], [0.2, 0, side * 0.35]));
   }
   if (s.tail === 'pom') parts.push(place(ellipsoid(0.09, 0.09, 0.09, c.belly), [0, 0.15, -w]));
   if (s.tail === 'bush') parts.push(place(puff(0.17, c.accent, 5, 0.2, 16), [0, 0.2, -w - 0.08]));

@@ -4,16 +4,17 @@ import { unlockAudio } from './audio/sound';
 import { preloadClips } from './audio/narrate';
 import { CONTENT, soundClip } from './content/content';
 import { installHooks } from './debug/hooks';
-import { Game, SLEEPER } from './game/game';
+import { BIG_ONES, OPEN_AREAS, closerOf, isFinished, lessonsOf } from './game/areas';
+import { Game } from './game/game';
 import { openStore } from './game/store';
-import { rescueIndex } from './learn/curriculum';
+import { findNode, rescueIndex, type AreaDef } from './learn/curriculum';
 import { blend, graphemeOf, shapeOf } from './learn/skills';
 import { rescue, type Rescue } from './cast/species';
 import { createAreaMap, type MapNode } from './scenes/areaMap';
-import { createChart } from './scenes/chart';
 import { createExerciseScene } from './scenes/exerciseScene';
 import { createHomeIsland } from './scenes/homeIsland';
 import { createLandfall } from './scenes/landfall';
+import { PLACES } from './scenes/places';
 import { createVoyage, type Port } from './scenes/voyage';
 import type { Diorama } from './scenes/diorama';
 import { Stage } from './stage/stage';
@@ -48,30 +49,38 @@ async function boot(): Promise<void> {
   ui.addEventListener('pointerdown', unlockAudio);
 
   const bar = new Bar(ui, (b) => void (b === 'home' ? goHome() : goMap(null)));
-  preloadClips(game.area.nodes.flatMap((n) => n.teaches.map(graphemeOf)).filter((g): g is string => !!g).map(soundClip));
 
-  /** Where the ship lies. Getting to the other place means sailing there. */
+  /** `?area=i1a2` goes to that area whatever the progress: for looking at one without playing up to it. */
+  const pinned = OPEN_AREAS.find((a) => a.id === params.get('area')) ?? null;
+  const frontier = (): AreaDef => pinned ?? game.area;
+  /** Where the ship lies, and the island it is at or was last at. Getting to the other place means sailing there. */
   let port: Port = 'home';
+  let here = frontier();
   let sailing = false;
 
+  const crewOf = (area: AreaDef): Rescue[] => lessonsOf(area).map((n) => rescue(rescueIndex(n.id)));
   /** The little ones waiting on deck: everyone woken so far on an island that is not finished with. */
-  const onDeck = (): Rescue[] => {
-    const nodes = game.area.nodes;
-    if (game.done.has(nodes[nodes.length - 1].id)) return [];
-    return nodes.filter((n) => n.kind === 'lesson' && game.done.has(n.id)).map((n) => rescue(rescueIndex(n.id)));
+  const onDeck = (area: AreaDef): Rescue[] =>
+    isFinished(area, game.done) ? [] : lessonsOf(area).filter((n) => game.done.has(n.id)).map((n) => rescue(rescueIndex(n.id)));
+  /** What the chart shows on a crossing to or from `area`: every island up to it, ticked if finished. */
+  const charted = (area: AreaDef, done = game.done) => {
+    const isle = OPEN_AREAS.indexOf(area);
+    return { isle, isles: OPEN_AREAS.slice(0, isle + 1).map((a) => ({ place: PLACES[a.id], finished: isFinished(a, done) })) };
   };
-  const everyone = (): Rescue[] => game.area.nodes.filter((n) => n.kind === 'lesson').map((n) => rescue(rescueIndex(n.id)));
+  const allDone = (area: AreaDef) => new Set([...game.done, ...OPEN_AREAS.slice(0, OPEN_AREAS.indexOf(area) + 1).flatMap((a) => a.nodes.map((n) => n.id))]);
 
   /** Show a scene and wait until it says it is over. */
   const beat = (make: (done: () => void) => Diorama) => new Promise<void>((over) => void stage.show(make(over)));
 
-  /** The crossing: cast off, the chart, and landfall. `big` rides the raft; `ashore` means the crew are home to stay. */
-  async function sail(to: Port, crew: Rescue[], big: Rescue | null, ashore = false): Promise<void> {
+  /**
+   * The crossing between home and `area`: cast off, and the chart unrolls over the ship and shows the trip.
+   * `big` rides the raft. `ashore` means the crew are home to stay, and only then do we watch them land.
+   */
+  async function sail(to: Port, area: AreaDef, crew: Rescue[], big: Rescue | null, ashore = false): Promise<void> {
     const from: Port = to === 'home' ? 'area' : 'home';
     bar.show([], null);
-    await beat((done) => createVoyage({ beat: 'leave', isle: from, crew, big, done }));
-    await beat((done) => createChart({ to, done }));
-    await beat((done) => (to === 'home' ? createLandfall({ crew, ashore, big, done }) : createVoyage({ beat: 'arrive', isle: to, crew, big, done })));
+    await beat((done) => createVoyage({ isle: from, place: PLACES[area.id], crew, big, chart: { to, ...charted(area) }, done }));
+    if (ashore) await beat((done) => createLandfall({ crew, ashore, big, done }));
   }
 
   /** `withAll` is the trip home at the end of an island: everyone aboard, the big one in tow. */
@@ -79,7 +88,7 @@ async function boot(): Promise<void> {
     if (sailing) return;
     if (!instant && port === 'area') {
       sailing = true;
-      await sail('home', withAll ? everyone() : onDeck(), withAll ? SLEEPER : null, withAll);
+      await sail('home', here, withAll ? crewOf(here) : onDeck(here), withAll ? BIG_ONES[here.id].who : null, withAll);
       sailing = false;
     }
     port = 'home';
@@ -87,14 +96,14 @@ async function boot(): Promise<void> {
     // `?demo` fills the island with a sample crowd, to see where it is heading.
     const demo = params.has('demo');
     const residents = demo ? Array.from({ length: 24 }, (_, i) => i) : home.residents;
-    bar.show(['home', 'map'], 'home', game.area.nodes.some((n) => !game.done.has(n.id)) ? 'map' : null);
+    bar.show(['home', 'map'], 'home', OPEN_AREAS.some((a) => !isFinished(a, game.done)) ? 'map' : null);
     await stage.show(
       createHomeIsland({
         residents,
         welcomed: demo ? residents.length : home.welcomed,
         onWelcomed: (n) => game.welcome(n),
-        aboard: onDeck(),
-        big: demo || game.done.has(game.area.nodes[game.area.nodes.length - 1].id) ? [SLEEPER] : [],
+        aboard: onDeck(frontier()),
+        big: OPEN_AREAS.filter((a) => demo || isFinished(a, game.done)).map((a) => BIG_ONES[a.id].who),
       }),
       instant,
     );
@@ -102,15 +111,18 @@ async function boot(): Promise<void> {
 
   async function goMap(fresh: string | null, instant = false, done = game.done, friends = false): Promise<void> {
     if (sailing) return;
+    // From home the ship always makes for the newest island; once at one, it stays until it has been home.
+    if (port === 'home') here = frontier();
+    const area = here;
     if (!instant && port === 'home') {
       sailing = true;
-      await sail('area', onDeck(), null);
+      await sail('area', area, onDeck(area), null);
       sailing = false;
     }
     port = 'area';
-    const nodes = game.area.nodes;
+    preloadClips(area.nodes.flatMap((n) => n.teaches.map(graphemeOf)).filter((g): g is string => !!g).map(soundClip));
+    const nodes = area.nodes;
     const currentId = nodes.find((n) => !done.has(n.id))?.id ?? null;
-    const closer = nodes[nodes.length - 1];
     const mapNodes: MapNode[] = nodes.map((n) => {
       const letter = n.teaches.map(graphemeOf).find((g) => g);
       return {
@@ -126,9 +138,10 @@ async function boot(): Promise<void> {
     await stage.show(
       createAreaMap({
         nodes: mapNodes,
-        sleeper: SLEEPER,
+        place: PLACES[area.id],
+        big: BIG_ONES[area.id],
         fresh,
-        campEmpty: done.has(closer.id) && !friends,
+        campEmpty: isFinished(area, done) && !friends,
         sailed: friends ? () => void goHome(false, true) : undefined,
         onNode: (id) => void play(id, game.planNode(id)),
       }),
@@ -138,7 +151,8 @@ async function boot(): Promise<void> {
 
   async function play(nodeId: string, plan: ReturnType<Game['planNode']>, instant = false): Promise<void> {
     if (!plan || plan.rounds.length === 0) return;
-    const closer = game.area.nodes[game.area.nodes.length - 1].id;
+    here = findNode(nodeId)?.area ?? here;
+    const closer = closerOf(here).id;
     port = 'area';
     bar.show(['back'], null);
     await stage.show(
@@ -157,25 +171,32 @@ async function boot(): Promise<void> {
   }
 
   const hooks = installHooks(stage, async (name) => {
+    // The scenes below show the newest island (or the `?area=` one) at a moment in its story, whatever the real progress.
+    const area = frontier();
+    const [place, big] = [PLACES[area.id], BIG_ONES[area.id].who];
     if (name === 'home') await goHome(true);
     else if (name === 'map') await goMap(null, true);
     else if (name === 'sleeper') {
-      // The moment the last little one is woken, whatever the real progress: the sleeper is about to block the way.
-      const lessons = game.area.nodes.slice(0, -1).map((n) => n.id);
+      // The moment the last little one is woken: the big one is about to block the way.
+      const lessons = lessonsOf(area).map((n) => n.id);
       await goMap(lessons[lessons.length - 1], true, new Set(lessons));
     } else if (name === 'friends') {
-      // The moment after the sleeper's level: the plank goes back and everyone boards.
-      await goMap(null, true, new Set(game.area.nodes.map((n) => n.id)), true);
+      // The moment after the big one's level: the plank goes back and everyone boards.
+      await goMap(null, true, allDone(area), true);
     } else if (name === 'leave') {
       // One end of the trip home with everyone aboard, held for a look.
-      await stage.show(createVoyage({ beat: 'leave', isle: 'area', crew: everyone(), big: SLEEPER, done: () => {} }), true);
-    } else if (name === 'arrive') await stage.show(createLandfall({ crew: everyone(), ashore: true, big: SLEEPER, done: () => {} }), true); else if (name === 'chart') await stage.show(createChart({ to: 'home', done: () => {} }), true);
+      await stage.show(createVoyage({ isle: 'area', place, crew: crewOf(area), big, chart: null, done: () => {} }), true);
+    } else if (name === 'arrive') await stage.show(createLandfall({ crew: crewOf(area), ashore: true, big, done: () => {} }), true);
+    else if (name === 'chart') {
+      // The same, with the chart unrolled over it and left open.
+      await stage.show(createVoyage({ isle: 'area', place, crew: crewOf(area), big, chart: { to: 'home', ...charted(area, allDone(area)) }, done: () => {} }), true);
+    }
     else if (name === 'sail') {
       // The whole crossing home, then home.
       port = 'area';
+      here = area;
       await goHome(false, true);
-    }
-    else await play(name, game.planNode(name), true);
+    } else await play(name, game.planNode(name), true);
   }, game);
 
   const start = params.get('scene');

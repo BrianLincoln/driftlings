@@ -1,4 +1,4 @@
-import type { BlendItem, BlendStage, Content, MeetItem, PickLetterItem } from './items';
+import type { BlendItem, BlendStage, CatchItem, Content, MeetItem, PickLetterItem } from './items';
 import type { SkillState } from './model';
 import { shuffle, weighted, type Rng } from './rng';
 import { blend, gpc, graphemeOf, shapeOf, type SkillId } from './skills';
@@ -40,19 +40,25 @@ export function meetItem(grapheme: string, ctx: GenContext): MeetItem | null {
   return { kind: 'meet', key: key('meet', grapheme), grapheme };
 }
 
-export function pickLetterItem(target: string, ctx: GenContext, nChoices = 3): PickLetterItem | null {
-  if (!ctx.known.has(gpc(target)) || !ctx.content.hasSound(target)) return null;
+/** Up to `n` letters to set beside the target: taught ones and foils, never the target itself. */
+function wrongLetters(target: string, n: number, ctx: GenContext): string[] {
   const taught = [...ctx.known].map(graphemeOf).filter((g): g is string => !!g && g !== target);
   let pool = [...new Set([...taught, ...ctx.foils.filter((g) => g !== target)])];
-  if (pool.length === 0) return null;
   const confused = ctx.confusions.get(target);
   const wrong: string[] = [];
-  while (wrong.length < nChoices - 1 && pool.length > 0) {
+  while (wrong.length < n && pool.length > 0) {
     // Letters the child has mixed up with this one before are the most useful wrong choices.
     const pick = weighted(pool, (g) => 1 + 3 * (confused?.get(g) ?? 0), ctx.rng);
     wrong.push(pick);
     pool = pool.filter((g) => g !== pick);
   }
+  return wrong;
+}
+
+export function pickLetterItem(target: string, ctx: GenContext, nChoices = 3): PickLetterItem | null {
+  if (!ctx.known.has(gpc(target)) || !ctx.content.hasSound(target)) return null;
+  const wrong = wrongLetters(target, nChoices - 1, ctx);
+  if (wrong.length === 0) return null;
   return {
     kind: 'pick-letter',
     key: key('pick', target),
@@ -60,6 +66,14 @@ export function pickLetterItem(target: string, ctx: GenContext, nChoices = 3): P
     choices: shuffle([target, ...wrong], ctx.rng),
     skills: [gpc(target)],
   };
+}
+
+/** The letter is asked for by name and says its sound when caught, so it needs both clips. */
+export function catchItem(target: string, ctx: GenContext, count = 4, nOthers = 2): CatchItem | null {
+  if (!ctx.known.has(gpc(target)) || !ctx.content.hasSound(target) || !ctx.content.hasName(target)) return null;
+  const others = wrongLetters(target, nOthers, ctx);
+  if (others.length === 0) return null;
+  return { kind: 'catch', key: key('catch', target), target, others, count, skills: [], supports: [gpc(target)] };
 }
 
 /** Words the child can sound out letter by letter: every letter taught and heard. */

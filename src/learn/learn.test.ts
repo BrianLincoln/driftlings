@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ISLAND_1, allNodes, currentNode, knownSkills, rescueIndex, rescuesHome } from './curriculum';
 import type { Attempt } from './events';
-import { askableGraphemes, blendItem, decodableWords, pickLetterItem, type GenContext } from './generator';
+import { askableGraphemes, blendItem, catchItem, decodableWords, pickLetterItem, type GenContext } from './generator';
 import type { Content, Item, Round } from './items';
 import { TUNING, applyOutcome, confusions, emptyState, foldSkills, isDue, quality, statusOf, type SkillState } from './model';
 import { seeded } from './rng';
@@ -14,7 +14,7 @@ const T0 = 1_700_000_000_000;
 
 const WORDS = ['am', 'at', 'mat', 'sat', 'map', 'pin', 'ant'];
 function content(sounds: string, words = WORDS): Content {
-  return { hasSound: (g) => sounds.includes(g), words: words.map((text) => ({ text, graphemes: [...text] })) };
+  return { hasSound: (g) => sounds.includes(g), hasName: (g) => sounds.includes(g) && g !== 'n', words: words.map((text) => ({ text, graphemes: [...text] })) };
 }
 
 function ctxFor(done: string[], opts: Partial<GenContext> & { seed?: number } = {}): GenContext {
@@ -149,6 +149,15 @@ describe('skill model', () => {
     expect(bad).toEqual(before);
   });
 
+  it('credits a catch a little and never counts a slip against the letter', () => {
+    const caught = foldSkills([attempt(gpc('m'), T0), attempt(gpc('m'), T0 + 1, { exercise: 'catch', skills: [], supports: [gpc('m')] })]);
+    const slipped = foldSkills([attempt(gpc('m'), T0), attempt(gpc('m'), T0 + 1, { exercise: 'catch', skills: [], supports: [gpc('m')], correct: false, answer: 's' })]);
+    const before = foldSkills([attempt(gpc('m'), T0)]).get(gpc('m'))!;
+    expect(caught.get(gpc('m'))!.strength).toBeGreaterThan(before.strength);
+    expect(caught.get(gpc('m'))!.seen).toBe(1);
+    expect(slipped.get(gpc('m'))).toEqual(before);
+  });
+
   it('slows credit only against the child\'s own speed', () => {
     const fast = [0, 1, 2, 3, 4].map((i) => attempt(gpc('m'), T0 + i, { ms: 1000 }));
     const slow = attempt(gpc('a'), T0 + 10, { ms: 9000 });
@@ -201,6 +210,15 @@ describe('generator', () => {
     expect(words).toEqual(['am']);
   });
 
+  it('sends a taught letter falling among others, and only if its name can be said', () => {
+    const item = catchItem('a', ctxFor([ids[0]], { foils: ['m', 's'] }))!;
+    expect(item.others.sort()).toEqual(['m', 's']);
+    expect(item.supports).toEqual([gpc('a')]);
+    expect(catchItem('a', ctxFor([ids[0]]))).toBeNull(); // nothing to watch out for
+    expect(catchItem('m', ctxFor([ids[0]], { foils: ['m'] }))).toBeNull(); // not taught
+    expect(catchItem('n', ctxFor(allNodes().slice(0, 10).map((x) => x.id)))).toBeNull(); // no name clip
+  });
+
   it('builds a word item from its letters', () => {
     const item = blendItem('sat', ctxFor(ids.slice(0, 5)))!;
     expect(item.graphemes).toEqual(['s', 'a', 't']);
@@ -219,6 +237,10 @@ describe('scheduler', () => {
   const legal = (item: Item, ctx: GenContext) => {
     if (item.kind === 'meet') return ctx.known.has(gpc(item.grapheme)) && sounds.includes(item.grapheme);
     if (item.kind === 'pick-letter') return ctx.known.has(gpc(item.target)) && sounds.includes(item.target) && item.choices.includes(item.target);
+    if (item.kind === 'catch') {
+      return ctx.known.has(gpc(item.target)) && sounds.includes(item.target) && item.target !== 'n' &&
+        item.others.length > 0 && !item.others.includes(item.target) && item.skills.length === 0;
+    }
     return item.graphemes.every((g) => ctx.known.has(gpc(g)) && sounds.includes(g)) &&
       (item.stage === 'read' || ctx.known.has(blend(shapeOf(item.graphemes)))) && WORDS.includes(item.word);
   };
@@ -242,7 +264,7 @@ describe('scheduler', () => {
 
   it('teaches the first letter with nothing older to mix in', () => {
     const rounds = planLesson(A1.nodes[0], ctxFor([ids[0]], { foils: ['m', 's'] }), T0);
-    expect(rounds.map((r) => r.exercise)).toEqual(['meet', 'pick-letter']);
+    expect(rounds.map((r) => r.exercise)).toEqual(['meet', 'pick-letter', 'catch']);
     expect(rounds[1].items.every((i) => i.kind === 'pick-letter' && i.target === 'a')).toBe(true);
     expect(rounds[1].items.length).toBe(SIZES.soloPicks);
     expect(SIZES.soloPicks).toBeLessThan(SIZES.lessonPicks);

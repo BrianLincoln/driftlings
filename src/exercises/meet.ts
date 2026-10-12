@@ -1,19 +1,24 @@
-import { hasClip, promptClip, soundClip, type ClipId } from '../content/content';
+import { hasClip, keywordClip, nameClip, promptClip, soundClip, type ClipId } from '../content/content';
 import type { MeetItem } from '../learn/items';
 import type { LetterTile } from '../scenes/letterTile';
 import type { ExerciseModule } from './contract';
 
-// Meet a letter: it appears, the narrator names it and says its sound, and
-// after a beat the lesson moves on. Nothing to tap and nothing scored; the
-// questions that follow are where the child answers.
+// Meet a letter: it appears, the narrator names it, says its sound and a word
+// that starts with it, and after a beat the lesson moves on. Nothing to tap and
+// nothing scored; the questions that follow are where the child answers.
 
-const nameClip = (g: string): ClipId => `letters/${g}-name`;
+/** "Like in [word]", for a letter that has a keyword recorded. */
+const likeIn = (g: string): ClipId[] => {
+  const word = keywordClip(g);
+  return word ? [promptClip('like-in'), word] : [];
+};
+const BEFORE_LIKE_IN = 0.45;
 
 export const meet: ExerciseModule<MeetItem> = {
   kind: 'meet',
   clips: (items) => [
     promptClip('this-is-the-letter'), promptClip('it-makes-the-sound'), promptClip('listen'),
-    ...items.flatMap((i) => [soundClip(i.grapheme), nameClip(i.grapheme)]),
+    ...items.flatMap((i) => [soundClip(i.grapheme), nameClip(i.grapheme), ...likeIn(i.grapheme)]),
   ],
 
   start(items, kit, hooks) {
@@ -49,14 +54,16 @@ export const meet: ExerciseModule<MeetItem> = {
         if (!told && t > 0.6) {
           told = true;
           const g = tile.text;
-          // "This is the letter [name]. It makes the sound [sound]."
+          // "This is the letter [name]. It makes the sound [sound]. Like in [word]."
           const said = kit.line(
             hasClip(nameClip(g))
               ? [promptClip('this-is-the-letter'), nameClip(g), promptClip('it-makes-the-sound'), soundClip(g)]
               : [promptClip('listen'), soundClip(g)],
           );
           soundAt = t + said.lastAt;
-          leaveAt = t + said.end + 0.8; // a beat, then on to the questions
+          const example = likeIn(g);
+          const end = example.length ? kit.line(example, said.end + BEFORE_LIKE_IN).end : said.end;
+          leaveAt = t + end + 0.8; // a beat, then on to the questions
         }
         if (t >= soundAt) {
           soundAt = Infinity;

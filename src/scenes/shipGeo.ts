@@ -39,6 +39,10 @@ export const deckY = (x: number) => {
   const up = CASTLES.find(([from, to]) => x >= from && x <= to);
   return up ? sheer(x) + up[2] - 0.07 : sheer(x) - RAIL;
 };
+const MAINMAST = 0.05;
+const MAST = 1.8;
+/** Where the pennant flies: partway up the staff that tops the mainmast. */
+export const PENNANT: [number, number, number] = [MAINMAST + 0.01, deckY(MAINMAST) + MAST + 0.17, 0];
 
 interface Section {
   hw: number;
@@ -171,16 +175,16 @@ export function shipGeo(): { wood: THREE.BufferGeometry; rig: THREE.BufferGeomet
   for (const x of [-1.45, -1.15]) for (const s of [-1, 1]) lit.push(window(x, sheer(x) + 0.14, s * beam(x) * 1.02, true));
   for (const z of [-0.2, 0, 0.2]) lit.push(window(-HALF * 1.0 - 0.005, sheer(-HALF) + 0.16, z, false));
 
-  const top = 1.8;
+  const top = MAST;
   const wood = merge(hull, ...CASTLES.map(([from, to, rise]) => castle(from, to, rise)));
   const rig = merge(
     ...lit,
-    ...mast(0.05, deckY(0.05), top, [[1.18, 1.5, 0.62], [1.7, 1.1, 0.44]]),
+    ...mast(MAINMAST, deckY(MAINMAST), top, [[1.18, 1.5, 0.62], [1.7, 1.1, 0.44]]),
     ...mast(FOREMAST, deckY(FOREMAST), top * 0.8, [[0.92, 1.1, 0.48], [1.34, 0.8, 0.36]]),
     ...mast(-1.3, deckY(-1.3), top * 0.62, [[0.96, 0.9, 0.5]]),
     place(capsule(0.03, 0.85, C.trunk), [1.9, sheer(HALF) + 0.22, 0], [0, 0, -1.15]),
-    place(ellipsoid(0.11, 0.05, 0.11, C.shipTrim, 14), [0.05, deckY(0.05) + top * 0.97, 0]),
-    place(paint(new THREE.BoxGeometry(0.36, 0.15, 0.025), C.pennant), [0.25, deckY(0.05) + top + 0.1, 0]),
+    place(ellipsoid(0.11, 0.05, 0.11, C.shipTrim, 14), [MAINMAST, deckY(MAINMAST) + top * 0.97, 0]),
+    place(capsule(0.012, 0.3, C.trunk), [MAINMAST, PENNANT[1] - 0.04, 0]),
   );
   return { wood, rig };
 }

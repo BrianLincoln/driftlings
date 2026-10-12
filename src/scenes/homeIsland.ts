@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { PALETTES } from '../gfx/palette';
-import { buildIsland, buildWater, islandHeight, type IslandShape } from '../gfx/ground';
+import { buildIsland, buildWater, islandHeight } from '../gfx/ground';
 import { buildSky } from '../gfx/sky';
 import { hash } from '../gfx/geo';
 import { pushBlob } from '../gfx/uniforms';
@@ -12,6 +12,7 @@ import type { Framing, LayoutMode } from '../stage/framing';
 import type { Touchable } from '../stage/touch';
 import type { Diorama } from './diorama';
 import { SIZE } from './blockade';
+import { HOME_SHAPE } from './places';
 import { Ship } from './ship';
 import { FLOWER_MAT, PROP_MAT, buildFarIsles, bushGeo, flowersGeo, rockGeo, treeGeo } from './props';
 
@@ -34,7 +35,6 @@ export interface HomePlan {
   big: Rescue[];
 }
 
-export const HOME_SHAPE: IslandShape = { radius: 10.5, rise: 0.7, sand: 1.3, seed: 1.7 };
 /** The band of the island the camera looks at, and creatures live in. */
 const LIVE = { halfWidth: 7.6, zBack: -6.2, zFront: 0.6 };
 const CENTER_Z = -2.6;

@@ -12,25 +12,35 @@ import { BOW, STEP_UP, type Ship } from './ship';
 // THE PLANK: the last creature has gone aboard. The camera closes in on the
 // companion; it gives the sleeper a sideways look and sets off for the plank,
 // round the stones like everyone else. The sleeper wakes, bounds over, lands
-// at the foot of the plank, reaches out and lifts it away. Everyone aboard is
-// horrified.
+// at the foot of the plank. The camera cuts in on the plank where it lies
+// against the rail; out come the arms, a little slower than life, and it
+// starts up off the ship. Back to the two of them as it goes up over the
+// sleeper's head. Everyone aboard is horrified.
 //
 // FRIENDS: the sleeper has been won over. It lays the plank back, everyone
 // cheers, it bounds onto the raft astern, the companion goes up the plank,
 // and they are ready to sail.
 
-type Beat = 'none' | 'wait' | 'eye' | 'go' | 'wake' | 'drop' | 'land' | 'crew' | 'bud' | 'back' | 'board' | 'follow' | 'sail';
+type Beat = 'none' | 'wait' | 'eye' | 'go' | 'wake' | 'drop' | 'land' | 'take' | 'up' | 'crew' | 'bud' | 'back' | 'board' | 'follow' | 'sail';
 
 /** Seconds each held beat lasts. */
-const FOR = { eye: 1.6, wake: 0.7, land: 2.4, crew: 2.0, bud: 1.0, back: 1.1, sail: 1.7 };
+const FOR = { eye: 1.6, wake: 0.7, land: 0.6, up: 1.5, crew: 2.0, bud: 1.0, back: 1.1, sail: 1.7 };
 /** How near the plank the companion gets before the sleeper wakes. It stops well short of where the sleeper lands. */
 const TOO_NEAR = 3.6;
+/** How much slower than life the plank comes away, so nobody misses it. */
+const SLOW = 0.6;
+/** How long the plank is looked at where it lies before the arms come for it. */
+const BEFORE = 0.35;
+/** How far off the rail the plank is (0 to 1) when the camera goes back to the two on the shore. */
+const OFF = 0.5;
 /**
  * The shots, each a stage box (width, height) and how far the camera drops toward the
  * ground (0 to 1). The walk is followed from higher up so the letter tiles do not hide it,
  * and the crew is seen from higher up so the sleeper in front of the ship does not hide them.
+ * The plank is seen from low down, so that it comes up off the rail toward the top of the shot;
+ * on a tall screen the sleeper stands in front of it, so from higher there.
  */
-const SHOT = { eye: [2.6, 2.0, 1], walk: [4.6, 3.4, 0], sleeper: [4.2, 3.2, 0.7], land: [6.0, 4.2, 0.8], crew: [4.8, 2.8, 0], shore: [10.5, 6.2, 0.3], tow: [12.6, 6.6, 0.3] };
+const SHOT = { eye: [2.6, 2.0, 1], walk: [4.6, 3.4, 0], sleeper: [4.2, 3.2, 0.7], land: [6.0, 4.2, 0.8], plank: [3.4, 2.5, 1], plankTall: [3.4, 2.5, 0.2], crew: [4.8, 2.8, 0], shore: [10.5, 6.2, 0.3], tow: [12.6, 6.6, 0.3] };
 
 export interface MapCutCast {
   companion: Companion;
@@ -66,6 +76,11 @@ export class MapCut {
   /** True while a scene has the companion: the map leaves it alone. */
   get playing(): boolean {
     return this.beat !== 'none';
+  }
+
+  /** How fast the ship and the sleeper run: slowed while the plank is coming away. */
+  get pace(): number {
+    return this.beat === 'take' && this.clock > BEFORE ? SLOW : 1;
   }
 
   get reframing(): boolean {
@@ -104,6 +119,7 @@ export class MapCut {
   /** Close the map's stage box in on the action. */
   frame(f: Framing): Framing {
     const k = this.close.x;
+    this.tall = f.height > f.width;
     if (k === 0) return f;
     f.center.lerp(this.focus, k);
     // Every shot closes in, but for the one that has to take in ship and raft together.
@@ -165,15 +181,22 @@ export class MapCut {
           companion.act('startle');
         });
       }
-    } else if (this.beat === 'drop' || this.beat === 'land') {
+    } else if (this.beat === 'drop' || this.beat === 'land' || this.beat === 'up') {
       shot = SHOT.land;
       this.aim.set((me.x + sleeper.stone.x) / 2, me.y + 1.2, (me.z + sleeper.stone.z) / 2);
-      // A moment to take it in; then out go the arms, and up comes the plank.
-      if (this.beat === 'land' && this.clock > 0.55 && !this.reached) {
+      // A moment to take it in.
+      if (held('land')) to('take');
+      if (held('up')) to('crew');
+    } else if (this.beat === 'take') {
+      // Cut to the plank, still on the rail; then out go the arms, and up it comes off the ship.
+      shot = this.tall ? SHOT.plankTall : SHOT.plank;
+      // Right in on the rail it comes off, drifting a little way after it as it goes.
+      this.aim.copy(ship.rail).lerp(ship.plank.position, 0.1);
+      if (this.clock > BEFORE && !this.reached) {
         this.reached = true;
         sleeper.grab(ship.plank, () => this.taken(false));
       }
-      if (held('land')) to('crew');
+      if (ship.plankUp > OFF) to('up');
     } else if (this.beat === 'crew') {
       // Cut to the ship: oh no.
       shot = SHOT.crew;
@@ -222,7 +245,7 @@ export class MapCut {
     }
 
     // A change of subject is a cut; within a shot the camera eases after what it follows.
-    const cut = shot !== this.last && (shot === SHOT.sleeper || shot === SHOT.crew || this.last === SHOT.sleeper);
+    const cut = shot !== this.last && (shot === SHOT.sleeper || shot === SHOT.plank || shot === SHOT.plankTall || shot === SHOT.crew || this.last === SHOT.sleeper || this.last === SHOT.plank || this.last === SHOT.plankTall);
     this.last = shot;
     const k = cut ? 1 : 1 - Math.exp(-6 * dt);
     this.focus.lerp(this.aim, k);
@@ -232,4 +255,5 @@ export class MapCut {
 
   private last: number[] = SHOT.eye;
   private reached = false;
+  private tall = false;
 }

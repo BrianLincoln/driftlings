@@ -6,7 +6,9 @@ import { C } from '../gfx/palette';
 import { sfx } from '../audio/sound';
 import type { Creature } from '../cast/creature';
 import { bound, routeAround, type Blocker } from './detour';
-import { HALF, beam, deckY, sheer, shipGeo } from './shipGeo';
+import { Lookout } from './lookout';
+import { pennant } from './pennant';
+import { HALF, PENNANT, beam, deckY, sheer, shipGeo } from './shipGeo';
 import type { Raft } from './raft';
 
 // The ship that carries everyone home. It counts as a piece of home: whoever
@@ -45,9 +47,8 @@ interface Rider {
   landed: () => void;
   /** Not in one of the places on the main deck. */
   big: boolean;
-  /** While fretting: what it is glancing at, and for how much longer. */
-  look: THREE.Vector3;
-  lookFor: number;
+  /** How it stands and where its eyes go while it rides. */
+  watch: Lookout;
   /** While on its way aboard: the spots still to reach, each with the ground under that stretch. */
   route: Array<{ to: THREE.Vector3; ground: Ground }>;
 }
@@ -60,6 +61,9 @@ export function shipModel(): THREE.Group {
   geo ??= shipGeo();
   const mesh = new THREE.Group();
   mesh.add(new THREE.Mesh(geo.wood, wood()), new THREE.Mesh(geo.rig, toonMaterial({ tag: TAG.prop, flag: -0.45 })));
+  const flag = pennant();
+  flag.position.set(...PENNANT);
+  mesh.add(flag);
   mesh.position.y = -SINK;
   return mesh;
 }
@@ -80,6 +84,9 @@ export class Ship {
   private heldAt = new THREE.Vector3();
   private carried = 0;
   private fretting = false;
+  /** Under way: whoever is aboard stands facing the way it is going and watches the sea ahead. */
+  underWay = false;
+  private bow = new THREE.Vector3();
   private stern = new THREE.Vector3();
   private ahead = new THREE.Vector3();
 
@@ -163,6 +170,11 @@ export class Ship {
     this.plank.quaternion.slerpQuaternions(this.laid.turn, FLAT, this.carried);
   }
 
+  /** How far the plank has been carried off: 0 lying in its place, 1 in someone's hands. */
+  get plankUp(): number {
+    return this.carried;
+  }
+
   /** Where the plank touches the shore. */
   get shore(): THREE.Vector3 {
     return this.foot;
@@ -179,7 +191,7 @@ export class Ship {
 
   private rider(who: Creature, spot: Rider['spot'], route: Rider['route'], landed: () => void, big = false): void {
     who.worried = this.fretting;
-    this.riders.push({ who, spot, route, landed, big, look: new THREE.Vector3(), lookFor: 0 });
+    this.riders.push({ who, spot, route, landed, big, watch: new Lookout() });
   }
 
   /** The next free place on deck. Past the first row, a second forms behind it. */
@@ -253,6 +265,8 @@ export class Ship {
     this.trail(dt);
     this.carried += ((this.held ? 1 : 0) - this.carried) * Math.min(1, dt * 7);
     this.layPlank();
+    this.bow.set(1, 0, 0).applyQuaternion(this.root.quaternion);
+    const mate = () => this.riders[Math.floor(Math.random() * this.riders.length)].who.root.position;
     for (const r of this.riders) {
       const p = r.who.root.position;
       const leg = r.route[0];
@@ -276,15 +290,9 @@ export class Ship {
         p.z = to.z;
         r.who.groundY = () => y;
         r.who.lookTarget = camera.position;
-        if (this.fretting) {
-          // Nervous glances: at whoever has the plank, at each other, and back.
-          if ((r.lookFor -= dt) <= 0) {
-            r.lookFor = 0.35 + Math.random() * 0.7;
-            const other = this.riders[Math.floor(Math.random() * this.riders.length)].who.root.position;
-            r.look.copy(Math.random() < 0.4 ? this.heldAt : other).y += 0.2;
-          }
-          r.who.lookTarget = r.look;
-        }
+        // Already standing that way when the picture opens, not turning to it.
+        if (this.underWay) r.who.turnTo(r.watch.yaw(p, this.bow, camera.position), this.t < 0.1);
+        if (this.underWay || this.fretting) r.who.lookTarget = r.watch.watch(dt, p, this.bow, camera.position, mate, this.fretting ? this.heldAt : null);
       }
       r.who.update(dt);
     }

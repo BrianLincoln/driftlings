@@ -1,5 +1,5 @@
 import { areaSkills, type AreaDef, type NodeDef } from './curriculum';
-import { askableGraphemes, blendItem, decodableWords, meetItem, pickLetterItem, readableWords, type GenContext } from './generator';
+import { askableGraphemes, blendItem, catchItem, decodableWords, meetItem, pickLetterItem, readableWords, type GenContext } from './generator';
 import type { BlendItem, Item, PickLetterItem, Round } from './items';
 import { isDue, statusOf, type SkillState } from './model';
 import { shuffle, weighted } from './rng';
@@ -16,6 +16,8 @@ export const SIZES = {
   soloPicks: 3,
   /** Share of a letter lesson's picks spent on the new letter. */
   newShare: 0.6,
+  /** How many of the new letter to catch as they fall. */
+  lessonCatches: 4,
   lessonBlends: 2,
   blendLessonBlends: 4,
   blendLessonPicks: 4,
@@ -102,7 +104,7 @@ const round = (items: Item[]): Round[] => (items.length ? [{ exercise: items[0].
 
 /**
  * A lesson. `ctx.known` must already include what the node teaches.
- * New letters are met, then practised with older letters mixed in, then used in words
+ * New letters are met, then practised with older letters mixed in, then caught as they fall, then used in words
  * (only sounded out and heard until the lesson that teaches word building).
  * The first question after meeting a letter is always about that letter.
  */
@@ -126,6 +128,7 @@ export function planLesson(node: NodeDef, ctx: GenContext, now: number): Round[]
   return [
     ...round(nonNull(fresh.map((g) => meetItem(g, ctx)))),
     ...round(spread(practice, ctx, fresh[fresh.length - 1])),
+    ...round(nonNull(fresh.slice(-1).map((g) => catchItem(g, ctx, SIZES.lessonCatches)))),
     ...round(blends(SIZES.lessonBlends, ctx, now, { favour: fresh, early: true })),
   ];
 }

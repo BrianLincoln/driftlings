@@ -1,6 +1,6 @@
-import { COATS, SPECIES, rescue, type Rescue } from '../cast/species';
+import { rescue, type Rescue } from '../cast/species';
 import { CONTENT } from '../content/content';
-import { ISLAND_1, findNode, knownSkills, rescueIndex, rescuesHome, type AreaDef } from '../learn/curriculum';
+import { allNodes, findNode, knownSkills, rescueIndex, rescuesHome, type AreaDef } from '../learn/curriculum';
 import { attemptsOf, doneNodes, type AttemptDraft, type LogEvent } from '../learn/events';
 import type { GenContext } from '../learn/generator';
 import type { Round } from '../learn/items';
@@ -8,6 +8,7 @@ import { confusions, foldSkills } from '../learn/model';
 import { seeded } from '../learn/rng';
 import { planCheckpoint, planLesson } from '../learn/scheduler';
 import { graphemeOf, type SkillId } from '../learn/skills';
+import { BIG_ONES, OPEN_AREAS, frontier } from './areas';
 import type { EventStore } from './store';
 
 // One child's game: the event log and everything derived from it. This is the
@@ -19,11 +20,7 @@ export interface NodePlan {
   boss: boolean;
 }
 
-/** The big sleepy creature that blocks the path at an area's end. */
-export const SLEEPER: Rescue = { species: SPECIES.find((s) => s.id === 'tusk')!, coat: COATS.find((c) => c.id === 'slate')! };
-
 export class Game {
-  readonly area: AreaDef = ISLAND_1.areas[0];
   private rng = seeded((Date.now() ^ 0x9e3779b9) >>> 0);
 
   private constructor(private store: EventStore, public events: LogEvent[]) {}
@@ -43,6 +40,11 @@ export class Game {
 
   get done(): Set<string> {
     return doneNodes(this.events);
+  }
+
+  /** The area being explored: the first one not finished. */
+  get area(): AreaDef {
+    return frontier(this.done);
   }
 
   record(node: string, a: AttemptDraft): void {
@@ -76,11 +78,15 @@ export class Game {
     const found = findNode(nodeId);
     if (!found) return null;
     const { node, area } = found;
-    const ctx = this.context(node.teaches, area);
+    // Whoever is at this node has been taught everything before it, even if the log does not say so
+    // (`?area=` and `?scene=` put the map ahead of the progress): a checkpoint is never left with nothing to ask.
+    const order = allNodes();
+    const before = order.slice(0, order.indexOf(node)).flatMap((n) => n.teaches);
+    const ctx = this.context([...before, ...node.teaches], area);
     if (node.kind === 'lesson') {
       return { rounds: planLesson(node, ctx, Date.now()), guest: rescue(rescueIndex(node.id)), boss: false };
     }
-    return { rounds: planCheckpoint(area, ctx, Date.now()), guest: SLEEPER, boss: true };
+    return { rounds: planCheckpoint(area, ctx, Date.now()), guest: (BIG_ONES[area.id] ?? BIG_ONES[OPEN_AREAS[0].id]).who, boss: true };
   }
 
   async reset(): Promise<void> {

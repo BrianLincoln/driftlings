@@ -35,7 +35,7 @@ export interface ExerciseKit {
   say(clip: ClipId, delay?: number): number;
   /** Say several clips in a row, with the pauses speech needs between them. */
   line(clips: ClipId[], delay?: number): Line;
-  /** Drop narration that has not started yet, once it no longer applies. */
+  /** Stop the narrator now, mid-clip if need be: the child has moved on from what was being said. */
   hush(): void;
   /** Something good happened. The host decides what that looks like. */
   cheer(): void;

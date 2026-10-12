@@ -6,7 +6,7 @@ export type BodyShape = 'pear' | 'round' | 'tall' | 'squat';
 export type EarKind = 'long' | 'round' | 'point' | 'flop' | 'antenna' | 'none';
 export type TailKind = 'pom' | 'long' | 'bush' | 'fin' | 'none';
 export type CrestKind = 'sprig' | 'tuft' | 'spikes' | 'none';
-export type ArmKind = 'nub' | 'flipper' | 'wing' | 'none';
+export type ArmKind = 'nub' | 'flipper' | 'none';
 export type Pattern = 'plain' | 'stripes' | 'spots';
 
 export interface Species {
@@ -44,12 +44,12 @@ export const SPECIES: Species[] = [
   sp('lop', { body: 'round', head: [0.27, 0.24, 0.25], ears: 'flop', earScale: 1.1, tail: 'bush', crest: 'tuft', arms: 'nub', muzzle: false, eyes: [0.37, 0.03, 1.05], size: 1.05 }),
   sp('finlet', { body: 'round', head: [0.26, 0.22, 0.25], ears: 'none', earScale: 1, tail: 'fin', crest: 'spikes', arms: 'flipper', muzzle: false, eyes: [0.44, 0.08, 1.1], size: 0.9 }),
   sp('stalk', { body: 'tall', head: [0.23, 0.21, 0.22], ears: 'antenna', earScale: 1, tail: 'none', crest: 'none', arms: 'nub', muzzle: false, eyes: [0.4, 0.06, 1.1], size: 1 }),
-  sp('owlet', { body: 'round', head: [0.3, 0.25, 0.26], ears: 'point', earScale: 0.6, tail: 'fin', crest: 'tuft', arms: 'wing', muzzle: true, eyes: [0.34, 0.08, 1.25], size: 0.85 }),
+  sp('owlet', { body: 'round', head: [0.3, 0.25, 0.26], ears: 'point', earScale: 0.6, tail: 'fin', crest: 'tuft', arms: 'nub', muzzle: true, eyes: [0.34, 0.08, 1.25], size: 0.85 }),
   sp('mouse', { body: 'pear', head: [0.25, 0.22, 0.23], ears: 'round', earScale: 1.6, tail: 'long', crest: 'none', arms: 'nub', muzzle: false, eyes: [0.36, 0.02, 1], size: 0.75 }),
   sp('tusk', { body: 'squat', head: [0.33, 0.27, 0.28], ears: 'flop', earScale: 0.7, tail: 'none', crest: 'spikes', arms: 'nub', muzzle: true, eyes: [0.42, 0.1, 0.85], size: 1.3 }),
   sp('bean', { body: 'tall', head: [0.25, 0.22, 0.23], ears: 'long', earScale: 0.55, tail: 'bush', crest: 'sprig', arms: 'flipper', muzzle: false, eyes: [0.38, 0.05, 1], size: 0.9 }),
   sp('puff', { body: 'round', head: [0.31, 0.26, 0.27], ears: 'round', earScale: 0.7, tail: 'bush', crest: 'tuft', arms: 'none', muzzle: false, eyes: [0.36, 0.0, 1.15], size: 0.8 }),
-  sp('glider', { body: 'squat', head: [0.26, 0.22, 0.24], ears: 'antenna', earScale: 0.8, tail: 'fin', crest: 'none', arms: 'wing', muzzle: false, eyes: [0.42, 0.06, 1.05], size: 1 }),
+  sp('glider', { body: 'squat', head: [0.26, 0.22, 0.24], ears: 'antenna', earScale: 0.8, tail: 'fin', crest: 'none', arms: 'nub', muzzle: false, eyes: [0.42, 0.06, 1.05], size: 1 }),
 ];
 
 const ct = (id: string, coat: string, belly: string, accent: string, crest: string, pattern: Pattern = 'plain'): Coat =>

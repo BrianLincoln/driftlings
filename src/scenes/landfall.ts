@@ -12,7 +12,7 @@ import type { Diorama } from './diorama';
 import { SIZE } from './blockade';
 import { bound } from './detour';
 import { Dust } from './dust';
-import { HOME_SHAPE } from './homeIsland';
+import { HOME_SHAPE } from './places';
 import { PROP_MAT, buildFarIsles, bushGeo, rockGeo, treeGeo } from './props';
 import { Raft } from './raft';
 import { BOW, Ship } from './ship';
@@ -80,6 +80,7 @@ export function createLandfall(plan: LandfallPlan): Diorama {
   scene.add(dust.root);
 
   const ship = new Ship(plan.big ? new Raft() : null);
+  ship.underWay = true;
   scene.add(ship.root);
   if (ship.raft) scene.add(ship.raft.root, ship.raft.rope);
   const come = (t: number, settle: boolean) => {
@@ -156,6 +157,7 @@ export function createLandfall(plan: LandfallPlan): Diorama {
       ship.update(dt, camera);
       if (!docked && t >= COME_IN) {
         docked = true;
+        ship.underWay = false;
         ship.cheer();
         sfx.cheer();
       }

@@ -70,6 +70,11 @@ export class LetterTile {
     if (this.leaving < 0) this.leaving = 0;
   }
 
+  /** Something flat stands in front of the tile: the letter gives way to it. See `Glyph.cover`. */
+  behind(at: THREE.Object3D, radius: number): void {
+    this.glyph.cover = { at, radius };
+  }
+
   lean_back(rad: number): void {
     this.tile.slab.rotation.x = rad;
   }

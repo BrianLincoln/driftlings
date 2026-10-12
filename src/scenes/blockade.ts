@@ -3,19 +3,20 @@ import { sfx } from '../audio/sound';
 import { BREATH, Creature } from '../cast/creature';
 import { ease } from '../cast/spring';
 import { capsule, ellipsoid, place } from '../gfx/geo';
-import type { Rescue } from '../cast/species';
+import type { BigOne } from '../game/areas';
 import type { LayoutMode } from '../stage/framing';
 import type { Glyph, GlyphLayer } from '../stage/glyphs';
 import type { Blocker } from './detour';
 import { Dust } from './dust';
 
-// The big sleeper's part on the map. It snores at the side of the island
+// The big one's part on the map. A sleepy one snores at the side of the island
 // while the little ones are woken and hurry aboard, opening one eye to watch
-// each of them go. When the last is aboard and the companion sets off after
-// them, it wakes, bounds over to the foot of the plank, reaches out, and
-// lifts the plank over its head (mapCut.ts). It is the one nobody woke: grey
-// like the little ones were, and put out about it. Nobody leaves until it has
-// had its turn and got its colour back.
+// each of them go; a watchful one sits there wide awake and glum, and turns to
+// see each of them off. When the last is aboard and the companion sets off
+// after them, it starts up, bounds over to the foot of the plank, reaches out,
+// and lifts the plank over its head (mapCut.ts). It is the one nobody came
+// for: grey like the little ones were, and put out about it. Nobody leaves
+// until it has had its turn and got its colour back.
 
 /** Asleep at the side, awake at the plank's foot, or no longer the map's to move. */
 export type SleeperState = 'beside' | 'across' | 'gone';
@@ -57,14 +58,20 @@ export class Blockade {
   private reach = 0;
   private reachFor = 0;
   private took: (() => void) | null = null;
+  /** True once it has noticed it is being left behind: from then on it has eyes only for whoever it noticed. */
+  private roused: boolean;
+  private sleepy: boolean;
 
-  /** `left` is true until it has had its turn: no colour yet, and sulking once it is awake. */
-  constructor(who: Rescue, private state: SleeperState, private left = true) {
+  /** `left` is true until it has had its turn: no colour yet, and sulking whenever it is awake. */
+  constructor(big: BigOne, private state: SleeperState, private left = true) {
+    const who = big.who;
+    this.sleepy = big.manner === 'sleepy';
+    this.roused = state !== 'beside';
     this.who = new Creature(who);
     this.who.root.scale.multiplyScalar(SIZE);
-    this.who.drowse = state === 'beside' ? 0 : null;
+    this.who.drowse = state === 'beside' && this.sleepy ? 0 : null;
     if (left) this.who.setColour(0);
-    this.who.worried = left && state === 'across';
+    this.who.worried = left && this.who.drowse === null;
     // A unit-long arm from the shoulder up, stretched to length each frame, and a round mitt for its end.
     const arm = place(capsule(0.13, 1, who.coat.coat), [0, 0.5, 0]);
     const mitt = ellipsoid(0.21, 0.19, 0.21, who.coat.coat, 14);
@@ -93,14 +100,14 @@ export class Blockade {
   }
 
   /** Work out its two spots from where the plank meets the shore, and stand it on the right one. */
-  moor(foot: THREE.Vector3, mode: LayoutMode, ground: Ground): void {
+  moor(foot: THREE.Vector3, mode: LayoutMode, ground: Ground, side: 1 | -1 = 1): void {
     this.ground = ground;
     // In front of the plank's foot as the child sees it, and never off the side of a narrow screen.
     const reach = mode === 'tall' ? 0.9 : 4;
     this.across.set(THREE.MathUtils.clamp(foot.x - 0.3, -reach, reach), 0, foot.z + 0.7);
-    // Asleep at the right-hand side, well clear of the path to the ship.
+    // Until then it keeps to one side, well clear of the path to the ship. A narrow screen only has room on the right.
     if (mode === 'tall') this.beside.set(this.across.x + 2.1, 0, this.across.z + 0.5);
-    else this.beside.set(4.6, 0, -1.65);
+    else this.beside.set(side * 4.6, 0, -1.65);
     this.stone.set(this.across.x, 0, this.across.z + 0.75);
     if (this.state === 'gone') return;
     this.leap = -1;
@@ -114,6 +121,7 @@ export class Blockade {
 
   /** Its snoring is drawn as letters, so it needs the glyph layer. */
   enter(glyphs: GlyphLayer): void {
+    if (!this.sleepy) return;
     this.zs = [0, 1, 2].map(() => {
       const anchor = new THREE.Object3D();
       this.root.add(anchor);
@@ -168,16 +176,18 @@ export class Blockade {
     });
   }
 
-  /** Open one eye on someone going by, then shut it again. */
+  /** Open one eye on someone going by, then shut it again. One that is awake turns to see them off. */
   peek(at: THREE.Vector3): void {
-    if (this.who.drowse === null || this.leap >= 0) return;
-    this.peeking = PEEK;
+    if (this.roused || this.leap >= 0) return;
+    this.peeking = this.sleepy ? PEEK : PEEK * 2;
     this.watching = at;
+    if (!this.sleepy) this.who.nod();
   }
 
   /** Wide awake all at once, and looking straight at `at`. */
   wake(at: THREE.Vector3): void {
-    if (this.who.drowse === null) return;
+    if (this.roused) return;
+    this.roused = true;
     this.who.drowse = null;
     this.peeking = 0;
     this.watching = at;
@@ -188,6 +198,7 @@ export class Blockade {
   /** Already awake and in the way, with no leap. */
   skip(): void {
     this.state = 'across';
+    this.roused = true;
     this.who.drowse = null;
     this.who.worried = this.left;
   }
@@ -244,7 +255,8 @@ export class Blockade {
     }
     const asleep = who.drowse !== null;
     this.peeking = Math.max(0, this.peeking - dt);
-    who.lookTarget = asleep ? (this.peeking > 0 ? this.watching : null) : this.watching ?? camera.position;
+    const idle = !this.roused && this.peeking <= 0;
+    who.lookTarget = asleep ? (idle ? null : this.watching) : idle ? camera.position : this.watching ?? camera.position;
     who.peek = ease(who.peek, asleep && this.peeking > 0.25 ? 0.8 : 0, 14, dt);
     who.update(dt);
     this.raise();
