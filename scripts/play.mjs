@@ -82,11 +82,15 @@ for (const size of SIZES) {
       if ((await scene()) !== 'exercise') { fail(`${size.name} ${node} did not open`); return false; }
       let last = '';
       let shots = 0;
+      let chainShots = 0;
       let done = false;
       for (let i = 0; i < 1500 && !done; i++) {
         const s = await page.evaluate(() => window.__dl.exercise());
         const kind = !s ? 'none' : s.finished ? 'finished' : s.steer ? 'steer' : s.tap ? `tap:${s.tap[0].split(':')[0]}` : 'waiting';
-        if (kind !== last && kind !== 'waiting' && SHOOT.has(node) && shots < 12) {
+        // A word chain comes late in a lesson, past the count of pictures: its steps get a few of their own.
+        const chain = kind === 'tap:option' && chainShots < 6 && SHOOT.has(node);
+        if (chain) chainShots++;
+        if (kind !== last && kind !== 'waiting' && SHOOT.has(node) && (shots < 12 || chain)) {
           await step(18);
           await shot(`${node}-${String(shots++).padStart(2, '0')}-${kind.replace(':', '-')}`);
         }
@@ -143,12 +147,15 @@ for (const size of SIZES) {
       attempts: ev.filter((e) => e.type === 'attempt').length,
       wrong: ev.filter((e) => e.type === 'attempt' && !e.correct).length,
       done: ev.filter((e) => e.type === 'node-done').map((e) => e.node),
+      chains: ev.filter((e) => e.type === 'attempt' && e.exercise === 'chain').length,
       welcomed: ev.filter((e) => e.type === 'welcomed').map((e) => e.count),
     };
   });
   console.log(size.name, JSON.stringify(summary));
   if (summary.done.length !== AREAS.flat().length) fail(`${size.name} expected ${AREAS.flat().length} nodes done`);
-  if (summary.wrong !== 0) fail(`${size.name} scripted play should make no mistakes`);
+  // Word chains wait on lines still to be recorded: with them pretended, every lesson after the first on blending has one.
+  if (flags.has('--unrecorded') && summary.chains < 60) fail(`${size.name} expected word chains to be played, saw ${summary.chains} steps`);
+    if (summary.wrong !== 0) fail(`${size.name} scripted play should make no mistakes`);
   await ctx.close();
 }
 

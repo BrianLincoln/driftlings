@@ -279,7 +279,11 @@ async function boot(): Promise<void> {
       port = 'area';
       here = area;
       await goHome(false, true);
-    } else await play(name, game.planNode(name), true);
+    } else {
+      // A node by its id; `&only=chain` keeps just that exercise's rounds, for a look at one exercise.
+      const [plan, only] = [game.planNode(name), params.get('only')];
+      await play(name, plan && only ? { ...plan, rounds: plan.rounds.filter((r) => r.exercise === only) } : plan, true);
+    }
   }, () => game);
 
   const start = params.get('scene');

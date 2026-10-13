@@ -6,6 +6,8 @@
 //   npm run shots -- chart@i1a2   a scene at one area (any `?scene=` name, then `@` and the area)
 //   npm run shots -- chart@sea3   the chart's sheet for a later sea
 //   npm run shots -- crews        the home island with every open area's crew, as play leaves it
+//   npm run shots -- i1a3-c+chain one exercise of a node (`+` and the exercise), played through with a picture at each step;
+//                                 as if every clip were recorded, so an exercise can be seen before its narration exists
 //   npm run shots -- things       the drawings of things (docs/things.md): pages of them at play size, each one
 //                                 three times closer with its name in the file name only, and a numbered
 //                                 sheet of those with no names anywhere; tall and wide
@@ -23,7 +25,7 @@ const args = process.argv.slice(2);
 const flags = new Set(args.filter((a) => a.startsWith('--')));
 const only = args.filter((a) => !a.startsWith('--'));
 const THINGS = only[0] === 'things';
-const SCENES = THINGS ? [] : only.length ? only : ['map', 'map@i1a2', 'map@i1a3', 'map@i1a4', 'map@i2a1', 'map@i2a2', 'home', 'who'];
+const SCENES = THINGS ? [] : only.length ? only : ['map', 'map@i1a2', 'map@i1a3', 'map@i1a4', 'map@i2a1', 'map@i2a2', 'home', 'who', 'i1a3-c+chain', 'i2a1-l2+chain'];
 /** Every node of the areas that are open, for `crews`. */
 const ALL = [
   'i1a1-a', 'i1a1-m', 'i1a1-s', 'i1a1-t', 'i1a1-blend', 'i1a1-boss',
@@ -72,6 +74,33 @@ for (const size of THINGS ? SIZES.slice(0, 2) : SIZES) {
   for (const scene of SCENES) {
     const [name, area] = scene.split('@');
     const low = flags.has('--low') ? '&q=low' : '';
+    const [node, exercise] = scene.split('+');
+    if (exercise) {
+      await page.goto(`${base}?reset&scene=${node}&only=${exercise}&unrecorded${low}`);
+      await page.waitForFunction(() => window.__dl?.ready === true, null, { timeout: 15000 });
+      // Played by its own debug hook: a picture each time it waits for a tap, and a last one when it is over.
+      let [n, quiet] = [0, 0];
+      for (let i = 0; i < 400 && n < 14; i++) {
+        const s = await page.evaluate(() => window.__dl.exercise());
+        if (!s || s.finished) break;
+        if (s.tap) {
+          await page.evaluate(() => window.__dl.step(1 / 60, 30));
+          await page.screenshot({ path: `shots/${node}-${exercise}-${size.name}-${String(n++).padStart(2, '0')}.png` });
+          for (const id of s.tap) await page.evaluate((t) => window.__dl.tap(t), id);
+          await page.evaluate(() => window.__dl.step(1 / 60, 50));
+          await page.screenshot({ path: `shots/${node}-${exercise}-${size.name}-${String(n++).padStart(2, '0')}.png` });
+        }
+        // Three seconds after the last tap with nothing more asked: the companion is on its way over.
+        quiet = s.tap ? 0 : quiet + 1;
+        if (quiet === 11 && n > 0) await page.screenshot({ path: `shots/${node}-${exercise}-${size.name}-after.png` });
+        await page.evaluate(() => window.__dl.step(1 / 60, 12));
+      }
+      await page.evaluate(() => window.__dl.step(1 / 60, 100));
+      await page.screenshot({ path: `shots/${node}-${exercise}-${size.name}-over.png` });
+      if (n === 0) { console.log(`  FAIL ${scene}: nothing to tap`); failed = true; }
+      console.log(`ok ${scene} ${size.name}`);
+      continue;
+    }
     await page.goto(name === 'crews' ? `${base}?reset&scene=map${low}` : `${base}?scene=${name}${area ? (/^sea\d+$/.test(area) ? `&sea=${area.slice(3)}` : `&area=${area}`) : ''}&demo${low}`);
     await page.waitForFunction(() => window.__dl?.ready === true, null, { timeout: 15000 });
     if (name === 'crews') {

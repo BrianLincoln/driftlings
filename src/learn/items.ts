@@ -131,7 +131,40 @@ export interface ReadItem {
   supports: SkillId[];
 }
 
-export type Item = MeetItem | PickLetterItem | BlendItem | CatchItem | ManyItem | HeartItem | ReadItem;
+/**
+ * One step of a word chain: the word before it with one letter changed, in the same place.
+ * spell: the new word is said, and the child puts in the letter that makes it.
+ * read: the letter changes by itself, nobody says the new word, and the child picks it out by ear from a few.
+ */
+export interface ChainStep {
+  mode: 'spell' | 'read';
+  /** The word this step makes. */
+  word: string;
+  graphemes: string[];
+  /** Which tile changes. */
+  at: number;
+  /**
+   * spell: the letters offered, the right one among them, in the order they stand.
+   * `makes` is the word a wrong one would spell, where that is a word that can be said. Empty for read.
+   */
+  letters: Array<{ grapheme: string; makes?: string }>;
+  /** read: the words to choose between, each heard on a tap, the right one among them. Empty for spell. */
+  words: string[];
+  skills: SkillId[];
+  supports: SkillId[];
+}
+
+/** A word chain: a word, then three or four more, each one letter away from the last. Spelling and reading take turns. */
+export interface ChainItem {
+  kind: 'chain';
+  key: string;
+  /** The word the chain sets out from. It is said; nothing is asked about it. */
+  start: string;
+  graphemes: string[];
+  steps: ChainStep[];
+}
+
+export type Item = MeetItem | PickLetterItem | BlendItem | CatchItem | ManyItem | HeartItem | ReadItem | ChainItem;
 export type ItemKind = Item['kind'];
 
 /** One exercise's worth of items, played in order. */
@@ -160,4 +193,6 @@ export interface Content {
   hearts: ReadonlyArray<Word>;
   /** Things that have a drawing and a spoken word: what a phrase can be about. `on` and `in`: something else can be put there. */
   drawable: ReadonlyArray<{ name: string; on: boolean; in: boolean }>;
+  /** True if this spoken line has been recorded. Left out, none has: an exercise that cannot explain itself is not offered. */
+  hasPrompt?(name: string): boolean;
 }

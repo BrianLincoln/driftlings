@@ -23,7 +23,7 @@ export interface GenContext {
 }
 
 let serial = 0;
-const key = (kind: string, what: string) => `${kind}:${what}:${++serial}`;
+export const key = (kind: string, what: string) => `${kind}:${what}:${++serial}`;
 
 /** Taught letters that can actually be asked about (their sound clip exists). */
 export function askableGraphemes(ctx: GenContext): string[] {

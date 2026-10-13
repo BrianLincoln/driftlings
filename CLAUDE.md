@@ -31,20 +31,22 @@ the dev server; that is the real test. Fix what breaks when it breaks.
   prints ok/FAIL and saves screenshots to `shots/play-*`
 - `npm run shots` : the full set is slow, only when asked; name one scene instead. Screenshots each area's map and the home island (from the landing, and with the companion sent
   to three other parts of it) at four sizes into `shots/`.
-  `npm run shots -- chart@i1a2` takes any `?scene=` at one area, `-- chart@sea3` the chart of a later sea; `-- crews` is home with every crew
+  `npm run shots -- chart@i1a2` takes any `?scene=` at one area, `-- chart@sea3` the chart of a later sea; `-- crews` is home with every crew;
+  `-- i1a3-c+chain` plays one exercise of a node through (as if every clip were recorded) with a picture at each step;
   `npm run shots -- things` is the sheet the drawings of things are judged on (`docs/things.md`)
 - `npm run audio` : take in clips from `audio-inbox/`, rebuild `public/audio/` and the manifest
 - `npm run audio:wanted` : write `audio-inbox/WANTED.md`, the clips the lessons ahead are missing,
   nearest lesson first. What a lesson needs follows from the skill it teaches: a grapheme needs its
   sound, its keyword words (`src/content/keywords.json`: heard in "like in ...", never read) and, for
   a single letter, its name (two letters that make one sound, like qu, have none); a blending lesson needs enough buildable words from the graphemes taught
-  so far, and a lesson on new word shapes needs them of those shapes with its letter in. An irregular word needs its word and the sound of each of its tiles. A new kind of skill gets its own rule in `scripts/audio-wanted.mjs`
+  so far, and a lesson on new word shapes needs them of those shapes with its letter in. An irregular word needs its word and the sound of each of its tiles. Word chains need the three lines the exercise says (`CHAIN_PROMPTS` in `src/learn/chains.ts`); no chain is offered until all three are recorded. A new kind of skill gets its own rule in `scripts/audio-wanted.mjs`
 
 URL switches: `?reset` clears the progress of the child who played last, `?demo` fills the home island, `?scene=map|home|who|sleeper|friends|<node id>`
 (`who` is where children choose who is playing, with `&demo` a full row of six; `sleeper` replays the map scene where the sleeper takes the plank, `friends` the one where it gives it back;
 `things` is the sheet of drawings, `&thing=cat` one of them close up;
 `leave` holds the ship pulling away, `chart` the same with the chart unrolled over it, `arrive` the landing
 at home with everyone getting off; `sail` plays the whole crossing home),
+`?scene=i1a3-c&only=chain` opens a node with only that exercise's rounds,
 `?area=i1a2` goes to that area whatever the progress (alone, or with any of the scenes above),
 `?isles=43` draws the chart as it will be with that many islands (more sheets, not smaller islands), `?sea=3` with
 `?scene=chart` the sheet of the third sea as on the crossing to its last island, `?q=low`,
@@ -75,7 +77,7 @@ before committing and deploying.
 
 ## Layout
 
-- `src/learn` : skills, event log, skill model, generator, scheduler. Pure logic: no three.js,
+- `src/learn` : skills, event log, skill model, generator (`chains.ts` makes the word chains), scheduler (`rounds.ts` has its sizes and the runs of items it builds from). Pure logic: no three.js,
   no DOM, no imports from the rest of the app (a test enforces this). It has to be right.
 - `src/content` : word list, audio manifest (generated), and the adapter the generator reads; `endings.json` lists the things shown as one and
   several (each needs a drawing in `scenes/things/`; a test checks) and the short words where s says /z/; `hearts.json` lists the
@@ -85,7 +87,7 @@ before committing and deploying.
   the device store (one log per child; ids are uuids so an account can take them over later), and `areas.ts`:
   which areas are open and the big one who lives on each, with its manner
 - `src/scenes` : dioramas (home island, where the child goes about as the companion (`steer.ts`) among creatures spending
-  their day (`residents.ts`) at things to do (`pastime.ts` is the contract, `pastimes.ts` the list of places), area map, exercise host, the crossing: `voyage.ts` at sea
+  their day (`residents.ts`) at things to do (`pastime.ts` is the contract, `pastimes.ts` the list of places), area map, exercise host (`exerciseKit.ts` is what it lends an exercise, `stream.ts` the stream and stepping stones of the word chains), the crossing: `voyage.ts` at sea
   with `chart.ts` unrolling over it, then `landfall.ts` only when an island's crew come home to stay), `who.ts` where a child taps their own creature to play, the ship and the raft it tows, letter tile, scenery recipes,
   `places.ts`: what makes each area's island its own (outline, palette, scenery, stone path, chart drawing),
   and `things/`: the drawings of everyday things a word can be about, with `thingsSheet.ts` to look at them on

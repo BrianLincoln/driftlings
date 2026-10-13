@@ -18,6 +18,16 @@ import type { Touchable } from '../stage/touch';
 // Adding an exercise: write one module that satisfies ExerciseModule, add its
 // item type to learn/items.ts, and add one line to exercises/index.ts.
 
+/** A stream to be crossed on stepping stones, from the bank on the left to the bank on the right. */
+export interface Crossing {
+  /** Where to stand: 0 is the bank on the left, then each stone in turn, then the bank on the right. */
+  place(i: number): THREE.Vector3;
+  /** Stone `i`, counting from 0 at the left, comes up out of the water. */
+  raise(i: number): void;
+  /** The stones sink and the water drains away. */
+  vanish(): void;
+}
+
 /** What the host lends an exercise to stage its items. */
 export interface ExerciseKit {
   readonly mode: LayoutMode;
@@ -28,6 +38,13 @@ export interface ExerciseKit {
   card(text: string, hue: number, scale?: number): LetterTile;
   /** An everyday thing to stand on the grass, by its word ("cup"). The exercise places it; the kit animates and disposes of it. */
   thing(name: string): Thing;
+  /**
+   * A stream across the front of the clearing with this many stepping stones in it, all under the water to begin with.
+   * The kit animates it, and clears it away once it has been told to go.
+   */
+  crossing(stones: number): Crossing;
+  /** The place on the clearing's ground `x` across and `z` down it, for an exercise whose rows are its own. */
+  at(x: number, z: number): THREE.Vector3;
   /** A place in the front row of tiles, or in the nearer row of options. */
   spot(row: 'tiles' | 'options', index: number, count: number): THREE.Vector3;
   /**

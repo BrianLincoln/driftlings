@@ -50,6 +50,7 @@ const allWords = Object.entries(wordGroups as Record<string, string[] | string>)
 export const CONTENT: Content = {
   hasSound: (g) => hasClip(soundClip(g)),
   hasName: (g) => hasClip(nameClip(g)),
+  hasPrompt: (name) => hasClip(promptClip(name)),
   words: [
     // Regular words: one grapheme, one sound.
     ...allWords,

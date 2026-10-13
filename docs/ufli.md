@@ -135,12 +135,30 @@ Our exercises against the eight steps:
 | `many` | 5 for lessons 20 and 21 | the ask stage |
 | `heart` | 7: meet an irregular word, then pick it out by ear; `blend` spells it | picking it out, and spelling it unaided |
 | `read` | 8, a first step: a phrase nobody says, tap the thing it names | yes |
+| `chain` | 6: a word chain. One letter changes at a time, in place; spelling steps (the word is said, pick the letter that makes it) and reading steps (the letter changes by itself, nobody says the word, pick it out by ear) take turns | every step |
+
+Word chains, as the game has them (`src/learn/chains.ts`, `src/exercises/chain.ts`):
+
+- One chain a lesson, after the lesson's own rounds and before its irregular words; one at each checkpoint; one in a
+  practice round that has word building in it. Four steps where the child's words link up that far, three if not,
+  and none otherwise: with today's words the first is in lesson 6 (tap, map, mat, sat, pat), not lesson 5 as in UFLI,
+  because am, at, mat and sat do not make a chain.
+- A step only ever swaps one tile for another. UFLI's chains also add and drop letters (at to sat, ant to at); ours do not yet.
+- Only words the child could be asked to build, every letter saying its usual sound: no "is" or "as", no irregular words.
+- A spelling step is evidence for the letter put in and for the word's shape; a reading step for the shape. The
+  letters used along the way are credited a little on a right answer, as in `blend`.
+- A reading step is answered by ear: two or three speakers, a tap says a word and a second tap chooses it. Only nine
+  words have drawings, so pictures could stand in for the speakers in few steps; one way of answering was kept.
+- A lesson on new word shapes (25, 27) gets a chain of those shapes if its words link up at least twice: at 27 that is
+  slip, skip, skin. The four-letter words in `words.json` hardly link (crab and grab, held and help, those three), so
+  until more are added (drip, trap, clip, flap, slap would join them up) chains are almost all three-letter words.
+- The exercise says three lines of its own (`CHAIN_PROMPTS`). Until all three are recorded no chain is offered at all.
 
 What UFLI does that the game does not yet:
 
-1. **Read a word nobody says** (steps 4, 6, 8). Only in `read`, and only the words for the nine drawn things.
+1. **Read a word nobody says** (steps 4, 6, 8). In `read`, for the nine drawn things, and in the reading steps of `chain`, for any word: but there the child matches it to a spoken word and never has to say it.
 2. **Letter to sound** (step 2). Everything we have runs sound to letter.
-3. **Word chains** (step 6, and in every lesson from 5).
+3. **Word chains that add or drop a letter** (step 6). Chains that swap one are in (`chain`, above), once their lines are recorded.
 4. **Sounds with no letters** (step 1): blending and segmenting by ear.
 5. **Longer blends** (35 to 41). CCVC and CVCC are taught (25, 27); CCVCC and CCCVC are not, and `shapeOf` calls
    them `other`. The blend exercise already holds five tiles in both layouts.
