@@ -164,6 +164,10 @@ letter, nearest island first. Draw a batch, run the critic on it, get the owner'
 **Batch 5** (fifth island and after): kid, elk, milk, ant, nest
 - net · nest; the rest stand alone and can wait
 
+**Batch 6** (words with two consonants together): frog, crab, drum, flag, plum, sled, belt, desk, mask, hand
+- None of these has a near miss that can be drawn; a child tells them apart from words that share an
+  end or a start (frog · log, hand · hat, belt · bed, drum · gum, plum · gum).
+
 Left out on purpose: ten and men (a numeral and a plural), pit, gas.
 
 Notes for whoever draws them:
