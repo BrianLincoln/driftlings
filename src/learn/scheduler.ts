@@ -1,6 +1,7 @@
 import { areaSkills, type AreaDef, type NodeDef } from './curriculum';
 import { chainItem } from './chains';
-import { askableGraphemes, catchItem, heartBuild, heartFind, heartMeet, heartWords, manyItem, manyWords, meetItem, oddAt, pickLetterItem, readItem, type GenContext } from './generator';
+import { askableGraphemes, catchItem, heartBuild, heartFind, heartMeet, heartWords, manyItem, manyWords, meetItem, oddAt, pickLetterItem, type GenContext } from './generator';
+import { readItem, type ReadWant } from './reads';
 import type { ChainItem, ReadItem, Round, Word } from './items';
 import { isDue, statusOf, type SkillState } from './model';
 import { shuffle, weighted } from './rng';
@@ -76,18 +77,22 @@ function hearts(ctx: GenContext, now: number, fresh: readonly string[] = [], ask
 }
 
 /**
- * Sentences ("the bug is on the bed") are made by the generator and can be played by the exercise, but are not asked for yet:
- * the little scenes are too big for the clearing and a sentence's two lines hide each other on a tall screen (docs/heart-words.md).
+ * A sentence about a thing on or in another ("the bug is on the bed") is made by the generator and can be played by the
+ * exercise, but is not asked for yet: the little scenes are too big for the clearing (docs/heart-words.md).
  */
-const SENTENCES = false;
+const SCENES = false;
 
-/** Words read in silence: a phrase, and once `SENTENCES` is on, then a sentence if one can be made. Only irregular words the child has met stand in them. */
+/**
+ * Words read in silence: first a phrase ("the bug"), then sentences that say which thing ("I see a bug"), once the child
+ * has met the words they begin with; a phrase again until then. Only irregular words the child has met stand in them.
+ */
 function reads(n: number, ctx: GenContext, met: readonly string[]): ReadItem[] {
   const out: ReadItem[] = [];
   for (let i = 0; i < n; i++) {
+    const want: ReadWant = i === 0 ? 'phrase' : SCENES && ctx.rng() < 0.5 ? 'scene' : 'sentence';
     // Not the same thing twice running, where chance allows another.
-    let item = readItem(ctx, met, SENTENCES && i > 0);
-    for (let tries = 0; item && out.length && tries < 4 && item.target.thing === out[out.length - 1].target.thing; tries++) item = readItem(ctx, met, SENTENCES && i > 0);
+    let item = readItem(ctx, met, want, SIZES.sentenceTiles);
+    for (let tries = 0; item && out.length && tries < 4 && item.target.thing === out[out.length - 1].target.thing; tries++) item = readItem(ctx, met, want, SIZES.sentenceTiles);
     if (item) out.push(item);
   }
   return out;

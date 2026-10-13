@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { AREAS, allNodes, findNode, knownSkills } from './curriculum';
 import type { Attempt } from './events';
-import { byHeart, heartBuild, heartFind, heartMeet, pictureLabel, readItem, type GenContext } from './generator';
-import type { Content, HeartItem, Item, ReadItem, Round } from './items';
+import { byHeart, heartBuild, heartFind, heartMeet, type GenContext } from './generator';
+import type { Content, HeartItem, Item, Round } from './items';
 import { confusions, foldSkills } from './model';
 import { seeded } from './rng';
 import { gate, planCheckpoint, planLesson } from './scheduler';
-import { blend, gpc, heart, heartOf, second } from './skills';
+import { gpc, heart, heartOf } from './skills';
 
 const T0 = 1_700_000_000_000;
 const THE = { text: 'the', graphemes: ['th', 'e'], sounds: ['th', 'u'] };
@@ -37,7 +37,6 @@ const answered = (word: string, correct = true, o: Partial<Attempt> = {}): Attem
 const node = (id: string) => findNode(id)!.node;
 const items = (rounds: Round[]): Item[] => rounds.flatMap((r) => r.items);
 const hearts = (rounds: Round[]) => items(rounds).filter((i): i is HeartItem => i.kind === 'heart');
-const reads = (rounds: Round[]) => items(rounds).filter((i): i is ReadItem => i.kind === 'read');
 
 describe('irregular words', () => {
   it('come one to a lesson: "the", then "a"', () => {
@@ -117,55 +116,19 @@ describe('irregular words', () => {
     expect(c.get('a')).toBeUndefined();
     expect(c.get('word:a')?.get('mat')).toBe(1);
   });
-});
 
-describe('words nobody says', () => {
-  const met = ['the', 'a'];
-
-  it('need three drawn things the child can read, and an irregular word the child has met', () => {
-    expect(readItem(at('i1a2-boss'), met)).toBeNull(); // only the map
-    expect(readItem(at('i1a3-c'), [])).toBeNull();
-    expect(readItem(at('i1a3-c', { content: content({ drawable: THINGS.slice(0, 2) }) }), met)).toBeNull();
-  });
-
-  it('show a phrase and three things, one of them what it says', () => {
-    for (let seed = 1; seed <= 40; seed++) {
-      const r = readItem(at('i1a3-c', { seed }), met)!;
-      expect(r.words.length).toBe(2);
-      expect(met).toContain(r.words[0].text);
-      expect(r.words[1].text).toBe(r.target.thing);
-      const things = r.choices.map((c) => c.thing);
-      expect(things).toContain(r.target.thing);
-      expect(new Set(things).size).toBe(3);
-      for (const t of things) expect(['map', 'cat', 'pot']).toContain(t);
-      expect(r.skills).toEqual([blend('cvc')]);
-      expect(r.supports).toContain(heart(r.words[0].text));
-    }
-  });
-
-  it('make a sentence only once "is" can be read, with each wrong picture wrong by one word', () => {
-    expect(readItem(at('i1a4-boss'), met, true)!.words.length).toBe(2);
-    for (let seed = 1; seed <= 60; seed++) {
-      const r = readItem(at('i2a1-s-z', { seed }), met, true)!;
-      expect(r.words.map((w) => w.text).slice(2, 4)).toEqual(['is', r.target.where!.rel]);
-      const labels = r.choices.map(pictureLabel);
-      expect(new Set(labels).size).toBe(3);
-      expect(labels).toContain(pictureLabel(r.target));
-      for (const c of r.choices) {
-        expect(c.where!.rel).toBe(r.target.where!.rel);
-        expect(c.thing).not.toBe(c.where!.thing);
-        if (c.where!.rel === 'in') expect(['cup', 'pot']).toContain(c.where!.thing);
-        const same = Number(c.thing === r.target.thing) + Number(c.where!.thing === r.target.where!.thing);
-        expect(same).toBeGreaterThanOrEqual(1);
-      }
-      expect(r.supports).toContain(second('s'));
-    }
-  });
-
-  it('end a lesson and a checkpoint with a phrase or two, never a sentence yet', () => {
-    const lesson = reads(planLesson(node('i1a3-c'), at('i1a3-c'), T0));
-    expect(lesson.length).toBe(2);
-    expect(reads(planCheckpoint(AREAS[4], at('i2a1-l2'), T0)).every((r) => r.words.length === 2 && !r.target.where)).toBe(true);
-    expect(reads(planLesson(node('i1a2-p'), at('i1a2-p'), T0))).toEqual([]);
+  it('are caught up on two to a lesson, in the order they are taught, by a child who was past their lessons', () => {
+    const SAID = { text: 'said', graphemes: ['s', 'ai', 'd'], sounds: ['s', 'e', 'd'] };
+    const I = { text: 'I', graphemes: ['I'], sounds: ['I'] };
+    const four = content({ hearts: [THE, A, I, SAID] });
+    const meets = (known: string[]) => hearts(planLesson(node('i1a4-u'), at('i1a4-u', { content: four, states: foldSkills(known.map((w) => answered(w))) }), T0)).filter((i) => i.stage === 'meet').map((i) => i.word);
+    expect(meets([])).toEqual(['the', 'a']);
+    expect(meets(['the', 'a'])).toEqual(['I', 'said']);
+    expect(meets(['the', 'a', 'I', 'said'])).toEqual([]);
+    // The word a lesson teaches comes before any the child is behind on, and no word is asked about or shown unmet.
+    const h = hearts(planLesson(node('i1a3-d'), at('i1a3-d', { content: four }), T0));
+    expect(h.filter((i) => i.stage === 'meet').map((i) => i.word)).toEqual(['said', 'the', 'a']);
+    expect(h.filter((i) => i.stage === 'find').some((i) => i.word === 'I' || i.choices.some((c) => c.text === 'I'))).toBe(false);
+    expect(h.find((i) => i.word === 'said')!.byHeart).toEqual([false, true, false]);
   });
 });

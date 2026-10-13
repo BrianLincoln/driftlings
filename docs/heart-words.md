@@ -6,15 +6,75 @@ then. Which word arrives at which UFLI lesson is in `docs/ufli.md` and is not re
 
 ## What is built
 
-Slice one, except sentences.
+Slices one to three, and sentences that say which thing. Seventeen words, one to a lesson:
 
-- "the" at `i1a2-p` and "a" at `i1a2-f`; the heart on the tile; `heart` (meet, find); `blend` spelling a
-  heart word; `read` with phrases; met-before-asked; the audio rule; `?unrecorded`.
-- **Nothing of it appears in the game until `words/the`, `words/a` and `letters/th-sound` are recorded**
-  (the generator never makes an item without its clips). The three new prompts are skipped while missing.
-  `?unrecorded` shows all of it in silence meanwhile.
-- **Sentences are made by the generator and playable in `read`, but switched off** (`SENTENCES` in
-  `scheduler.ts`). Looked at in both layouts, they are not good enough: a thing standing on another is as
+| Word | Tiles (what each says) | Heart at its lesson | Node | UFLI |
+|---|---|---|---|---|
+| the | th · e (/u/) | both | `i1a2-p` | 1 |
+| a | a (/u/) | it | `i1a2-f` | 7 |
+| I | I (its name) | it | `i1a2-i` | 1 to 4 |
+| said | s · ai (/e/) · d | ai | `i1a3-d` | 13 |
+| to | t · o (/oo/) | o | `i1a4-u` | 15 |
+| do | d · o (/oo/) | o | `i1a4-g` | 15 |
+| of | o (/u/) · f (/v/) | both | `i1a4-b` | 17 |
+| see | s · ee (e's name) | ee | `i2a1-k` | 19 |
+| he | h · e (its name) | e | `i2a1-h` | 23 |
+| be | b · e | e | `i2a1-r` | 23 |
+| me | m · e | e | `i2a1-l` | 23 |
+| from | f · r · o (/u/) · m | o | `i2a2-w` | 25 |
+| was | w · a (/u/) · s (/z/) | a | `i2a2-j` | 29 |
+| are | are (/ar/), one tile | it | `i2a2-y` | 27 |
+| you | y · ou (/oo/) | ou | `i2a2-x` | 31 |
+| what | wh (/w/) · a (/u/) · t | wh, a | `i2a2-v` | 33 |
+| have | h · a · ve (/v/) | ve | `i2a2-z` | 33 |
+
+Decisions taken while the owner was away (2026-10-13), each easy to undo:
+
+- **One word to a lesson, never before UFLI's lesson, and none in a lesson that is already long** (the two on an s
+  at the end, the two on word shapes, the checkpoints). So see, be, me, from and are come one to three lessons
+  after UFLI's, and `i2a2-qu` has none. A test holds all three rules (`src/game/hearts.test.ts`).
+- **he, be, me are three lessons running, not one lesson of three.** Three words to meet, find and spell in one
+  sitting is about two minutes on top of a letter lesson. The pattern is the same tile each time (e with a heart).
+- **Starred words (irregular only for now): see, he, be, me, you and have are taught; look and book wait.** The
+  six are among the commonest words there are and sentences need them. look and book would need a sound nothing
+  else uses (the short oo) for two words no sentence here can use; they come with lesson 89 or when a slot is free.
+- **"and" is still not here**: it is regular, belongs in `words.json`, and its shape (VCC) is one nothing teaches.
+- **"I" is a capital on its tile**, the only one in the game, and it is all heart: that it looks like nothing the
+  child has been taught is exactly what the heart says. Nothing else is capitalised and there are no full stops.
+- **A letter saying its name is heard from the clip of the letter's name** (`letters/e-name` for the e of "he",
+  `letters/i-name` for "I"): in `hearts.json` that is a capital in `sounds`. No new recordings for six words.
+- **Two new sounds only**: `letters/oo-sound` (to, do, you) and `letters/ar-sound` ("are" is one sound, so one
+  tile, and like "a" it is never spelled; a three-letter tile draws its letters smaller).
+- **Hearts that go away.** Within the six islands: the s of "was" once s says /z/, and any tile whose letter the
+  child had not reached (a child sees "said" with a heart on d only before d). Later: the e of he, be, me when a
+  lesson teaches `second:e`. For see, what and have the tile's sound is written as another letter's (E, w, v), so
+  when ee (85), wh (50) or ve is taught, change that entry of `sounds` to the grapheme itself and the heart goes.
+- **Nobody is sent back.** No lesson was added: the words are on lessons that were there, so `late` and `settled`
+  have nothing to do. A child past a word's lesson meets it at the top of their next lesson, two at a time in the
+  order they are taught (`catchUps`); a child who has finished all six islands is up to fifteen words behind and
+  catches up over the first eight lessons of the next island, each about a minute longer.
+
+Sentences:
+
+- **A sentence that says which thing is on** (`LEADS` in `src/learn/reads.ts`): "I see a cat", "I see the cat",
+  "you see a cat", "it is a cat", "I have a cat". The second reading of a lesson or checkpoint is one, once the
+  child has met the irregular words it begins with ("it is" needs none: from `i2a1-s-z`); the first is still a
+  phrase. Three single things to choose between, near misses first, exactly as for a phrase, so there is no new art
+  and no new line to record. It never has more than eight tiles (`sentenceTiles`), which is one line on a tall
+  screen: that leaves out "it is the cat" and "you have a cat".
+- What it shows and does not: the picture tells only the thing's word, as with "the cat". The words before it are
+  read in use and get support credit; they are evidenced by `find` and by spelling.
+- **A thing on or in another ("the bug is on the bed") is still off** (`SCENES` in `scheduler.ts`), for the reason
+  below: it needs things that can be drawn small. "said", "to", "do", "of", "he", "be", "me", "from", "was", "are"
+  and "what" are in no sentence yet: none makes a sentence a picture of single things can check.
+
+Still true from slice one:
+
+- **Nothing of a word appears in the game until its word clip and each of its sounds are recorded** (the generator
+  never makes an item without its clips), and nothing at all until "the" or "a" is. `?unrecorded` shows all of it
+  in silence meanwhile.
+- **The scenes for a thing on another** are made by the generator and playable in `read`, but switched off.
+  Looked at in both layouts, they are not good enough: a thing standing on another is as
   big as what it stands on and reaches up into the words, and on a tall screen a sentence's two lines hide
   each other (letters are DOM, so the nearer line's tiles cannot cover the further line's letters). They
   need things that can be drawn small, which belongs with the things work, and probably one plank per word.

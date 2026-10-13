@@ -43,7 +43,8 @@ export class LetterTile {
     this.anchor = this.tile.anchor;
     // Two letters on one tile (qu, th) are a little smaller, so they clear its edges: smaller again inside a card's frame.
     const two = 0.6 * Math.min(1, ((tile.face ?? TILE.width) / TILE.width) * 1.12);
-    this.glyph = glyphs.add(text, this.anchor, (!icon && text.length > 1 ? two : 0.74) * scale, icon);
+    // Three (the one tile of "are") are smaller again.
+    this.glyph = glyphs.add(text, this.anchor, (!icon && text.length > 1 ? two * Math.min(1, 2.3 / text.length) : 0.74) * scale, icon);
     if (tile.heart) this.glyph.el.classList.add('heart');
     this.root.scale.setScalar(0.001);
   }

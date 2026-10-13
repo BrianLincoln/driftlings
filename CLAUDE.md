@@ -39,7 +39,7 @@ the dev server; that is the real test. Fix what breaks when it breaks.
   nearest lesson first. What a lesson needs follows from the skill it teaches: a grapheme needs its
   sound, its keyword words (`src/content/keywords.json`: heard in "like in ...", never read) and, for
   a single letter, its name (two letters that make one sound, like qu, have none); a blending lesson needs enough buildable words from the graphemes taught
-  so far, and a lesson on new word shapes needs them of those shapes with its letter in. An irregular word needs its word and the sound of each of its tiles. Word chains need the three lines the exercise says (`CHAIN_PROMPTS` in `src/learn/chains.ts`); no chain is offered until all three are recorded. A new kind of skill gets its own rule in `scripts/audio-wanted.mjs`
+  so far, and a lesson on new word shapes needs them of those shapes with its letter in. An irregular word needs its word and the sound of each of its tiles (the letter's name where the tile says that). Word chains need the three lines the exercise says (`CHAIN_PROMPTS` in `src/learn/chains.ts`); no chain is offered until all three are recorded. A new kind of skill gets its own rule in `scripts/audio-wanted.mjs`
 
 URL switches: `?reset` clears the progress of the child who played last, `?demo` fills the home island, `?scene=map|home|who|sleeper|friends|<node id>`
 (`who` is where children choose who is playing, with `&demo` a full row of six; `sleeper` replays the map scene where the sleeper takes the plank, `friends` the one where it gives it back;
@@ -77,11 +77,11 @@ before committing and deploying.
 
 ## Layout
 
-- `src/learn` : skills, event log, skill model, generator (`chains.ts` makes the word chains), scheduler (`rounds.ts` has its sizes and the runs of items it builds from). Pure logic: no three.js,
+- `src/learn` : skills, event log, skill model, generator (`chains.ts` makes the word chains, `reads.ts` the phrases and sentences read in silence), scheduler (`rounds.ts` has its sizes and the runs of items it builds from). Pure logic: no three.js,
   no DOM, no imports from the rest of the app (a test enforces this). It has to be right.
 - `src/content` : word list, audio manifest (generated), and the adapter the generator reads; `drawn.json` lists every thing that has a drawing (the `read` exercise chooses its pictures from it, near misses first), `endings.json` lists the things shown as one and
   several (each needs a drawing in `scenes/things/`; a test checks) and the short words where s says /z/; `hearts.json` lists the
-  irregular words, a tile to a sound (`docs/heart-words.md` has the design and what is built)
+  irregular words in the order they are taught, a tile to a sound, a capital for a letter saying its name (`docs/heart-words.md` has the design and what is built)
 - `src/exercises` : one module per exercise, all satisfying `contract.ts`; `index.ts` is the catalogue
 - `src/game` : one child's game (event log + everything derived), the children on this device (`children.ts`),
   the device store (one log per child; ids are uuids so an account can take them over later), and `areas.ts`:

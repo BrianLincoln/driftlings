@@ -1,4 +1,4 @@
-import type { BlendItem, BlendStage, CatchItem, Content, HeartItem, ManyItem, MeetItem, Picture, PickLetterItem, ReadItem, ReadWord, Word } from './items';
+import type { BlendItem, BlendStage, CatchItem, Content, HeartItem, ManyItem, MeetItem, PickLetterItem, ReadWord, Word } from './items';
 import { confusionKey, type SkillState } from './model';
 import { shuffle, weighted, type Rng } from './rng';
 import { answersFor, blend, gpc, graphemeOf, heart, second, shapeOf, suffix, type SkillId } from './skills';
@@ -132,7 +132,7 @@ export function manyItem(base: string, ctx: GenContext, stage: ManyItem['stage']
 }
 
 // ---------------------------------------------------------------------------
-// Irregular words, and words nobody says.
+// Irregular words. (Words nobody says are in reads.ts.)
 // ---------------------------------------------------------------------------
 
 /**
@@ -148,8 +148,8 @@ export function heartWords(ctx: GenContext): Word[] {
   return ctx.content.hearts.filter((w) => ctx.known.has(heart(w.text)));
 }
 
-const onTiles = (w: Word, ctx: GenContext): ReadWord => ({ text: w.text, graphemes: w.graphemes, sounds: w.sounds ?? w.graphemes, byHeart: byHeart(w, ctx) });
-const behaving = (w: Word, ctx: GenContext): SkillId[] => w.graphemes.filter((_, i) => !byHeart(w, ctx)[i]).map(gpc);
+export const onTiles = (w: Word, ctx: GenContext): ReadWord => ({ text: w.text, graphemes: w.graphemes, sounds: w.sounds ?? w.graphemes, byHeart: byHeart(w, ctx) });
+export const behaving = (w: Word, ctx: GenContext): SkillId[] => w.graphemes.filter((_, i) => !byHeart(w, ctx)[i]).map(gpc);
 
 export function heartMeet(word: string, ctx: GenContext, first = false): HeartItem | null {
   const w = heartWords(ctx).find((x) => x.text === word);
@@ -186,76 +186,4 @@ export function heartBuild(word: string, ctx: GenContext, stage: 'guided' | 'fre
   const w = heartWords(ctx).find((x) => x.text === word);
   if (!w || w.graphemes.length < 2) return null;
   return { kind: 'blend', key: key('build', word), word, graphemes: w.graphemes, sounds: w.sounds ?? w.graphemes, stage, byHeart: byHeart(w, ctx), skills: [heart(word)], supports: behaving(w, ctx) };
-}
-
-/** Drawn things whose word the child can read with nobody saying it. */
-export function readableThings(ctx: GenContext): Array<{ name: string; on: boolean; in: boolean; word: Word }> {
-  const words = decodableWords(ctx);
-  return ctx.content.drawable.flatMap((d) => {
-    const word = words.find((w) => w.text === d.name);
-    return word ? [{ ...d, word }] : [];
-  });
-}
-
-/** A picture in words, for the log: "bug", "bug on bed". */
-export const pictureLabel = (p: Picture): string => (p.where ? `${p.thing} ${p.where.rel} ${p.where.thing}` : p.thing);
-
-/**
- * Words to read in silence and the pictures to choose between. `articles` are the irregular words that may
- * stand in front of a thing ("the", "a"): only ones the child has met.
- * A sentence ("the bug is on the bed") when `sentence` is asked for and its words can all be read; if not, a phrase ("the bug").
- * Null without three things to choose between.
- */
-export function readItem(ctx: GenContext, articles: readonly string[], sentence = false): ReadItem | null {
-  const things = readableThings(ctx);
-  const arts = heartWords(ctx).filter((w) => articles.includes(w.text));
-  if (things.length < 3 || arts.length === 0) return null;
-  const art = () => arts[Math.floor(ctx.rng() * arts.length)];
-  /** How easily `b` is taken for `a`: most of all when one letter apart (cat, cap), then when it starts the same way. */
-  const apart = (a: string, b: string) => (a.length === b.length ? [...a].filter((c, i) => c !== b[i]).length : 9);
-  const near = (a: string, b: string) => 1 + (apart(a, b) === 1 ? 14 : 0) + (a[0] === b[0] ? 4 : 0) + ([...a].some((c) => b.includes(c)) ? 1 : 0);
-  /** Another thing, for choice beside `than`: a near miss if there is one, so the first letter is not enough. */
-  const other = (than: string, not: string[], ok: (t: (typeof things)[number]) => boolean = () => true) => {
-    const pool = things.filter((t) => t.name !== than && !not.includes(t.name) && ok(t));
-    return pool.length ? weighted(pool, (t) => near(t.name, than), ctx.rng) : null;
-  };
-  const subject = things[Math.floor(ctx.rng() * things.length)];
-  const used = (ws: Word[]) => [...new Set(ws.flatMap((w) => [...(byHeart(w, ctx).some(Boolean) ? [heart(w.text)] : []), ...behaving(w, ctx), ...w.graphemes.flatMap((g, i) => (oddAt(w, i) && ctx.known.has(second(g)) ? [second(g)] : []))]))];
-  const shapes = (ws: Word[]) => [...new Set(ws.map((w) => blend(shapeOf(w.graphemes))))];
-
-  if (sentence) {
-    const little = readableWords(ctx);
-    const is = little.find((w) => w.text === 'is');
-    const rels = (['on', 'in'] as const).filter((r) => little.some((w) => w.text === r) && things.some((t) => t[r]));
-    const rel = rels[Math.floor(ctx.rng() * rels.length)];
-    const place = rel && weighted(things.filter((t) => t[rel] && t.name !== subject.name), () => 1, ctx.rng);
-    const wrongSubject = place && other(subject.name, [place.name]);
-    const wrongPlace = place && other(place.name, [subject.name], (t) => t[rel]);
-    if (is && rel && place && wrongSubject) {
-      const at = (thing: string, where: string): Picture => ({ thing, where: { rel, thing: where } });
-      // The third choice is wrong in its last word where there is somewhere else to put the thing, in its first if not.
-      const third = wrongPlace ? at(subject.name, wrongPlace.name) : other(subject.name, [place.name, wrongSubject.name]);
-      if (third) {
-        const words = [art(), subject.word, is, little.find((w) => w.text === rel)!, art(), place.word];
-        return {
-          kind: 'read', key: key('read', `${subject.name}-${rel}-${place.name}`),
-          words: words.map((w) => onTiles(w, ctx)),
-          target: at(subject.name, place.name),
-          choices: shuffle([at(subject.name, place.name), at(wrongSubject.name, place.name), 'thing' in third ? third : at(third.name, place.name)], ctx.rng),
-          skills: shapes([subject.word, place.word]), supports: used(words),
-        };
-      }
-    }
-  }
-  const a = other(subject.name, []);
-  const b = a && other(subject.name, [a.name]);
-  if (!a || !b) return null;
-  const words = [art(), subject.word];
-  return {
-    kind: 'read', key: key('read', subject.name),
-    words: words.map((w) => onTiles(w, ctx)),
-    target: { thing: subject.name },
-    choices: shuffle([subject, a, b], ctx.rng).map((t) => ({ thing: t.name })),
-    skills: shapes([subject.word]), supports: used(words),
-  };
 }

@@ -47,10 +47,12 @@ export const AREAS: AreaDef[] = [
   {
     id: 'i1a2',
     nodes: [
-      // Irregular words come one to a lesson, never before UFLI has them (docs/heart-words.md).
+      // Irregular words come one to a lesson, never before UFLI has them and never in a lesson that is already long
+      // (an ending, new word shapes), so some come a lesson or two after UFLI's (docs/heart-words.md has the table).
+      // A word added to a lesson a child is already past needs nothing here: it is met at the top of their next lesson.
       lesson('i1a2-p', 6, gpc('p'), heart('the')),
       lesson('i1a2-f', 7, gpc('f'), heart('a')),
-      lesson('i1a2-i', 8, gpc('i')),
+      lesson('i1a2-i', 8, gpc('i'), heart('I')),
       lesson('i1a2-n', 9, gpc('n')),
       check('i1a2-boss', 'miniboss', 10),
     ],
@@ -60,7 +62,7 @@ export const AREAS: AreaDef[] = [
     nodes: [
       // UFLI 11 (nasalised a in am, an) is a pronunciation point, not a new correspondence.
       lesson('i1a3-o', 12, gpc('o')),
-      lesson('i1a3-d', 13, gpc('d')),
+      lesson('i1a3-d', 13, gpc('d'), heart('said')),
       lesson('i1a3-c', 14, gpc('c')),
       check('i1a3-boss', 'miniboss', null),
     ],
@@ -68,9 +70,9 @@ export const AREAS: AreaDef[] = [
   {
     id: 'i1a4',
     nodes: [
-      lesson('i1a4-u', 15, gpc('u')),
-      lesson('i1a4-g', 16, gpc('g')),
-      lesson('i1a4-b', 17, gpc('b')),
+      lesson('i1a4-u', 15, gpc('u'), heart('to')),
+      lesson('i1a4-g', 16, gpc('g'), heart('do')),
+      lesson('i1a4-b', 17, gpc('b'), heart('of')),
       lesson('i1a4-e', 18, gpc('e')),
       check('i1a4-boss', 'boss', 19),
     ],
@@ -81,13 +83,13 @@ export const AREAS: AreaDef[] = [
       // UFLI 20 and 21: an s on the end for more than one, saying /s/ (cups), then saying /z/ (beds, and in "is").
       lesson('i2a1-add-s', 20, suffix('s')),
       lesson('i2a1-s-z', 21, second('s')),
-      lesson('i2a1-k', 22, gpc('k')),
-      lesson('i2a1-h', 23, gpc('h')),
+      lesson('i2a1-k', 22, gpc('k'), heart('see')),
+      lesson('i2a1-h', 23, gpc('h'), heart('he')),
       // UFLI gives r and l two lessons each. The first is the letter; the second is the letter next to another
       // consonant: 25 is r after one at the start of a word (trip), 27 is l there (flag) and before one at the end (milk).
-      lesson('i2a1-r', 24, gpc('r')),
+      lesson('i2a1-r', 24, gpc('r'), heart('be')),
       shapes('i2a1-r2', 25, ['r'], blend('ccvc')),
-      lesson('i2a1-l', 26, gpc('l')),
+      lesson('i2a1-l', 26, gpc('l'), heart('me')),
       shapes('i2a1-l2', 27, ['l'], blend('ccvc'), blend('cvcc')),
       check('i2a1-boss', 'miniboss', null),
     ],
@@ -97,13 +99,13 @@ export const AREAS: AreaDef[] = [
     // grapheme of two letters: one tile, one sound.
     id: 'i2a2',
     nodes: [
-      lesson('i2a2-w', 28, gpc('w')),
-      lesson('i2a2-j', 29, gpc('j')),
-      lesson('i2a2-y', 30, gpc('y')),
-      lesson('i2a2-x', 31, gpc('x')),
+      lesson('i2a2-w', 28, gpc('w'), heart('from')),
+      lesson('i2a2-j', 29, gpc('j'), heart('was')),
+      lesson('i2a2-y', 30, gpc('y'), heart('are')),
+      lesson('i2a2-x', 31, gpc('x'), heart('you')),
       lesson('i2a2-qu', 32, gpc('qu')),
-      lesson('i2a2-v', 33, gpc('v')),
-      lesson('i2a2-z', 34, gpc('z')),
+      lesson('i2a2-v', 33, gpc('v'), heart('what')),
+      lesson('i2a2-z', 34, gpc('z'), heart('have')),
       // Ours: UFLI goes straight on to seven lessons of review (35 to 41). Every letter is known now, so it is a boss.
       check('i2a2-boss', 'boss', null),
     ],

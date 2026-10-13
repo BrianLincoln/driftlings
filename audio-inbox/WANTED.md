@@ -15,18 +15,23 @@ Complete.
 - [ ] `prompts/what-word-is-it-now` : "What word is it now?" (word chains)
 - [ ] `prompts/tap-to-hear-tap-again-to-choose` : "Tap one to hear it. Tap it again to choose it." (word chains)
 - [ ] `words/the` : "the", said as "thuh", not "thee" (learned by heart)
-- [ ] `letters/th-sound` : the sound "th" makes in "the", alone, no trailing "uh"
+- [ ] `letters/th-sound` : the buzzing "th" of "the", alone, no trailing "uh"
 - [ ] `prompts/this-word-is` : "This word is"
 - [ ] `prompts/learn-this-part-by-heart` : "This part, we learn by heart."
 - [ ] `words/a` : "a", said as "uh", not "ay" (learned by heart)
+- [ ] `words/i` : "I" (learned by heart)
 
 ## Island 3
 
+- [ ] `words/said` : "said" (learned by heart)
 - [ ] `prompts/tap-what-it-says` : "Tap what it says."
 
 ## Island 4
 
-Complete.
+- [ ] `words/to` : "to", said as "too", not "tuh" (learned by heart)
+- [ ] `letters/oo-sound` : the long "oo" of "to", "do" and "you", alone, no trailing "uh"
+- [ ] `words/do` : "do" (learned by heart)
+- [ ] `words/of` : "of", said as "uv" (learned by heart)
 
 ## Island 5
 
@@ -37,18 +42,28 @@ Complete.
 - [ ] `words/pigs` : "pigs" (one pig, lots of pigs)
 - [ ] `words/bug` : "bug" (one bug, lots of bugs)
 - [ ] `words/bugs` : "bugs" (one bug, lots of bugs)
+- [ ] `words/see` : "see" (learned by heart)
+- [ ] `words/he` : "he" (learned by heart)
+- [ ] `words/be` : "be" (learned by heart)
 - [ ] `words/trip` : "trip" (a word to build: r beside another consonant)
 - [ ] `words/drum` : "drum" (a word to build: r beside another consonant)
 - [ ] `words/crab` : "crab" (a word to build: r beside another consonant)
 - [ ] `words/frog` : "frog" (a word to build: r beside another consonant)
+- [ ] `words/me` : "me" (learned by heart)
 - [ ] `words/flag` : "flag" (a word to build: l beside another consonant)
 - [ ] `words/clap` : "clap" (a word to build: l beside another consonant)
 - [ ] `words/help` : "help" (a word to build: l beside another consonant)
 
 ## Island 6
 
+- [ ] `words/from` : "from" (learned by heart)
+- [ ] `words/was` : "was", said as "wuz" (learned by heart)
+- [ ] `words/are` : "are", said as in "we are" (learned by heart)
+- [ ] `letters/ar-sound` : the "ar" of "are" and "car", alone, no trailing "uh"
 - [ ] `prompts/together-these-letters-make-the-sound` : "Together, these letters make the sound" (said before the sound of two letters on one tile: qu, and later sh, ch, th)
 - [ ] `words/squid` : "squid" (a word with qu in it: only sounded out and heard, so any shape)
+- [ ] `words/what` : "what", said as "wut" (learned by heart)
+- [ ] `words/have` : "have" (learned by heart)
 - [ ] `words/quiz` : "quiz" (a word with z in it)
 - [ ] `words/swim` : "swim" (two consonants together, with one of the last letters of the alphabet)
 - [ ] `words/jump` : "jump" (two consonants together, with one of the last letters of the alphabet)

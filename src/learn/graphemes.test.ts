@@ -73,7 +73,7 @@ describe('the island that ends the alphabet', () => {
   it('teaches w, j, y, x, qu, v, z in UFLI\'s order and ends on a boss', () => {
     expect(A.id).toBe('i2a2');
     expect(A.nodes.map((x) => x.ufli)).toEqual([28, 29, 30, 31, 32, 33, 34, null]);
-    expect(A.nodes.slice(0, -1).map((x) => x.teaches)).toEqual(LETTERS.map((g) => [gpc(g)]));
+    expect(A.nodes.slice(0, -1).map((x) => x.teaches.filter((t) => t.startsWith('gpc:')))).toEqual(LETTERS.map((g) => [gpc(g)]));
     expect(A.nodes.at(-1)!.kind).toBe('boss');
     // Every little one before this island keeps its number.
     expect(A.nodes.slice(0, -1).map((x) => rescueIndex(x.id))).toEqual([24, 25, 26, 27, 28, 29, 30]);

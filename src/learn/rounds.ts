@@ -36,6 +36,8 @@ export const SIZES = {
   /** Phrases or sentences read in silence at the end of a lesson, and at a checkpoint. */
   lessonReads: 2,
   checkpointReads: 2,
+  /** A sentence of more tiles than this would not go on one line of a tall screen, and two lines hide each other. */
+  sentenceTiles: 8,
   /** Steps in a word chain: this many where the words link up that far, and never fewer than the least. A lesson on new word shapes takes a shorter one of its own shapes. */
   chainSteps: 4,
   chainLeast: 3,

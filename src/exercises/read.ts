@@ -1,14 +1,14 @@
 import * as THREE from 'three';
 import { sfx } from '../audio/sound';
 import { promptClip, soundClip, wordClip } from '../content/content';
-import { pictureLabel } from '../learn/generator';
+import { pictureLabel } from '../learn/reads';
 import type { Picture, ReadItem, ReadWord } from '../learn/items';
 import type { Thing } from '../scenes/things';
 import type { Touchable } from '../stage/touch';
 import type { ExerciseModule } from './contract';
 import { placeLine, standWords, wordScale, type StoodWord } from './wordRow';
 
-// Words nobody says. A phrase ("the cat") or a sentence ("the bug is on the bed") stands on its
+// Words nobody says. A phrase ("the cat") or a sentence ("I see a cat", "the bug is on the bed") stands on its
 // tiles, and below it three things, or three little scenes. The child reads, and taps the one the
 // words describe. Tapping a letter says its sound, which is how reading is done and costs nothing;
 // tapping the companion has it read the words aloud, which is help and is reported as help.
