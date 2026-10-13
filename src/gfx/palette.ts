@@ -36,6 +36,14 @@ export const PALETTES = {
     tint: '#93ab8f', tintAmt: 0.4, lift: 0.07, wash: '#e3e8d6',
     outline: '#3d302c', water: '#80b3b2', foam: '#f4f3e8', sun: '#fffbe6',
   },
+  // Late in the day: a peach horizon under a rose and lilac sky, long mauve shade.
+  roseEvening: {
+    skyTop: '#c8a6c6', skyMid: '#f0c0bb', skyHorizon: '#ffdcab',
+    cloud: '#fff5ea', cloudShade: '#ecd0cc',
+    light: '#fff2dc', mid: '#ecd0b9', shade: '#b39aab',
+    tint: '#c1977f', tintAmt: 0.36, lift: 0.05, wash: '#edd8c8',
+    outline: '#3e2a2e', water: '#9aa2c2', foam: '#f8efe6', sun: '#ffe7bd',
+  },
 } satisfies Record<string, ScenePalette>;
 
 /** Base surface colours, before lighting and grade. */

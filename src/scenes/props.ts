@@ -68,6 +68,8 @@ export interface Tile {
   mat: ToonMaterial;
   /** Perched on the top edge of a tile whose letter is learned by heart. Only there if asked for. */
   heart?: THREE.Mesh;
+  /** How wide the face the letter stands on is, where that is not the whole slab: a card has a frame round it. */
+  face?: number;
 }
 
 let tileGeo: THREE.BufferGeometry | null = null;
@@ -165,7 +167,7 @@ export function buildCard(colour: string): Tile {
   anchor.position.set(0, CARD.height / 2, CARD.depth / 2 + 0.012);
   slab.add(anchor);
   root.add(slab);
-  return { root, slab, halo, anchor, mat };
+  return { root, slab, halo, anchor, mat, face: CARD.width - 2 * CARD.frame };
 }
 
 /** A far-off island: one flat pale tone, so distance reads as layers, not fog. */

@@ -510,7 +510,7 @@ describe('a lesson added to an area already out', () => {
     const done = settled(new Set([...earlier, ...was]));
     expect(ids.every((id) => done.has(id))).toBe(true);
     expect(currentNode(A, done)).toBeNull();
-    expect(knownSkills(done)).toEqual(new Set(allNodes().flatMap((x) => x.teaches)));
+    expect(knownSkills(done)).toEqual(new Set(AREAS.slice(0, 5).flatMap((a) => a.nodes).flatMap((x) => x.teaches)));
     expect(rescuesHome(done)).toEqual(Array.from({ length: 24 }, (_, i) => i));
   });
 
@@ -532,7 +532,7 @@ describe('a lesson added to an area already out', () => {
     // As numbered before the two lessons were added: every lesson in order.
     expect(was.slice(0, -1).map(rescueIndex)).toEqual([16, 17, 18, 19, 20, 21]);
     expect(['i2a1-r2', 'i2a1-l2'].map(rescueIndex)).toEqual([22, 23]);
-    expect(new Set(allNodes().filter((x) => x.kind === 'lesson').map((x) => rescueIndex(x.id))).size).toBe(24);
+    expect(new Set(AREAS.slice(0, 5).flatMap((a) => a.nodes).filter((x) => x.kind === 'lesson').map((x) => rescueIndex(x.id)))).toEqual(new Set(Array.from({ length: 24 }, (_, i) => i)));
   });
 
   it('settles nothing in an area whose checkpoint is not beaten', () => {

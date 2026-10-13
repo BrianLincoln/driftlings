@@ -4,8 +4,10 @@ import type { LetterTile } from '../scenes/letterTile';
 import type { ExerciseModule } from './contract';
 
 // Meet a letter: it appears, the narrator names it, says its sound and a word
-// that starts with it, and after a beat the lesson moves on. Nothing to tap and
-// nothing scored; the questions that follow are where the child answers.
+// that starts with it (x: ends with it), and after a beat the lesson moves on.
+// Nothing to tap and nothing scored; the questions that follow are where the
+// child answers. Two letters that make one sound (qu) stand on one tile and
+// have no name: "Together, these letters make the sound ...".
 
 /** "Like in [word]", for a letter that has a keyword recorded. */
 const likeIn = (g: string): ClipId[] => {
@@ -13,12 +15,17 @@ const likeIn = (g: string): ClipId[] => {
   return word ? [promptClip('like-in'), word] : [];
 };
 const BEFORE_LIKE_IN = 0.45;
+const TOGETHER = promptClip('together-these-letters-make-the-sound');
+/** What is said before the sound itself. Until the line for two letters is recorded, they get what a letter with no name gets. */
+const lead = (g: string): ClipId[] =>
+  g.length > 1
+    ? [hasClip(TOGETHER) ? TOGETHER : promptClip('listen')]
+    : hasClip(nameClip(g)) ? [promptClip('this-is-the-letter'), nameClip(g), promptClip('it-makes-the-sound')] : [promptClip('listen')];
 
 export const meet: ExerciseModule<MeetItem> = {
   kind: 'meet',
   clips: (items) => [
-    promptClip('this-is-the-letter'), promptClip('it-makes-the-sound'), promptClip('listen'),
-    ...items.flatMap((i) => [soundClip(i.grapheme), nameClip(i.grapheme), ...likeIn(i.grapheme)]),
+    ...items.flatMap((i) => [...lead(i.grapheme), soundClip(i.grapheme), ...likeIn(i.grapheme)]),
   ],
 
   start(items, kit, hooks) {
@@ -55,11 +62,7 @@ export const meet: ExerciseModule<MeetItem> = {
           told = true;
           const g = tile.text;
           // "This is the letter [name]. It makes the sound [sound]. Like in [word]."
-          const said = kit.line(
-            hasClip(nameClip(g))
-              ? [promptClip('this-is-the-letter'), nameClip(g), promptClip('it-makes-the-sound'), soundClip(g)]
-              : [promptClip('listen'), soundClip(g)],
-          );
+          const said = kit.line([...lead(g), soundClip(g)]);
           soundAt = t + said.lastAt;
           const example = likeIn(g);
           const end = example.length ? kit.line(example, said.end + BEFORE_LIKE_IN).end : said.end;

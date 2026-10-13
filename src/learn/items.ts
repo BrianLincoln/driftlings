@@ -154,8 +154,8 @@ export interface Content {
   hasName(grapheme: string): boolean;
   /** Decodable words that have a spoken clip. `sounds` is given where a letter does not say its usual sound. */
   words: ReadonlyArray<Word>;
-  /** Words for a thing that can be shown, one and several, with what the s says on the end. Both words have clips. */
-  many: ReadonlyArray<{ base: string; sound: string }>;
+  /** Words for a thing that can be shown, one and several, with what the s says on the end. Both words have clips. `graphemes`: the word for one cut up, where that is not a letter at a time. */
+  many: ReadonlyArray<{ base: string; sound: string; graphemes?: string[] }>;
   /** Irregular words, one grapheme per tile and what each says. The word and every sound have clips. */
   hearts: ReadonlyArray<Word>;
   /** Things that have a drawing and a spoken word: what a phrase can be about. `on` and `in`: something else can be put there. */

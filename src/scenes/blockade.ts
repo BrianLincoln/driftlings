@@ -15,8 +15,10 @@ import { Reach } from './reach';
 // of them go; a watchful one sits there wide awake and glum, and turns to see
 // each of them off; a restless one paces its bit of shore and stops short to
 // stare; a huffy one has its back to the lot of them, and only looks round
-// when it thinks nobody will see; a stirring one starts asleep and works its
-// way through the rest as the ship fills. When the last is aboard and the
+// when it thinks nobody will see; a merry one bobs from side to side to a tune
+// of its own and sees each of them off with a bounce, sure it is all a game; a
+// stirring one starts asleep and works its way through the first three as the
+// ship fills. When the last is aboard and the
 // companion sets off after them, it starts up, bounds over to the foot of the
 // plank, reaches out, and lifts the plank over its head (mapCut.ts). It is the
 // one nobody came for: grey like the little ones were, and put out about it.
@@ -38,6 +40,8 @@ const STIRS: Mood[] = ['sleepy', 'sleepy', 'watchful', 'restless'];
 const BEAT = { wide: [-0.2, 1.3], tall: [-0.2, 1.3], every: 2.5 };
 /** How far round a huffy one is turned from facing us. */
 const BACK = Math.PI - 0.55;
+/** A merry one's bobbing: how far it turns to each side, and how long between one bob and the next. */
+const SWAY = { turn: 0.45, every: 0.8 };
 
 type Ground = (x: number, z: number) => number;
 
@@ -79,7 +83,8 @@ export class Blockade {
     this.who.root.scale.multiplyScalar(SIZE);
     this.who.drowse = state === 'beside' && this.sleepy ? 0 : null;
     if (left) this.who.setColour(0);
-    this.who.worried = left && this.who.drowse === null;
+    // A merry one does not know it is being left until the last of them has gone.
+    this.who.worried = left && this.who.drowse === null && !(this.mood === 'merry' && !this.roused);
     this.reach = new Reach(this.who);
     this.root.add(...this.reach.parts, this.who.root, this.dust.root);
     this.root.visible = state !== 'gone';
@@ -243,13 +248,18 @@ export class Blockade {
     this.snore(asleep ? 1 - who.peek / 0.8 : 0);
   }
 
-  /** What it does with itself while nobody is going by: a restless one walks its beat, a huffy one turns its back again. */
+  /** What it does with itself while nobody is going by: a restless one walks its beat, a merry one bobs on the spot, a huffy one turns its back again. */
   private fidget(dt: number): void {
     const b = this.beat;
     if (this.mood === 'huffy') this.who.turnTo(this.at.x > 0 ? -BACK : BACK);
-    if (this.mood !== 'restless' || (b.next -= dt) > 0) return;
-    b.next = BEAT.every;
+    if ((this.mood !== 'restless' && this.mood !== 'merry') || (b.next -= dt) > 0) return;
     b.turn = -b.turn;
+    if (this.mood === 'merry') {
+      b.next = SWAY.every;
+      this.who.turnTo(b.turn * SWAY.turn);
+      return this.who.nod(true);
+    }
+    b.next = BEAT.every;
     const far = b.ends[b.turn > 0 ? 1 : 0];
     this.who.hopTo(this.beside.x + b.x * far, this.beside.z + b.z * far);
   }

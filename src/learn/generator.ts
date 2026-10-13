@@ -1,7 +1,7 @@
 import type { BlendItem, BlendStage, CatchItem, Content, HeartItem, ManyItem, MeetItem, Picture, PickLetterItem, ReadItem, ReadWord, Word } from './items';
 import { confusionKey, type SkillState } from './model';
 import { shuffle, weighted, type Rng } from './rng';
-import { blend, gpc, graphemeOf, heart, second, shapeOf, soundsLike, suffix, type SkillId } from './skills';
+import { answersFor, blend, gpc, graphemeOf, heart, second, shapeOf, suffix, type SkillId } from './skills';
 
 // Builds items from what the child knows and what audio exists. Two rules it
 // never breaks: an item only asks about taught skills, and an item is only
@@ -40,10 +40,10 @@ export function meetItem(grapheme: string, ctx: GenContext): MeetItem | null {
   return { kind: 'meet', key: key('meet', grapheme), grapheme };
 }
 
-/** Up to `n` letters to set beside the target: taught ones and foils, never the target itself or a letter that sounds the same. */
+/** Up to `n` letters to set beside the target: taught ones and foils, never the target itself or a letter that says the same sound. */
 function wrongLetters(target: string, n: number, ctx: GenContext): string[] {
-  const taught = [...ctx.known].map(graphemeOf).filter((g): g is string => !!g && !soundsLike(g, target));
-  let pool = [...new Set([...taught, ...ctx.foils.filter((g) => !soundsLike(g, target))])];
+  const taught = [...ctx.known].map(graphemeOf).filter((g): g is string => !!g && !answersFor(target, g));
+  let pool = [...new Set([...taught, ...ctx.foils.filter((g) => !answersFor(target, g))])];
   const confused = ctx.confusions.get(target);
   const wrong: string[] = [];
   while (wrong.length < n && pool.length > 0) {
@@ -68,9 +68,9 @@ export function pickLetterItem(target: string, ctx: GenContext, nChoices = 3): P
   };
 }
 
-/** The letter is asked for by name and says its sound when caught, so it needs both clips. */
+/** The letter is asked for by name and says its sound when caught, so it needs both clips. Two letters that make one sound have no name to ask by. */
 export function catchItem(target: string, ctx: GenContext, count = 4, nOthers = 2): CatchItem | null {
-  if (!ctx.known.has(gpc(target)) || !ctx.content.hasSound(target) || !ctx.content.hasName(target)) return null;
+  if (target.length > 1 || !ctx.known.has(gpc(target)) || !ctx.content.hasSound(target) || !ctx.content.hasName(target)) return null;
   const others = wrongLetters(target, nOthers, ctx);
   if (others.length === 0) return null;
   return { kind: 'catch', key: key('catch', target), target, others, count, skills: [], supports: [gpc(target)] };
@@ -107,10 +107,10 @@ export function blendItem(word: string, ctx: GenContext, stage: BlendStage = 'fr
 }
 
 /** Things whose word can take its s: the ending taught, and s's second sound too where the s says that. */
-export function manyWords(ctx: GenContext): Array<{ base: string; sound: string }> {
+export function manyWords(ctx: GenContext): Content['many'][number][] {
   if (!ctx.known.has(suffix('s'))) return [];
   return ctx.content.many.filter((m) =>
-    ctx.content.hasSound(m.sound) && (m.sound === 's' || ctx.known.has(second('s'))) && [...m.base].every((g) => ctx.known.has(gpc(g))));
+    ctx.content.hasSound(m.sound) && (m.sound === 's' || ctx.known.has(second('s'))) && (m.graphemes ?? [...m.base]).every((g) => ctx.known.has(gpc(g))));
 }
 
 /** `plural` is which of the two words is said when asking. Showing asks nothing, so it is evidence of nothing. */
@@ -122,7 +122,7 @@ export function manyItem(base: string, ctx: GenContext, stage: ManyItem['stage']
     kind: 'many',
     key: key('many', base),
     base,
-    graphemes: [...base],
+    graphemes: m.graphemes ?? [...base],
     sound: m.sound,
     stage,
     target: plural || !ask ? `${base}s` : base,

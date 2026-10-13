@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Spring, ease, squash } from '../cast/spring';
 import type { Glyph, GlyphLayer } from '../stage/glyphs';
-import { buildTile, type Tile } from './props';
+import { TILE, buildTile, type Tile } from './props';
 
 // A letter tile as exercises use it: the 3D slab, its DOM glyph, and the small
 // set of states and reactions that every exercise shares.
@@ -41,8 +41,9 @@ export class LetterTile {
     this.tile = tile;
     this.root = this.tile.root;
     this.anchor = this.tile.anchor;
-    // Two letters on one tile (th) are a little smaller, so they clear its edges.
-    this.glyph = glyphs.add(text, this.anchor, (!icon && text.length > 1 ? 0.6 : 0.74) * scale, icon);
+    // Two letters on one tile (qu, th) are a little smaller, so they clear its edges: smaller again inside a card's frame.
+    const two = 0.6 * Math.min(1, ((tile.face ?? TILE.width) / TILE.width) * 1.12);
+    this.glyph = glyphs.add(text, this.anchor, (!icon && text.length > 1 ? two : 0.74) * scale, icon);
     if (tile.heart) this.glyph.el.classList.add('heart');
     this.root.scale.setScalar(0.001);
   }

@@ -1,4 +1,4 @@
-import { blend, gpc, heart, second, suffix, type SkillId } from './skills';
+import { blend, gpc, graphemeOf, heart, second, suffix, type SkillId } from './skills';
 
 // The order follows the published UFLI Foundations scope and sequence
 // (lesson numbers in `ufli`). Only the order and the review points are taken
@@ -92,7 +92,26 @@ export const AREAS: AreaDef[] = [
       check('i2a1-boss', 'miniboss', null),
     ],
   },
+  {
+    // The last of the alphabet. x is met at the end of a word, where it is found (fox), and qu is the first
+    // grapheme of two letters: one tile, one sound.
+    id: 'i2a2',
+    nodes: [
+      lesson('i2a2-w', 28, gpc('w')),
+      lesson('i2a2-j', 29, gpc('j')),
+      lesson('i2a2-y', 30, gpc('y')),
+      lesson('i2a2-x', 31, gpc('x')),
+      lesson('i2a2-qu', 32, gpc('qu')),
+      lesson('i2a2-v', 33, gpc('v')),
+      lesson('i2a2-z', 34, gpc('z')),
+      // Ours: UFLI goes straight on to seven lessons of review (35 to 41). Every letter is known now, so it is a boss.
+      check('i2a2-boss', 'boss', null),
+    ],
+  },
 ];
+
+/** Every grapheme of more than one letter that some lesson teaches: what a word is cut by (`splitGraphemes`). */
+export const multiGraphemes = (): string[] => allNodes().flatMap((n) => n.teaches.map(graphemeOf)).filter((g): g is string => !!g && g.length > 1);
 
 export const allNodes = (): NodeDef[] => AREAS.flatMap((a) => a.nodes);
 

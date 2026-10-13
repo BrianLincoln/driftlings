@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import endings from '../content/endings.json';
 import hearts from '../content/hearts.json';
+import keywords from '../content/keywords.json';
 import wordGroups from '../content/words.json';
 import { AREAS, allNodes } from '../learn/curriculum';
 import type { LogEvent } from '../learn/events';
 import { graphemeOf, heartOf, shapeOf } from '../learn/skills';
-import { OPEN_AREAS, isFinished } from './areas';
+import { cut } from '../content/content';
+import { isFinished } from './areas';
 import { Game } from './game';
 import type { EventStore } from './store';
 
@@ -24,7 +26,7 @@ const was = AREAS[4].nodes.map((n) => n.id).filter((id) => !NEW.includes(id));
 describe('a saved game from before lessons were added to an island', () => {
   it('keeps the island finished for a child who had beaten it, with the new lessons done and their little ones home', async () => {
     const game = await gameWith([...earlier, ...was]);
-    expect(OPEN_AREAS.every((a) => isFinished(a, game.done))).toBe(true);
+    expect(AREAS.slice(0, 5).every((a) => isFinished(a, game.done))).toBe(true);
     expect(AREAS[4].nodes.every((n) => game.done.has(n.id))).toBe(true);
     expect(game.home.residents).toEqual(Array.from({ length: 24 }, (_, i) => i));
     // Every node can still be played again, the new ones included.
@@ -41,7 +43,7 @@ describe('a saved game from before lessons were added to an island', () => {
       expect(game.planNode(id)!.rounds.length, id).toBeGreaterThan(0);
       game.completeNode(id);
     }
-    expect(isFinished(game.area, game.done)).toBe(true);
+    expect(isFinished(AREAS[4], game.done)).toBe(true);
     expect(game.home.residents.length).toBe(24);
   });
 });
@@ -49,6 +51,8 @@ describe('a saved game from before lessons were added to an island', () => {
 describe('the word list', () => {
   const groups = Object.entries(wordGroups as Record<string, string[] | string>).filter((e): e is [string, string[]] => Array.isArray(e[1]));
   const words = groups.flatMap(([, list]) => list);
+  /** A word's graphemes: qu is one. */
+  const split = (w: string) => cut(w).graphemes;
   /** The letters taught by the end of an area. */
   const taughtBy = (area: string) => {
     const nodes = allNodes();
@@ -66,17 +70,47 @@ describe('the word list', () => {
       const area = group.split(' ')[0];
       if (!AREAS.some((a) => a.id === area)) continue;
       const taught = taughtBy(area);
-      for (const w of list) expect([...w].every((g) => taught.has(g)), `${w} in ${group}`).toBe(true);
+      for (const w of list) expect(split(w).every((g) => taught.has(g)), `${w} in ${group}`).toBe(true);
     }
   });
 
   it('has words of every shape a lesson teaches, and none with two consonants together that could be read before the lessons on them are near', () => {
-    const shapes = new Set(words.map((w) => shapeOf([...w])));
+    const shapes = new Set(words.map((w) => shapeOf(split(w))));
     for (const s of allNodes().flatMap((n) => n.teaches).filter((t) => t.startsWith('blend:'))) expect(shapes.has(s.slice(6) as 'cvc'), s).toBe(true);
     // Before the fifth island every lesson's words are two or three letters long, bar the keywords that happen to be decodable.
     const early = taughtBy('i1a4');
-    const long = words.filter((w) => w.length > 3 && [...w].every((g) => early.has(g)));
+    const long = words.filter((w) => w.length > 3 && split(w).every((g) => early.has(g)));
     expect(long).toEqual(['nest']);
+  });
+});
+
+describe('the last letters of the alphabet', () => {
+  const groups = Object.entries(wordGroups as Record<string, string[] | string>).filter((e): e is [string, string[]] => Array.isArray(e[1]));
+  const words = groups.flatMap(([, list]) => list).map(cut);
+
+  it('cuts qu as one grapheme wherever it is, and never leaves a q or its u on a tile alone', () => {
+    expect(cut('quit').graphemes).toEqual(['qu', 'i', 't']);
+    expect(cut('squid').graphemes).toEqual(['s', 'qu', 'i', 'd']);
+    expect(shapeOf(cut('quilt').graphemes)).toBe('cvcc');
+    for (const w of words) {
+      expect(w.graphemes.join(''), w.text).toBe(w.text);
+      expect(w.graphemes, w.text).not.toContain('q');
+    }
+  });
+
+  it('has x only where it says /ks/: after a vowel, never at the start of a word', () => {
+    const withX = words.filter((w) => w.graphemes.includes('x'));
+    expect(withX.length).toBeGreaterThan(3);
+    for (const w of withX) for (const [i, g] of w.graphemes.entries()) if (g === 'x') expect('aeiou', w.text).toContain(w.graphemes[i - 1] ?? '-');
+    for (const k of keywords.x) expect(k.endsWith('x'), k).toBe(true);
+  });
+
+  it('has words for every one of the letters, some with two consonants together', () => {
+    for (const g of ['w', 'j', 'y', 'x', 'qu', 'v', 'z']) {
+      const with_ = words.filter((w) => w.graphemes.includes(g));
+      expect(with_.filter((w) => shapeOf(w.graphemes) === 'cvc').length, g).toBeGreaterThanOrEqual(2);
+      expect(with_.some((w) => ['ccvc', 'cvcc'].includes(shapeOf(w.graphemes))), g).toBe(true);
+    }
   });
 });
 

@@ -1,5 +1,5 @@
 {
-  "comment": "Regular words (every letter makes its basic sound), grouped by the first area in which all their letters have been taught; the words with two consonants together are in groups of their own, in the order the lessons on them use them (r before l). The game only uses a word once its clip exists; scripts/audio-wanted.mjs lists the ones that do not.",
+  "comment": "Regular words (every letter makes its basic sound), grouped by the first area in which all their letters have been taught; the words with two consonants together are in groups of their own, in the order the lessons on them use them (r before l). A word is cut into graphemes by the two-letter ones the curriculum teaches (quit is qu, i, t); a dot forces a cut where that would be wrong (\"mis.hap\"). No word begins with x: it says /ks/, which only comes after a vowel. The game only uses a word once its clip exists; scripts/audio-wanted.mjs lists the ones that do not.",
   "i1a1": ["am", "at", "mat", "sat"],
   "i1a2": ["an", "in", "it", "if", "map", "nap", "pan", "pin", "tip", "tin", "sit", "fan", "man", "pat", "tap", "sip", "pit", "fit", "fin", "fat", "tan"],
   "i1a3": ["on", "cat", "cot", "dot", "pot", "top", "mop", "dip", "dim", "nod", "sad", "mad", "dad", "cap", "can", "cod"],
@@ -7,5 +7,8 @@
   "i2a1": ["kid", "hat", "hen", "him", "hop", "lip", "log", "rat", "red", "rub", "run", "elk", "milk"],
   "i2a1 two consonants first": ["trip", "drum", "crab", "frog", "grab", "drop", "skip", "skin", "flag", "clap", "plum", "sled", "glad", "slip"],
   "i2a1 two consonants last": ["help", "belt", "gulp", "held", "desk", "mask", "hand", "hunt"],
+  "i2a2": ["wet", "win", "wig", "web", "jam", "jet", "jog", "jug", "yes", "yum", "yet", "yam", "fox", "box", "six", "mix", "wax", "quit", "quiz", "van", "vet", "vat", "zip", "zap", "zig"],
+  "i2a2 two consonants first": ["swim", "twin", "twig", "swam", "squid"],
+  "i2a2 two consonants last": ["jump", "just", "west", "went", "yelp", "next", "vest", "quilt", "zest"],
   "later": ["ant", "nest"]
 }
