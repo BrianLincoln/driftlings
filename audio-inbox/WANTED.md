@@ -11,11 +11,15 @@ Complete.
 
 ## Island 2
 
-Complete.
+- [ ] `words/the` : "the", said as "thuh", not "thee" (learned by heart)
+- [ ] `letters/th-sound` : the sound "th" makes in "the", alone, no trailing "uh"
+- [ ] `prompts/this-word-is` : "This word is"
+- [ ] `prompts/learn-this-part-by-heart` : "This part, we learn by heart."
+- [ ] `words/a` : "a", said as "uh", not "ay" (learned by heart)
 
 ## Island 3
 
-Complete.
+- [ ] `prompts/tap-what-it-says` : "Tap what it says."
 
 ## Island 4
 

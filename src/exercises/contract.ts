@@ -22,8 +22,8 @@ import type { Touchable } from '../stage/touch';
 export interface ExerciseKit {
   readonly mode: LayoutMode;
   readonly companion: Companion;
-  /** Make a letter tile (or an icon tile). The kit animates and disposes of it. */
-  tile(text: string, scale?: number, icon?: boolean): LetterTile;
+  /** Make a letter tile (or an icon tile). `heart`: its letter is learned by heart, and it carries the mark. The kit animates and disposes of it. */
+  tile(text: string, scale?: number, icon?: boolean, heart?: boolean): LetterTile;
   /** A letter on a coloured card instead of a stone tile. `hue` picks the colour; any whole number will do. */
   card(text: string, hue: number, scale?: number): LetterTile;
   /** An everyday thing to stand on the grass, by its word ("cup"). The exercise places it; the kit animates and disposes of it. */

@@ -1,8 +1,33 @@
 # Heart words, then sentences: a proposal
 
-Written 2026-10-13. Nothing here is built. It is for the owner to say yes or no to, section by section;
-the decisions are collected at the end. Which word arrives at which UFLI lesson is in `docs/ufli.md` and
-is not repeated here.
+Written 2026-10-13 as a proposal. The owner's answer the same day was to go with every recommendation
+for now and give feedback after playing, so the questions in section 7 are settled as recommended until
+then. Which word arrives at which UFLI lesson is in `docs/ufli.md` and is not repeated here.
+
+## What is built
+
+Slice one, except sentences.
+
+- "the" at `i1a2-p` and "a" at `i1a2-f`; the heart on the tile; `heart` (meet, find); `blend` spelling a
+  heart word; `read` with phrases; met-before-asked; the audio rule; `?unrecorded`.
+- **Nothing of it appears in the game until `words/the`, `words/a` and `letters/th-sound` are recorded**
+  (the generator never makes an item without its clips). The three new prompts are skipped while missing.
+  `?unrecorded` shows all of it in silence meanwhile.
+- **Sentences are made by the generator and playable in `read`, but switched off** (`SENTENCES` in
+  `scheduler.ts`). Looked at in both layouts, they are not good enough: a thing standing on another is as
+  big as what it stands on and reaches up into the words, and on a tall screen a sentence's two lines hide
+  each other (letters are DOM, so the nearer line's tiles cannot cover the further line's letters). They
+  need things that can be drawn small, which belongs with the things work, and probably one plank per word.
+
+Differences from what is written below:
+
+- The heart round and the reading come at the end of a lesson, after the words to build, not after the catch.
+- `read` ends every lesson and checkpoint from `i1a3-c` on, not only the lessons that teach a heart word.
+- A wrong choice in `read` goes away (a thing cannot shake or dim yet) and says its word.
+- "Tap what it says" is said at the start of each reading round, not once per child: an exercise does not
+  know what a child has heard before.
+- On a phone the three words of a `find` stand in one line and are small (a tile is about 40 px). Standing
+  them one behind another was tried and the nearer hid the further.
 
 ## In one paragraph
 

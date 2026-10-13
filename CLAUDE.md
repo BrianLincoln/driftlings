@@ -23,14 +23,16 @@ anything about UFLI; do not go from memory.
   nearest lesson first. What a lesson needs follows from the skill it teaches: a grapheme needs its
   sound, its keyword words (`src/content/keywords.json`: heard in "like in ...", never read) and, for
   a single letter, its name; a blending lesson needs enough buildable words from the graphemes taught
-  so far, and a lesson on new word shapes needs them of those shapes with its letter in. A new kind of skill gets its own rule in `scripts/audio-wanted.mjs`
+  so far, and a lesson on new word shapes needs them of those shapes with its letter in. An irregular word needs its word and the sound of each of its tiles. A new kind of skill gets its own rule in `scripts/audio-wanted.mjs`
 
 URL switches: `?reset` clears the progress of the child who played last, `?demo` fills the home island, `?scene=map|home|who|sleeper|friends|<node id>`
 (`who` is where children choose who is playing, with `&demo` a full row of six; `sleeper` replays the map scene where the sleeper takes the plank, `friends` the one where it gives it back;
 `leave` holds the ship pulling away, `chart` the same with the chart unrolled over it, `arrive` the landing
 at home with everyone getting off; `sail` plays the whole crossing home),
 `?area=i1a2` goes to that area whatever the progress (alone, or with any of the scenes above),
-`?isles=43` draws the chart as it will be with that many islands, `?q=low`.
+`?isles=43` draws the chart as it will be with that many islands, `?q=low`,
+`?unrecorded` plays as if every clip had been recorded (the missing ones are silent): for looking at a lesson
+before its narration exists. `npm run play -- --unrecorded` does the same for the scripted play.
 
 Pushing to `main` deploys `dist/` to GitHub Pages. Tell the owner a change is ready locally
 before committing and deploying.
@@ -45,6 +47,7 @@ before committing and deploying.
   must see or touch stays inside it. Check both `tall` and `wide` in screenshots.
 - Render scale is the device pixel ratio or half of it, nothing in between (`src/stage/quality.ts`).
 - The glow colour means "touch this now" and the companion. Do not spend it elsewhere.
+- The heart colour (`C.heart`) means "this part of the word is learned by heart": the heart on a tile and its letter. Nothing else.
 - No text instructions in the game UI. Players cannot read. The one exception is the grown-ups' corner
   (`src/ui/grownups.ts`), behind a button that has to be held down.
 - Visual work is not done until `npm run shots` output has been looked at.
@@ -55,7 +58,8 @@ before committing and deploying.
 - `src/learn` : skills, event log, skill model, generator, scheduler. Pure logic: no three.js,
   no DOM, no imports from the rest of the app (a test enforces this). It has to be right.
 - `src/content` : word list, audio manifest (generated), and the adapter the generator reads; `endings.json` lists the things shown as one and
-  several (each needs a drawing in `scenes/things.ts`; a test checks) and the short words where s says /z/
+  several (each needs a drawing in `scenes/things.ts`; a test checks) and the short words where s says /z/; `hearts.json` lists the
+  irregular words, a tile to a sound (`docs/heart-words.md` has the design and what is built)
 - `src/exercises` : one module per exercise, all satisfying `contract.ts`; `index.ts` is the catalogue
 - `src/game` : one child's game (event log + everything derived), the children on this device (`children.ts`),
   the device store (one log per child; ids are uuids so an account can take them over later), and `areas.ts`:

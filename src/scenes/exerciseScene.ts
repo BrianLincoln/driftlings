@@ -18,7 +18,7 @@ import type { Diorama, StageContext } from './diorama';
 import { Dust } from './dust';
 import { LetterTile } from './letterTile';
 import { Pips } from '../ui/pips';
-import { PROP_MAT, TILE, buildCard, bushGeo, rockGeo, treeGeo } from './props';
+import { PROP_MAT, TILE, buildCard, buildTile, bushGeo, rockGeo, treeGeo } from './props';
 import { Thing } from './things';
 
 // The host for exercises: a small clearing, the companion, and whoever is
@@ -109,7 +109,7 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
   const kit: ExerciseKit = {
     get mode() { return mode; },
     companion,
-    tile: (text, scale = 1, icon = false) => stand(new LetterTile(text, ctx!.glyphs, scale, icon)),
+    tile: (text, scale = 1, icon = false, heart = false) => stand(new LetterTile(text, ctx!.glyphs, scale, icon, buildTile(heart))),
     card: (text, hue, scale = 1) => stand(new LetterTile(text, ctx!.glyphs, scale, false, buildCard(C.cards[Math.abs(hue) % C.cards.length]))),
     thing(name) {
       const thing = new Thing(name, prop);

@@ -6,6 +6,8 @@
 //   blending words   enough buildable words made only of graphemes taught so far
 //   new word shapes  the same, of the shapes the lesson teaches and with its letter in them (r in "trip", l in "flag" and
 //                    "milk"): the lesson's words are shared evenly between its shapes, as the scheduler shares them
+//   an irregular word its word, the sound of each of its tiles (src/content/hearts.json), and the lines that introduce it
+//   reading alone     the lines that say what to do; the words themselves are the drawn things' and already wanted elsewhere
 //   an ending        the lines that explain it, and for each thing shown as one and several
 //                    (src/content/endings.json) its word with the s; for s saying /z/, two short words where it does too
 
@@ -15,16 +17,18 @@ const json = (p) => JSON.parse(readFileSync(p, 'utf8'));
 const manifest = existsSync('src/content/audio-manifest.json') ? json('src/content/audio-manifest.json') : {};
 const keywords = json('src/content/keywords.json');
 const endings = json('src/content/endings.json');
+const hearts = json('src/content/hearts.json');
 const words = Object.values(json('src/content/words.json')).filter(Array.isArray).flat();
 const has = (id) => id in manifest;
 
 // The lessons in order, a step past what the curriculum lists so recording can run ahead of building.
 // A string is a grapheme; { blend: n } is a lesson that needs n buildable words, of `shapes` (vc and cvc unless given)
-// and with the letter `having` in them if given; { ending: 's' | 'z' } is an s on the end, saying that.
+// and with the letter `having` in them if given; { ending: 's' | 'z' } is an s on the end, saying that;
+// { heart: word } is an irregular word; { read: true } is where words are first read with nobody saying them.
 const STEPS = [
   ['Island 1', ['a', 'm', 's', 't', { blend: 4 }]],
-  ['Island 2', ['p', 'f', 'i', 'n']],
-  ['Island 3', ['o', 'd', 'c']],
+  ['Island 2', ['p', { heart: 'the' }, 'f', { heart: 'a' }, 'i', 'n']],
+  ['Island 3', ['o', 'd', 'c', { read: true }]],
   ['Island 4', ['u', 'g', 'b', 'e']],
   ['Island 5', [{ ending: 's' }, { ending: 'z' }, 'k', 'h', 'r', { blend: 4, shapes: ['ccvc'], having: 'r' }, 'l', { blend: 4, shapes: ['ccvc', 'cvcc'], having: 'l' }]],
   ['Next: w j y x qu v z', ['w', 'j', 'y', 'x', 'qu', 'v', 'z']],
@@ -43,6 +47,7 @@ const lines = [
   '',
 ];
 let total = 0;
+const asked = new Set();
 const taught = new Set();
 for (const [title, steps] of STEPS) {
   const want = [];
@@ -52,6 +57,14 @@ for (const [title, steps] of STEPS) {
       if (!has(`letters/${step}-sound`)) want.push(`\`letters/${step}-sound\` : the sound of "${step}" alone, no trailing "uh"`);
       if (step.length === 1 && !has(`letters/${step}-name`)) want.push(`\`letters/${step}-name\` : the name of the letter "${step}"`);
       for (const w of keywords[step] ?? []) if (!has(`words/${w}`)) want.push(`\`words/${w}\` : "${w}" (keyword for ${step})`);
+    } else if (step.heart) {
+      const w = step.heart;
+      const said = { the: 'as "thuh", not "thee"', a: 'as "uh", not "ay"' }[w];
+      if (!has(`words/${w}`)) want.push(`\`words/${w}\` : "${w}"${said ? `, said ${said}` : ''} (learned by heart)`);
+      for (const snd of hearts.words[w].sounds) if (!has(`letters/${snd}-sound`)) want.push(`\`letters/${snd}-sound\` : the sound "${snd}" makes in "${w}", alone, no trailing "uh"`);
+      for (const [name, text] of [['this-word-is', 'This word is'], ['learn-this-part-by-heart', 'This part, we learn by heart.']]) if (!has(`prompts/${name}`)) want.push(`\`prompts/${name}\` : "${text}"`);
+    } else if (step.read) {
+      for (const [name, text] of [['your-turn-read-it', 'Your turn. Read it.'], ['tap-what-it-says', 'Tap what it says.']]) if (!has(`prompts/${name}`)) want.push(`\`prompts/${name}\` : "${text}"`);
     } else if (step.ending) {
       const z = step.ending === 'z';
       const prompts = z
@@ -78,8 +91,10 @@ for (const [title, steps] of STEPS) {
       }
     }
   }
-  lines.push(`## ${title}`, '', ...(want.length ? want.map((l) => `- [ ] ${l}`) : ['Complete.']), '');
-  total += want.length;
+  // A line two lessons share is asked for once, at the first.
+  const fresh = want.filter((l) => !asked.has(l) && asked.add(l));
+  lines.push(`## ${title}`, '', ...(fresh.length ? fresh.map((l) => `- [ ] ${l}`) : ['Complete.']), '');
+  total += fresh.length;
 }
 for (const f of ['letters', 'words', 'prompts', 'sfx']) mkdirSync(`audio-inbox/${f}`, { recursive: true });
 writeFileSync('audio-inbox/WANTED.md', lines.join('\n'));

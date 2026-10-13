@@ -1,8 +1,8 @@
-import { clipSeconds, clipUrl, hasClip, type ClipId } from '../content/content';
+import { clipSeconds, clipUrl, hasClip, recorded, type ClipId } from '../content/content';
 import { cutClips, playClip, preload } from './sound';
 
 function play(id: ClipId, delay: number): number {
-  playClip(clipUrl(id), delay);
+  if (recorded(id)) playClip(clipUrl(id), delay);
   return clipSeconds(id);
 }
 
@@ -58,5 +58,5 @@ export function sayLine(ids: ClipId[], delay = 0): Line {
 }
 
 export function preloadClips(ids: ClipId[]): void {
-  void preload(ids.filter(hasClip).map(clipUrl));
+  void preload(ids.filter(recorded).map(clipUrl));
 }

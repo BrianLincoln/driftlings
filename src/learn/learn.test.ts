@@ -14,7 +14,7 @@ const T0 = 1_700_000_000_000;
 
 const WORDS = ['am', 'at', 'mat', 'sat', 'map', 'pin', 'ant'];
 function content(sounds: string, words = WORDS): Content {
-  return { hasSound: (g) => sounds.includes(g), hasName: (g) => sounds.includes(g) && g !== 'n', words: words.map((text) => ({ text, graphemes: [...text] })), many: [] };
+  return { hasSound: (g) => sounds.includes(g), hasName: (g) => sounds.includes(g) && g !== 'n', words: words.map((text) => ({ text, graphemes: [...text] })), many: [], hearts: [], drawable: [] };
 }
 
 function ctxFor(done: string[], opts: Partial<GenContext> & { seed?: number } = {}): GenContext {
@@ -242,6 +242,7 @@ describe('scheduler', () => {
         item.others.length > 0 && !item.others.includes(item.target) && item.skills.length === 0;
     }
     if (item.kind === 'many') return false; // nothing here can be shown as one and several
+    if (item.kind !== 'blend') return false; // nor is there an irregular word, or a thing to read about
     return item.graphemes.every((g) => ctx.known.has(gpc(g)) && sounds.includes(g)) &&
       (item.stage === 'read' || ctx.known.has(blend(shapeOf(item.graphemes)))) && WORDS.includes(item.word);
   };
@@ -550,7 +551,7 @@ describe('an s on the end', () => {
     ...['is', 'as', 'his'].map((text) => ({ text, graphemes: [...text], sounds: [...text.slice(0, -1), 'z'] })),
   ];
   const ctxAt = (done: string[], seed = 1, sounds = 'amstpfinodcugbez') =>
-    ctxFor([...before, ...done], { seed, content: { hasSound: (g) => sounds.includes(g), hasName: () => true, words, many } });
+    ctxFor([...before, ...done], { seed, content: { hasSound: (g) => sounds.includes(g), hasName: () => true, words, many, hearts: [], drawable: [] } });
   const manys = (rounds: Round[]) => itemsOf(rounds).flatMap((i) => (i.kind === 'many' ? [i] : []));
 
   it('teaches the ending and the second sound as skills of their own', () => {

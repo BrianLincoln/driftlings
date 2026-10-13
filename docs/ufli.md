@@ -121,17 +121,19 @@ Our exercises against the eight steps:
 | `catch` | none directly: letter by *name*, at speed | light credit |
 | `blend` | 4 for the sounding out, 6 for the rebuilding | the unaided stage only |
 | `many` | 5 for lessons 20 and 21 | the ask stage |
+| `heart` | 7: meet an irregular word, then pick it out by ear; `blend` spells it | picking it out, and spelling it unaided |
+| `read` | 8, a first step: a phrase nobody says, tap the thing it names | yes |
 
 What UFLI does that the game does not yet:
 
-1. **Read a word nobody says** (steps 4, 6, 8). `blend` always speaks the word, so nothing shows a child decoding alone.
+1. **Read a word nobody says** (steps 4, 6, 8). Only in `read`, and only the words for the nine drawn things.
 2. **Letter to sound** (step 2). Everything we have runs sound to letter.
 3. **Word chains** (step 6, and in every lesson from 5).
 4. **Sounds with no letters** (step 1): blending and segmenting by ear.
 5. **Longer blends** (35 to 41). CCVC and CVCC are taught (25, 27); CCVCC and CCCVC are not, and `shapeOf` calls
    them `other`. The blend exercise already holds five tiles in both layouts.
-6. **Heart words** (step 7). By lesson 27 UFLI has taught about twenty; the `heart:` skill type is unused.
-7. **Sentences** (step 8). Not possible without heart words: almost every sentence needs "the", "a" or "is".
+6. **Heart words** (step 7). By lesson 27 UFLI has taught about twenty; the game has two, "the" and "a" (`docs/heart-words.md`).
+7. **Sentences** (step 8). Phrases ("the cat") are read; whole sentences are made but not shown yet, for want of room.
 8. **Letter formation** (step 5) and capital letters (Getting Ready). A decision to make, not an oversight to fix.
 
 ## Sources

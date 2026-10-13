@@ -73,6 +73,8 @@ export const C = {
   /** The one glow colour. It means "touch this now" and the companion. Nothing else. */
   glow: '#ffd27a',
   amber: '#f4a455',
+  /** The heart on a tile, and its letter: "this part is learned by heart". Nothing else. Matches `.glyph.heart` in style.css. */
+  heart: '#dc6450',
   /** Letter cards: the frame round the parchment face. Bright, and none of them the glow colour. */
   cards: ['#e8705f', '#5aa9c9', '#6fb37a', '#9a86d6', '#e58bb0'],
   basket: '#c9925a',

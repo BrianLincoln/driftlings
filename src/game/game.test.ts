@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import endings from '../content/endings.json';
+import hearts from '../content/hearts.json';
 import wordGroups from '../content/words.json';
 import { AREAS, allNodes } from '../learn/curriculum';
 import type { LogEvent } from '../learn/events';
-import { graphemeOf, shapeOf } from '../learn/skills';
+import { graphemeOf, heartOf, shapeOf } from '../learn/skills';
 import { OPEN_AREAS, isFinished } from './areas';
 import { Game } from './game';
 import type { EventStore } from './store';
@@ -76,5 +77,21 @@ describe('the word list', () => {
     const early = taughtBy('i1a4');
     const long = words.filter((w) => w.length > 3 && [...w].every((g) => early.has(g)));
     expect(long).toEqual(['nest']);
+  });
+});
+
+describe('irregular words', () => {
+  it('each one a lesson teaches is cut into tiles in hearts.json, with a sound for every tile', () => {
+    const taught = allNodes().flatMap((n) => n.teaches.map(heartOf)).filter((w): w is string => !!w);
+    expect(taught.sort()).toEqual(Object.keys(hearts.words).sort());
+    for (const [word, w] of Object.entries(hearts.words)) {
+      expect(w.graphemes.join(''), word).toBe(word);
+      expect(w.sounds.length, word).toBe(w.graphemes.length);
+    }
+  });
+
+  it('only things with a drawing can have something put on or in them', () => {
+    const drawn = Object.values(endings.many).flat();
+    for (const name of [...hearts.on, ...hearts.in]) expect(drawn, name).toContain(name);
   });
 });

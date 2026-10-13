@@ -16,9 +16,14 @@ export const gpc = (grapheme: string): SkillId => `gpc:${grapheme}`;
 export const blend = (shape: WordShape): SkillId => `blend:${shape}`;
 export const suffix = (ending: string): SkillId => `suffix:${ending}`;
 export const second = (grapheme: string): SkillId => `second:${grapheme}`;
+export const heart = (word: string): SkillId => `heart:${word}`;
 
 export function graphemeOf(id: SkillId): string | null {
   return id.startsWith('gpc:') ? id.slice(4) : null;
+}
+
+export function heartOf(id: SkillId): string | null {
+  return id.startsWith('heart:') ? id.slice(6) : null;
 }
 
 const VOWELS = new Set(['a', 'e', 'i', 'o', 'u']);

@@ -95,7 +95,7 @@ export const blendExercise: ExerciseModule<BlendItem> = {
     const next = () => {
       index++;
       if (index >= items.length) return hooks.finished();
-      tiles = item().graphemes.map((g, _, all) => kit.tile(g, kit.fit(all.length)));
+      tiles = item().graphemes.map((g, i, all) => kit.tile(g, kit.fit(all.length), false, item().byHeart?.[i]));
       order = [...tiles];
       placed = [];
       nextSound = 0;
@@ -127,7 +127,7 @@ export const blendExercise: ExerciseModule<BlendItem> = {
 
     const scatter = () => {
       // Never back into the right order: there would be nothing to put right.
-      const word = item().graphemes.join('');
+      const word = item().graphemes;
       do {
         slots = tiles.map((_, i) => i).sort(() => Math.random() - 0.5);
       } while (new Set(word).size > 1 && tiles.every((tile, i) => tile.text === word[slots[i]]));
@@ -151,6 +151,7 @@ export const blendExercise: ExerciseModule<BlendItem> = {
       const tile = tiles[i];
       if (phase === 'sound') {
         tile.press();
+        tile.beat();
         // In the sounding-out row the tiles stand in word order, so a tile's place is its sound's.
         const sound = item().sounds[i];
         if (i !== nextSound) return void kit.say(soundClip(sound), 0.03);

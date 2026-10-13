@@ -122,13 +122,17 @@ export function isDue(s: SkillState | undefined, now: number): boolean {
   return !!s && s.seen > 0 && now >= s.dueAt;
 }
 
+/** Where a target's mix-ups are kept. A word picked from among words is kept apart from a letter of the same spelling ("a"). */
+export const confusionKey = (exercise: string, target: string): string => (exercise === 'heart' ? `word:${target}` : target);
+
 /** What the child tends to answer instead: target -> wrong answer -> count. Drives distractor choice. */
 export function confusions(attempts: readonly Attempt[]): Map<string, Map<string, number>> {
   const out = new Map<string, Map<string, number>>();
   for (const a of attempts) {
     if (a.correct || !a.answer) continue;
-    let m = out.get(a.target);
-    if (!m) out.set(a.target, (m = new Map()));
+    const k = confusionKey(a.exercise, a.target);
+    let m = out.get(k);
+    if (!m) out.set(k, (m = new Map()));
     m.set(a.answer, (m.get(a.answer) ?? 0) + 1);
   }
   return out;

@@ -1,4 +1,4 @@
-import { blend, gpc, second, suffix, type SkillId } from './skills';
+import { blend, gpc, heart, second, suffix, type SkillId } from './skills';
 
 // The order follows the published UFLI Foundations scope and sequence
 // (lesson numbers in `ufli`). Only the order and the review points are taken
@@ -47,8 +47,9 @@ export const AREAS: AreaDef[] = [
   {
     id: 'i1a2',
     nodes: [
-      lesson('i1a2-p', 6, gpc('p')),
-      lesson('i1a2-f', 7, gpc('f')),
+      // Irregular words come one to a lesson, never before UFLI has them (docs/heart-words.md).
+      lesson('i1a2-p', 6, gpc('p'), heart('the')),
+      lesson('i1a2-f', 7, gpc('f'), heart('a')),
       lesson('i1a2-i', 8, gpc('i')),
       lesson('i1a2-n', 9, gpc('n')),
       check('i1a2-boss', 'miniboss', 10),
