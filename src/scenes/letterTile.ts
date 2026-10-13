@@ -17,6 +17,7 @@ export class LetterTile {
   readonly anchor: THREE.Object3D;
   private tile: Tile;
   private glyph: Glyph;
+  private label: string;
   private sq = new Spring(1);
   private lean = new Spring(0);
   private pop = new Spring(0);
@@ -37,16 +38,35 @@ export class LetterTile {
   tip = 0;
 
   /** `tile` is what it is made of: a stone tile unless told otherwise (see `buildCard`). */
-  constructor(readonly text: string, private glyphs: GlyphLayer, readonly scale = 1, icon = false, tile: Tile = buildTile()) {
+  constructor(text: string, private glyphs: GlyphLayer, readonly scale = 1, private icon = false, tile: Tile = buildTile()) {
+    this.label = text;
     this.tile = tile;
     this.root = this.tile.root;
     this.anchor = this.tile.anchor;
-    // Two letters on one tile (qu, th) are a little smaller, so they clear its edges: smaller again inside a card's frame.
-    const two = 0.6 * Math.min(1, ((tile.face ?? TILE.width) / TILE.width) * 1.12);
-    // Three (the one tile of "are") are smaller again.
-    this.glyph = glyphs.add(text, this.anchor, (!icon && text.length > 1 ? two * Math.min(1, 2.3 / text.length) : 0.74) * scale, icon);
+    this.glyph = glyphs.add(text, this.anchor, this.height(text), icon);
     if (tile.heart) this.glyph.el.classList.add('heart');
     this.root.scale.setScalar(0.001);
+  }
+
+  /** What is on the tile. */
+  get text(): string {
+    return this.label;
+  }
+
+  /** How tall its letters are drawn, in world units. */
+  private height(text: string): number {
+    // Two letters on one tile (qu, th) are a little smaller, so they clear its edges: smaller again inside a card's frame.
+    const two = 0.6 * Math.min(1, ((this.tile.face ?? TILE.width) / TILE.width) * 1.12);
+    // Three (the one tile of "are") are smaller again.
+    return (!this.icon && text.length > 1 ? two * Math.min(1, 2.3 / text.length) : 0.74) * this.scale;
+  }
+
+  /** The tile says something else from now on, where it stands: a blank one shows the letter. Not for icons. */
+  retext(text: string): void {
+    this.label = text;
+    this.glyph.el.textContent = text;
+    this.glyph.worldHeight = this.height(text);
+    this.blank = false;
   }
 
   /** Place immediately, with no glide. */

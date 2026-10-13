@@ -76,7 +76,12 @@ for (const size of SIZES) {
     const boss = nodes[nodes.length - 1];
     const lastLesson = nodes[nodes.length - 2];
     for (const node of nodes) {
-      const ok = await page.evaluate((id) => window.__dl.tap(`node:${id}`), node);
+      // A stone takes no tap while a scene has the map (the plank scene is longer where the walk to the ship is): wait it out.
+      let ok = false;
+      for (let i = 0; i < 40 && !ok; i++) {
+        ok = await page.evaluate((id) => window.__dl.tap(`node:${id}`), node);
+        if (!ok) await step(30);
+      }
       if (!ok) { fail(`${size.name} could not tap ${node} on the map`); return false; }
       await page.waitForTimeout(450);
       await step(30);

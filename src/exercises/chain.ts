@@ -206,8 +206,8 @@ export const chainExercise: ExerciseModule<ChainItem> = {
         // The drawing that was right stays while its word is said.
         o.thing?.hop();
         later(1.2, () => o.thing?.vanish());
-        // The letter goes to the gap, and there turns into a tile the size of the word's own.
-        if (o.inWord) later(0.3, () => { o.tile!.vanish(); row[s.at].vanish(); (row[s.at] = kit.tile(o.value, scale)).snap(slot(s.at)); });
+        // The letter goes to the gap, and the word's own tile takes it on: one tile fades over one that stays, nothing is swapped.
+        if (o.inWord) later(0.3, () => { row[s.at].retext(o.value); row[s.at].press(); o.tile!.vanish(); });
         options = [];
         point(null);
         // The word is said, the stone comes up, and on to the next change or over the stream.
