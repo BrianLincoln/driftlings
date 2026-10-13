@@ -112,7 +112,7 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
     tile: (text, scale = 1, icon = false) => stand(new LetterTile(text, ctx!.glyphs, scale, icon)),
     card: (text, hue, scale = 1) => stand(new LetterTile(text, ctx!.glyphs, scale, false, buildCard(C.cards[Math.abs(hue) % C.cards.length]))),
     thing(name) {
-      const thing = new Thing(name, prop);
+      const thing = new Thing(name);
       scene.add(thing.root);
       things.push(thing);
       return thing;

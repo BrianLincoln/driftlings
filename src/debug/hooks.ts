@@ -1,6 +1,8 @@
 import type { Stage } from '../stage/stage';
 import type { Quality } from '../gfx/post';
 import type { Game } from '../game/game';
+import { SHEET_PAGE } from '../scenes/thingsSheet';
+import { THING_NAMES } from '../scenes/things';
 
 // Debug hooks for the screenshot loop and scripted play. Not for players.
 
@@ -60,6 +62,7 @@ export function installHooks(stage: Stage, goto: (name: string, instant?: boolea
       frames: stage.frames,
       dpr: window.devicePixelRatio,
       size: [window.innerWidth, window.innerHeight],
+      ...(stage.scene?.name === 'things' ? { things: THING_NAMES, perPage: SHEET_PAGE } : {}),
     }),
   };
   window.__dl = hooks;
