@@ -14,7 +14,7 @@ Complete.
 - [ ] `prompts/change-one-letter-to-make` : "Change one letter to make ... (the word follows: leave it hanging)" (word chains)
 - [ ] `prompts/what-word-is-it-now` : "What word is it now?" (word chains)
 - [ ] `prompts/tap-to-hear-tap-again-to-choose` : "Tap one to hear it. Tap it again to choose it." (word chains)
-- [ ] `prompts/learn-this-part-by-heart` : "This part, we learn by heart."
+- [ ] `prompts/learn-this-part-by-heart` : "Heart words don't follow the rules, so we learn them by heart."
 - [ ] `words/i` : "I" (learned by heart)
 
 ## Island 3

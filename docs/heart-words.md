@@ -210,7 +210,7 @@ export interface HeartItem {
 2. The first tile lights. The child taps each tile in turn, as in `blend`; each says its sound *in this
    word*, and a heart tile's heart beats.
 3. The tiles close up and the word is said again. The first time a child ever meets a heart word, the
-   companion points at a heart and the narrator adds "This part, we learn by heart." Never again after.
+   companion points at a heart and the narrator adds "Heart words don't follow the rules, so we learn them by heart." Never again after.
 4. A beat, `itemDone`, on to the questions.
 
 It differs from `meet` for letters in one way: the child taps. Tapping through the sounds is the method
@@ -327,7 +327,7 @@ Six new clips for slice one, and two words the game is already missing.
 | `words/a` | "a", as "uh", not "ay" | the same |
 | `letters/th-sound` | the buzzing th of "the" on its own, held, no "uh" after | tapping the `th` tile |
 | `prompts/this-word-is` | "This word is" | meet |
-| `prompts/learn-this-part-by-heart` | "This part, we learn by heart." | meet, once per child |
+| `prompts/learn-this-part-by-heart` | "Heart words don't follow the rules, so we learn them by heart." | meet, once per child |
 | `prompts/which-one-is-it` | "Which one is it?" | read, once per child |
 | `words/on` | "on" | read-back of a sentence (already missing) |
 | `words/bug` | "bug" | already missing |

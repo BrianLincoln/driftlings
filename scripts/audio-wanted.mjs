@@ -110,7 +110,7 @@ for (const [title, steps] of STEPS) {
         const id = /^[A-Z]$/.test(snd) ? `letters/${snd.toLowerCase()}-name` : `letters/${snd}-sound`;
         if (!has(id)) want.push(`\`${id}\` : ${id.endsWith('-name') ? `the name of the letter "${snd.toLowerCase()}"` : `${how[snd] ?? `the sound of "${snd}"`}, alone, no trailing "uh"`}`);
       }
-      for (const [name, text] of [['this-word-is', 'This word is'], ['learn-this-part-by-heart', 'This part, we learn by heart.']]) if (!has(`prompts/${name}`)) want.push(`\`prompts/${name}\` : "${text}"`);
+      for (const [name, text] of [['this-word-is', 'This word is'], ['learn-this-part-by-heart', "Heart words don't follow the rules, so we learn them by heart."]]) if (!has(`prompts/${name}`)) want.push(`\`prompts/${name}\` : "${text}"`);
     } else if (step.chain) {
       // The names are CHAIN_PROMPTS in src/learn/chains.ts: no chain is offered until all three exist.
       for (const [name, text] of [
