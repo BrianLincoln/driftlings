@@ -7,15 +7,29 @@ The curriculum follows UFLI Foundations. `docs/ufli.md` has its full lesson orde
 lesson, the irregular words by lesson, and what the game covers and misses. Read it before answering
 anything about UFLI; do not go from memory.
 
+## Speed first
+
+The owner wants a fast loop and accepts the odd breakage for it. They play every change themselves on
+the dev server; that is the real test. Fix what breaks when it breaks.
+
+- After a change: `npx tsc --noEmit` and `npm test` (two seconds together), say it is ready at
+  localhost:5173, stop.
+- `npm run play` and a full `npm run shots` are not part of the loop. Run them only when the owner asks.
+- A visual change gets at most one targeted shot of the scene it touched (`npm run shots -- map@i1a2`),
+  and only when it moves or adds something in a stage box. Colour, timing and small tweaks get none.
+- No `npm run build` before a push: the type-check covers it and the deploy builds anyway.
+- Check what the change touched, once. Do not re-run a check that passed, or check the live build.
+- Say in one line what was not checked, so the owner knows where to look.
+
 ## Commands
 
 - `npm run dev` : dev server (the owner keeps one running on :5173)
 - `npm test` : unit tests (Vitest)
 - `npm run build` : type-check and build to `dist/`
-- `npm run play` : build, then play every open area end to end in headless Chromium through
+- `npm run play` : slow, only when asked. Build, then play every open area end to end in headless Chromium through
   real taps and slides (area one, home, out to the next, home, and so on; about ten minutes);
   prints ok/FAIL and saves screenshots to `shots/play-*`
-- `npm run shots` : screenshot each area's map and the home island (from the landing, and with the companion sent
+- `npm run shots` : the full set is slow, only when asked; name one scene instead. Screenshots each area's map and the home island (from the landing, and with the companion sent
   to three other parts of it) at four sizes into `shots/`.
   `npm run shots -- chart@i1a2` takes any `?scene=` at one area, `-- chart@sea3` the chart of a later sea; `-- crews` is home with every crew
 - `npm run audio` : take in clips from `audio-inbox/`, rebuild `public/audio/` and the manifest
@@ -53,7 +67,8 @@ before committing and deploying.
 - The heart colour (`C.heart`) means "this part of the word is learned by heart": the heart on a tile and its letter. Nothing else.
 - No text instructions in the game UI. Players cannot read. The one exception is the grown-ups' corner
   (`src/ui/grownups.ts`), behind a button that has to be held down.
-- Visual work is not done until `npm run shots` output has been looked at.
+- A change to what sits in a stage box is not done until one targeted shot of it has been looked at
+  (`npm run shots -- <scene>@<area>`), `tall` and `wide`. Not the full set.
 - Keep files small; split before a file passes about 300 lines.
 
 ## Layout
@@ -90,7 +105,7 @@ left over from when areas were grouped; saved progress uses them, so they stay. 
 The curriculum already lists it. Give it a big one in `BIG_ONES`
 (`src/game/areas.ts`) and an entry in `PLACES` (`src/scenes/places.ts`); a test checks the two agree.
 Add its nodes to `scripts/play.mjs` and its map to `scripts/shots.mjs`, run `npm run audio:wanted`,
-and look at the chart in both layouts. Nothing on the chart is placed by hand: `src/scenes/chartSheets.ts`
+and look at the chart in both layouts (`npm run shots -- chart@<area>`). The scripted play of it waits until the owner asks. Nothing on the chart is placed by hand: `src/scenes/chartSheets.ts`
 cuts each sea's sheet into six spots, and an island's spot follows only from its place in the list, so adding
 one to the end moves none of the others and the seventh of a sea starts a new sheet. An eleventh big one needs a spot at home (`DENS` in `homeIsland.ts`).
 
