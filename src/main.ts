@@ -15,6 +15,7 @@ import { createAreaMap, type MapNode } from './scenes/areaMap';
 import { createExerciseScene } from './scenes/exerciseScene';
 import { createHomeIsland } from './scenes/homeIsland';
 import { createLandfall } from './scenes/landfall';
+import { createThingsSheet } from './scenes/thingsSheet';
 import { SEA, placeInSea, seaOf } from './scenes/chartSheets';
 import { PLACES } from './scenes/places';
 import { createVoyage, type Port } from './scenes/voyage';
@@ -251,6 +252,11 @@ async function boot(): Promise<void> {
     const area = frontier();
     const [place, big] = [PLACES[area.id], BIG_ONES[area.id].who];
     if (name === 'who') await who(true);
+    else if (name === 'things') {
+      // The sheet the drawings of things are judged on: `&thing=cat` for one close up, `&page=1` for the next nine.
+      showBar([]);
+      await stage.show(createThingsSheet({ only: params.get('thing'), page: Number(params.get('page')) || 0 }), true);
+    }
     else if (name === 'home') await goHome(true);
     else if (name === 'map') await goMap(null, true);
     else if (name === 'sleeper') {

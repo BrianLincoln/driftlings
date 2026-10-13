@@ -55,7 +55,7 @@ export function buildKit(host: KitHost): { kit: ExerciseKit; layout(mode: Layout
     tile: (text, scale = 1, icon = false, heart = false) => stand(new LetterTile(text, host.ctx().glyphs, scale, icon, buildTile(heart))),
     card: (text, hue, scale = 1) => stand(new LetterTile(text, host.ctx().glyphs, scale, false, buildCard(C.cards[Math.abs(hue) % C.cards.length]))),
     thing(name) {
-      const thing = new Thing(name, host.prop);
+      const thing = new Thing(name);
       scene.add(thing.root);
       things.push(thing);
       return thing;
@@ -144,7 +144,7 @@ export function buildKit(host: KitHost): { kit: ExerciseKit; layout(mode: Layout
         if (th.gone) {
           scene.remove(th.root);
           things.splice(i, 1);
-        } else if (th.root.scale.x > 0.5) pushBlob(th.root.position.x, th.root.position.z, 0.34, 1.1);
+        } else if (th.root.scale.x > 0.5) pushBlob(th.root.position.x, th.root.position.z, th.reach, 1.1);
       }
       for (let i = crossings.length - 1; i >= 0; i--) {
         crossings[i].update(dt);

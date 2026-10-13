@@ -7,18 +7,33 @@ The curriculum follows UFLI Foundations. `docs/ufli.md` has its full lesson orde
 lesson, the irregular words by lesson, and what the game covers and misses. Read it before answering
 anything about UFLI; do not go from memory.
 
+## Speed first
+
+The owner wants a fast loop and accepts the odd breakage for it. They play every change themselves on
+the dev server; that is the real test. Fix what breaks when it breaks.
+
+- After a change: `npx tsc --noEmit` and `npm test` (two seconds together), say it is ready at
+  localhost:5173, stop.
+- `npm run play` and a full `npm run shots` are not part of the loop. Run them only when the owner asks.
+- A visual change gets at most one targeted shot of the scene it touched (`npm run shots -- map@i1a2`),
+  and only when it moves or adds something in a stage box. Colour, timing and small tweaks get none.
+- No `npm run build` before a push: the type-check covers it and the deploy builds anyway.
+- Check what the change touched, once. Do not re-run a check that passed, or check the live build.
+- Say in one line what was not checked, so the owner knows where to look.
+
 ## Commands
 
 - `npm run dev` : dev server (the owner keeps one running on :5173)
 - `npm test` : unit tests (Vitest)
 - `npm run build` : type-check and build to `dist/`
-- `npm run play` : build, then play every open area end to end in headless Chromium through
+- `npm run play` : slow, only when asked. Build, then play every open area end to end in headless Chromium through
   real taps and slides (area one, home, out to the next, home, and so on; about ten minutes);
   prints ok/FAIL and saves screenshots to `shots/play-*`
-- `npm run shots` : screenshot each area's map and the home island (from the landing, and with the companion sent
+- `npm run shots` : the full set is slow, only when asked; name one scene instead. Screenshots each area's map and the home island (from the landing, and with the companion sent
   to three other parts of it) at four sizes into `shots/`.
   `npm run shots -- chart@i1a2` takes any `?scene=` at one area, `-- chart@sea3` the chart of a later sea; `-- crews` is home with every crew;
-  `-- i1a3-c+chain` plays one exercise of a node through (as if every clip were recorded) with a picture at each step
+  `-- i1a3-c+chain` plays one exercise of a node through (as if every clip were recorded) with a picture at each step;
+  `npm run shots -- things` is the sheet the drawings of things are judged on (`docs/things.md`)
 - `npm run audio` : take in clips from `audio-inbox/`, rebuild `public/audio/` and the manifest
 - `npm run audio:wanted` : write `audio-inbox/WANTED.md`, the clips the lessons ahead are missing,
   nearest lesson first. What a lesson needs follows from the skill it teaches: a grapheme needs its
@@ -28,6 +43,7 @@ anything about UFLI; do not go from memory.
 
 URL switches: `?reset` clears the progress of the child who played last, `?demo` fills the home island, `?scene=map|home|who|sleeper|friends|<node id>`
 (`who` is where children choose who is playing, with `&demo` a full row of six; `sleeper` replays the map scene where the sleeper takes the plank, `friends` the one where it gives it back;
+`things` is the sheet of drawings, `&thing=cat` one of them close up;
 `leave` holds the ship pulling away, `chart` the same with the chart unrolled over it, `arrive` the landing
 at home with everyone getting off; `sail` plays the whole crossing home),
 `?scene=i1a3-c&only=chain` opens a node with only that exercise's rounds,
@@ -53,7 +69,8 @@ before committing and deploying.
 - The heart colour (`C.heart`) means "this part of the word is learned by heart": the heart on a tile and its letter. Nothing else.
 - No text instructions in the game UI. Players cannot read. The one exception is the grown-ups' corner
   (`src/ui/grownups.ts`), behind a button that has to be held down.
-- Visual work is not done until `npm run shots` output has been looked at.
+- A change to what sits in a stage box is not done until one targeted shot of it has been looked at
+  (`npm run shots -- <scene>@<area>`), `tall` and `wide`. Not the full set.
 - Keep files small; split before a file passes about 300 lines.
 
 ## Layout
@@ -61,7 +78,7 @@ before committing and deploying.
 - `src/learn` : skills, event log, skill model, generator (`chains.ts` makes the word chains), scheduler (`rounds.ts` has its sizes and the runs of items it builds from). Pure logic: no three.js,
   no DOM, no imports from the rest of the app (a test enforces this). It has to be right.
 - `src/content` : word list, audio manifest (generated), and the adapter the generator reads; `endings.json` lists the things shown as one and
-  several (each needs a drawing in `scenes/things.ts`; a test checks) and the short words where s says /z/; `hearts.json` lists the
+  several (each needs a drawing in `scenes/things/`; a test checks) and the short words where s says /z/; `hearts.json` lists the
   irregular words, a tile to a sound (`docs/heart-words.md` has the design and what is built)
 - `src/exercises` : one module per exercise, all satisfying `contract.ts`; `index.ts` is the catalogue
 - `src/game` : one child's game (event log + everything derived), the children on this device (`children.ts`),
@@ -70,7 +87,8 @@ before committing and deploying.
 - `src/scenes` : dioramas (home island, where the child goes about as the companion (`steer.ts`) among creatures spending
   their day (`residents.ts`) at things to do (`pastime.ts` is the contract, `pastimes.ts` the list of places), area map, exercise host (`exerciseKit.ts` is what it lends an exercise, `stream.ts` the stream and stepping stones of the word chains), the crossing: `voyage.ts` at sea
   with `chart.ts` unrolling over it, then `landfall.ts` only when an island's crew come home to stay), `who.ts` where a child taps their own creature to play, the ship and the raft it tows, letter tile, scenery recipes,
-  and `places.ts`: what makes each area's island its own (outline, palette, scenery, stone path, chart drawing)
+  `places.ts`: what makes each area's island its own (outline, palette, scenery, stone path, chart drawing),
+  and `things/`: the drawings of everyday things a word can be about, with `thingsSheet.ts` to look at them on
 - `src/gfx` : palette, shared uniforms, shader chunks, materials, post chain, ground, sky
 - `src/stage` : renderer loop, framing rule, quality tiers, tap picking, DOM glyph layer
 - `src/cast` : creature rig, species and coats, companion (want + queued acts), springs
@@ -78,6 +96,12 @@ before committing and deploying.
 - `src/ui` : the buttons over a scene (`bar.ts`: the way back top left, who is playing top right, play bottom middle; never a button for where you already are) and progress pips, icons only, and the grown-ups' corner (add, name, remove children)
 - `src/debug` : `window.__dl` hooks used by the scripts
 - `audio-src/` : narration masters. `audio-inbox/` : where the owner drops new clips
+
+## Drawing a thing
+
+The small drawings of everyday things (cat, cup, bed) are recipes in `src/scenes/things/`. `docs/things.md`
+is the brief: the rules, the approved nine to copy from, how the lines are placed by numbering parts, how to
+run the sheet and the critic, and the words still to draw in batches. Read it before drawing one.
 
 ## Opening an area
 
@@ -89,7 +113,7 @@ left over from when areas were grouped; saved progress uses them, so they stay.)
 The curriculum already lists it. Give it a big one in `BIG_ONES`
 (`src/game/areas.ts`) and an entry in `PLACES` (`src/scenes/places.ts`); a test checks the two agree.
 Add its nodes to `scripts/play.mjs` and its map to `scripts/shots.mjs`, run `npm run audio:wanted`,
-and look at the chart in both layouts. Nothing on the chart is placed by hand: `src/scenes/chartSheets.ts`
+and look at the chart in both layouts (`npm run shots -- chart@<area>`). The scripted play of it waits until the owner asks. Nothing on the chart is placed by hand: `src/scenes/chartSheets.ts`
 cuts each sea's sheet into six spots, and an island's spot follows only from its place in the list, so adding
 one to the end moves none of the others and the seventh of a sea starts a new sheet. An eleventh big one needs a spot at home (`DENS` in `homeIsland.ts`).
 

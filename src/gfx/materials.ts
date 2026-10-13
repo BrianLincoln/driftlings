@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { U } from './uniforms';
-import { COMMON_VERT, TAG, TOON, WRITE_G } from './glsl';
+import { COMMON_VERT, PART_STEP, TAG, TOON, WRITE_G } from './glsl';
 import { FACE_GLSL, faceUniforms, type FaceLook, type FaceUniforms } from './face';
 
 export interface ToonOptions {
@@ -14,6 +14,8 @@ export interface ToonOptions {
   /** Planked wood: board seams and grain drawn over the vertex colour. Boards run along x. */
   wood?: boolean;
   doubleSided?: boolean;
+  /** The mesh is in numbered parts (a `part` attribute), inked where one meets another. See `PART_STEP`. */
+  parts?: boolean;
 }
 
 export type ToonMaterial = THREE.ShaderMaterial & {
@@ -62,7 +64,8 @@ void paintWood(inout vec3 base) {
 }
 `;
 
-const FRAG = (face: boolean, wood: boolean) => /* glsl */ `
+const FRAG = (face: boolean, wood: boolean, parts: boolean) => /* glsl */ `
+${parts ? 'in float vPart;' : ''}
 in vec3 vN;
 in vec3 vObj;
 in vec3 vCol;
@@ -106,7 +109,7 @@ void main() {
     col = mix(col, col * 1.1 + 0.14, edge);
     col += uDorm.w * 0.3;
   }
-  writeG(col, flag, n, uTag);
+  writeG(col, flag, n, uTag${parts ? ` + floor(vPart + 0.5) * ${PART_STEP}` : ''});
 }
 `;
 
@@ -125,7 +128,7 @@ export function toonMaterial(o: ToonOptions = {}): ToonMaterial {
       uTag: { value: o.tag ?? TAG.prop },
       ...(o.face ? faceUniforms(o.face) : {}),
     },
-    vertexShader: COMMON_VERT,
-    fragmentShader: FRAG(!!o.face, !!o.wood),
+    vertexShader: COMMON_VERT(!!o.parts),
+    fragmentShader: FRAG(!!o.face, !!o.wood, !!o.parts),
   }) as ToonMaterial;
 }
