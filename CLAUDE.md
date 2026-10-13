@@ -3,6 +3,10 @@
 A browser phonics game for ages 4 to 7. The kickoff brief and decisions live in
 the conversation history; the reference look is in `references/`.
 
+The curriculum follows UFLI Foundations. `docs/ufli.md` has its full lesson order, the eight steps of a
+lesson, the irregular words by lesson, and what the game covers and misses. Read it before answering
+anything about UFLI; do not go from memory.
+
 ## Commands
 
 - `npm run dev` : dev server (the owner keeps one running on :5173)
