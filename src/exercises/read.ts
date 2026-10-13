@@ -45,7 +45,7 @@ const top = (thing: Thing) => {
 export const readExercise: ExerciseModule<ReadItem> = {
   kind: 'read',
   clips: (items) => [
-    promptClip('your-turn-read-it'), promptClip('tap-what-it-says'),
+    promptClip('your-turn-read-it'), promptClip('which-one-is-it'),
     ...items.flatMap((i) => [
       ...i.words.flatMap((w) => [wordClip(w.text), ...w.sounds.map(soundClip)]),
       ...i.choices.flatMap((c) => [wordClip(c.thing), ...(c.where ? [wordClip(c.where.thing)] : [])]),
@@ -132,8 +132,8 @@ export const readExercise: ExerciseModule<ReadItem> = {
       }));
       place();
       words.forEach((w) => w.tiles.forEach((tile) => tile.snap(tile.goal)));
-      // "Your turn. Read it. Tap what it says." Once a round; after that the words just stand there.
-      openAt = t + 0.5 + (index === 0 ? kit.line([promptClip('your-turn-read-it'), promptClip('tap-what-it-says')], 0.5).end : 0);
+      // "Your turn. Read it. Which one is it?" Once a round; after that the words just stand there.
+      openAt = t + 0.5 + (index === 0 ? kit.line([promptClip('your-turn-read-it'), promptClip('which-one-is-it')], 0.5).end : 0);
       nextAt = openAt + READ_FOR_THEM_AFTER;
     };
 

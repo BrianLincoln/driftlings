@@ -121,7 +121,7 @@ for (const [title, steps] of STEPS) {
     } else if (step.sentence) {
       for (const w of step.sentence) if (!has(`words/${w}`)) want.push(`\`words/${w}\` : "${w}" (a sentence begins with it)`);
     } else if (step.read) {
-      for (const [name, text] of [['your-turn-read-it', 'Your turn. Read it.'], ['tap-what-it-says', 'Tap what it says.']]) if (!has(`prompts/${name}`)) want.push(`\`prompts/${name}\` : "${text}"`);
+      for (const [name, text] of [['your-turn-read-it', 'Your turn. Read it.'], ['which-one-is-it', 'Which one is it?']]) if (!has(`prompts/${name}`)) want.push(`\`prompts/${name}\` : "${text}"`);
     } else if (step.ending) {
       const z = step.ending === 'z';
       const prompts = z

@@ -283,7 +283,7 @@ Opens at `i2a1-s-z`, where "is" is taught. "in" is used only with things that ho
 How it plays:
 
 1. The words appear. "Your turn. Read it." (first item of a round only; this clip already exists), then
-   "Tap what it says." (first ever round only). Then silence.
+   "Which one is it?" (first ever round only). Then silence.
 2. Tapping a letter tile says its sound. That is sounding out, which is what we want, and it costs
    nothing.
 3. Tapping the companion makes it read the words aloud. That is help: the attempt is reported `helped`,
@@ -328,7 +328,7 @@ Six new clips for slice one, and two words the game is already missing.
 | `letters/th-sound` | the buzzing th of "the" on its own, held, no "uh" after | tapping the `th` tile |
 | `prompts/this-word-is` | "This word is" | meet |
 | `prompts/learn-this-part-by-heart` | "This part, we learn by heart." | meet, once per child |
-| `prompts/tap-what-it-says` | "Tap what it says." | read, once per child |
+| `prompts/which-one-is-it` | "Which one is it?" | read, once per child |
 | `words/on` | "on" | read-back of a sentence (already missing) |
 | `words/bug` | "bug" | already missing |
 
