@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { FaceLook } from '../../gfx/face';
 import { C } from '../../gfx/palette';
-import { capsule, ellipsoid, merge, paint, place } from '../../gfx/geo';
+import { capsule, ellipsoid, lathe, merge, paint, place } from '../../gfx/geo';
 
 // What the drawings of things are put together from. docs/things.md has the rules.
 
@@ -83,4 +83,14 @@ export function wrapTail(radius: number, thick: number, arc: number, colour: str
     place(paint(new THREE.TorusGeometry(radius, thick, 12, 28, arc), colour), [0, thick, 0], [Math.PI / 2, 0, -Math.PI / 2]),
     place(ball(thick * 1.25, tip), [radius * Math.cos(end), thick, radius * Math.sin(end)]),
   );
+}
+
+/** A fat wheel standing on the ground with its axle along z: a dark tyre, a pale hub showing on both sides. */
+export function wheel(r: number, w: number, tyre: string = C.trunk, hub: string = C.rock): THREE.BufferGeometry {
+  const h = w / 2;
+  const e = Math.min(0.02, h * 0.6);
+  return place(merge(
+    place(lathe([[0, -h], [r - e, -h], [r, e - h], [r, h - e], [r - e, h], [0, h]], tyre, 28, 24), [0, 0, 0], [Math.PI / 2, 0, 0]),
+    ellipsoid(r * 0.48, r * 0.48, h + 0.012, hub, 16),
+  ), [0, r, 0]);
 }
