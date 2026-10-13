@@ -156,14 +156,14 @@ letter, nearest island first. Draw a batch, run the critic on it, get the owner'
 - top · mop · map, top · tap
 - cod · cot · cap
 
-**Batch 3** (fourth island): bud, bus, cab, cob, sun, net, nut, peg
+**Batch 3** (fourth island), DRAWN: bud, bus, cab, cob, sun, net, nut, peg
 - bed · bud · bug
 - bug · bus · bud
 - cab · cob · cod, cab · cap · can
 - net · nut
 - pig · peg · pin
 
-**Batch 4** (fourth and fifth islands): tub, gum, mud, hat, hen, rat, log, lip
+**Batch 4** (fourth and fifth islands), DRAWN: tub, gum, mud, hat, hen, rat, log, lip
 - bat · cat · hat, hat · rat · mat
 - log · dog
 - mud · bud
