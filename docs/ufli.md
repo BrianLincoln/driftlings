@@ -134,7 +134,7 @@ Our exercises against the eight steps:
 | `blend` | 4 for the sounding out, 6 for the rebuilding | the unaided stage only |
 | `many` | 5 for lessons 20 and 21 | the ask stage |
 | `heart` | 7: meet an irregular word, then pick it out by ear; `blend` spells it | picking it out, and spelling it unaided |
-| `read` | 8, a first step: a phrase nobody says, tap the thing it names | yes |
+| `read` | 8, a first step: a phrase or a short sentence nobody says ("the cat", "I see a cat"), tap the thing it names | yes |
 | `chain` | 6: a word chain. One letter changes at a time, in place; spelling steps (the word is said, pick the letter that makes it) and reading steps (the letter changes by itself, nobody says the word, pick it out by ear) take turns | every step |
 
 Word chains, as the game has them (`src/learn/chains.ts`, `src/exercises/chain.ts`):
@@ -156,14 +156,19 @@ Word chains, as the game has them (`src/learn/chains.ts`, `src/exercises/chain.t
 
 What UFLI does that the game does not yet:
 
-1. **Read a word nobody says** (steps 4, 6, 8). In `read`, for the nine drawn things, and in the reading steps of `chain`, for any word: but there the child matches it to a spoken word and never has to say it.
+1. **Read a word nobody says** (steps 4, 6, 8). In `read`, for the drawn things (twenty-five), and in the reading steps of `chain`, for any word: but there the child matches it to a spoken word and never has to say it.
 2. **Letter to sound** (step 2). Everything we have runs sound to letter.
 3. **Word chains that add or drop a letter** (step 6). Chains that swap one are in (`chain`, above), once their lines are recorded.
 4. **Sounds with no letters** (step 1): blending and segmenting by ear.
 5. **Longer blends** (35 to 41). CCVC and CVCC are taught (25, 27); CCVCC and CCCVC are not, and `shapeOf` calls
    them `other`. The blend exercise already holds five tiles in both layouts.
-6. **Heart words** (step 7). By lesson 27 UFLI has taught about twenty; the game has two, "the" and "a" (`docs/heart-words.md`).
-7. **Sentences** (step 8). Phrases ("the cat") are read; whole sentences are made but not shown yet, for want of room.
+6. **Heart words** (step 7). Seventeen of UFLI's twenty-two by lesson 34 are taught, one to a lesson, some a lesson or two
+   late (`docs/heart-words.md` has the table). Not yet: look, book (they need the short oo), and (regular, but a shape
+   nothing teaches), and is, as are ordinary words from lesson 21. None can be heard until its clip is recorded.
+   They are read and spelled; UFLI also has them written from memory in a sentence.
+7. **Sentences** (step 8). Phrases ("the cat") and sentences that say which thing ("I see a cat", "it is a cat") are read,
+   by choosing a picture. A thing on or in another is made but not shown yet, for want of room; nothing is longer than
+   four words, there is no passage, no sentence is spelled, and most irregular words are in no sentence.
 8. **Letter formation** (step 5) and capital letters (Getting Ready). A decision to make, not an oversight to fix.
 
 ## Sources

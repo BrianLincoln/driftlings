@@ -9,7 +9,9 @@
 //                    "milk"): the lesson's words are shared evenly between its shapes, as the scheduler shares them.
 //                    `why` says what the words are for when it is something else: a letter whose keywords cannot
 //                    both be built (queen, zoo) still wants two words to be seen in
-//   an irregular word its word, the sound of each of its tiles (src/content/hearts.json), and the lines that introduce it
+//   an irregular word its word, the sound of each of its tiles (src/content/hearts.json), and the lines that introduce it.
+//                    A capital for a tile's sound is the letter saying its name: that is the clip of the letter's name
+//   a sentence       the little words it begins with that are sounded out, not learned by heart (it, is)
 //   reading alone     the lines that say what to do; the words themselves are the drawn things' and already wanted elsewhere
 //   word chains      the lines that say what to do; its words are ones the lessons build, already wanted elsewhere
 //   an ending        the lines that explain it, and for each thing shown as one and several
@@ -28,19 +30,20 @@ const has = (id) => id in manifest;
 // The lessons in order, a step past what the curriculum lists so recording can run ahead of building.
 // A string is a grapheme; { blend: n } is a lesson that needs n buildable words, of `shapes` (vc and cvc unless given)
 // (each its share, or any mix of them with `mix`) and with the letter `having` (or one of them) in them if given; { ending: 's' | 'z' } is an s on the end, saying that;
-// { heart: word } is an irregular word; { read: true } is where words are first read with nobody saying them.
+// { heart: word } is an irregular word; { read: true } is where words are first read with nobody saying them;
+// { sentence: [words] } is where a sentence can first begin with those (LEADS in src/learn/reads.ts).
 // { chain: true } is where word chains begin: the lesson after the first on blending, when there are words enough to link.
 const STEPS = [
   ['Island 1', ['a', 'm', 's', 't', { blend: 4 }]],
-  ['Island 2', ['p', { chain: true }, { heart: 'the' }, 'f', { heart: 'a' }, 'i', 'n']],
-  ['Island 3', ['o', 'd', 'c', { read: true }]],
-  ['Island 4', ['u', 'g', 'b', 'e']],
-  ['Island 5', [{ ending: 's' }, { ending: 'z' }, 'k', 'h', 'r', { blend: 4, shapes: ['ccvc'], having: 'r' }, 'l', { blend: 4, shapes: ['ccvc', 'cvcc'], having: 'l' }]],
+  ['Island 2', ['p', { chain: true }, { heart: 'the' }, 'f', { heart: 'a' }, 'i', { heart: 'I' }, 'n']],
+  ['Island 3', ['o', 'd', { heart: 'said' }, 'c', { read: true }]],
+  ['Island 4', ['u', { heart: 'to' }, 'g', { heart: 'do' }, 'b', { heart: 'of' }, 'e']],
+  ['Island 5', [{ ending: 's' }, { ending: 'z' }, 'k', { heart: 'see' }, { sentence: ['it', 'is'] }, 'h', { heart: 'he' }, 'r', { heart: 'be' }, { blend: 4, shapes: ['ccvc'], having: 'r' }, 'l', { heart: 'me' }, { blend: 4, shapes: ['ccvc', 'cvcc'], having: 'l' }]],
   ['Island 6', [
-    'w', 'j', 'y', 'x',
+    'w', { heart: 'from' }, 'j', { heart: 'was' }, 'y', { heart: 'are' }, 'x', { heart: 'you' },
     'qu', { blend: 2, shapes: ['cvc', 'ccvc', 'cvcc'], mix: true, having: 'qu', why: 'a word with qu in it: only sounded out and heard, so any shape' },
-    'v',
-    'z', { blend: 2, having: 'z', why: 'a word with z in it' },
+    'v', { heart: 'what' },
+    'z', { heart: 'have' }, { blend: 2, having: 'z', why: 'a word with z in it' },
     { blend: 2, shapes: ['ccvc', 'cvcc'], having: ['w', 'j', 'y', 'x', 'qu', 'v', 'z'], why: 'two consonants together, with one of the last letters of the alphabet' },
   ]],
 ];
@@ -80,9 +83,15 @@ for (const [title, steps] of STEPS) {
       for (const w of keywords[step] ?? []) if (!has(`words/${w}`)) want.push(`\`words/${w}\` : "${w}" (keyword for ${step})`);
     } else if (step.heart) {
       const w = step.heart;
-      const said = { the: 'as "thuh", not "thee"', a: 'as "uh", not "ay"' }[w];
-      if (!has(`words/${w}`)) want.push(`\`words/${w}\` : "${w}"${said ? `, said ${said}` : ''} (learned by heart)`);
-      for (const snd of hearts.words[w].sounds) if (!has(`letters/${snd}-sound`)) want.push(`\`letters/${snd}-sound\` : the sound "${snd}" makes in "${w}", alone, no trailing "uh"`);
+      const said = { the: 'as "thuh", not "thee"', a: 'as "uh", not "ay"', to: 'as "too", not "tuh"', of: 'as "uv"', are: 'as in "we are"', was: 'as "wuz"', what: 'as "wut"' }[w];
+      const how = { oo: 'the long "oo" of "to", "do" and "you"', ar: 'the "ar" of "are" and "car"', th: 'the buzzing "th" of "the"' };
+      const clip = w.toLowerCase();
+      if (!has(`words/${clip}`)) want.push(`\`words/${clip}\` : "${w}"${said ? `, said ${said}` : ''} (learned by heart)`);
+      for (const snd of hearts.words[w].sounds) {
+        // A capital is a letter saying its name, which the letter's own lesson already asks for.
+        const id = /^[A-Z]$/.test(snd) ? `letters/${snd.toLowerCase()}-name` : `letters/${snd}-sound`;
+        if (!has(id)) want.push(`\`${id}\` : ${id.endsWith('-name') ? `the name of the letter "${snd.toLowerCase()}"` : `${how[snd] ?? `the sound of "${snd}"`}, alone, no trailing "uh"`}`);
+      }
       for (const [name, text] of [['this-word-is', 'This word is'], ['learn-this-part-by-heart', 'This part, we learn by heart.']]) if (!has(`prompts/${name}`)) want.push(`\`prompts/${name}\` : "${text}"`);
     } else if (step.chain) {
       // The names are CHAIN_PROMPTS in src/learn/chains.ts: no chain is offered until all three exist.
@@ -91,6 +100,8 @@ for (const [title, steps] of STEPS) {
         ['what-word-is-it-now', 'What word is it now?'],
         ['tap-to-hear-tap-again-to-choose', 'Tap one to hear it. Tap it again to choose it.'],
       ]) if (!has(`prompts/${name}`)) want.push(`\`prompts/${name}\` : "${text}" (word chains)`);
+    } else if (step.sentence) {
+      for (const w of step.sentence) if (!has(`words/${w}`)) want.push(`\`words/${w}\` : "${w}" (a sentence begins with it)`);
     } else if (step.read) {
       for (const [name, text] of [['your-turn-read-it', 'Your turn. Read it.'], ['tap-what-it-says', 'Tap what it says.']]) if (!has(`prompts/${name}`)) want.push(`\`prompts/${name}\` : "${text}"`);
     } else if (step.ending) {

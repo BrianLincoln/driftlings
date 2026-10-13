@@ -28,9 +28,11 @@ export const recorded = (id: ClipId): boolean => id in clips;
 export const clipSeconds = (id: ClipId): number => clips[id] ?? 0;
 export const clipUrl = (id: ClipId): string => `${import.meta.env.BASE_URL}audio/${id}.mp3`;
 
-export const soundClip = (grapheme: string): ClipId => `letters/${grapheme}-sound`;
 export const nameClip = (grapheme: string): ClipId => `letters/${grapheme}-name`;
-export const wordClip = (word: string): ClipId => `words/${word}`;
+/** A capital stands for a letter saying its name (the e of "he" is E, and "I" is I): that is the clip of its name. */
+export const soundClip = (grapheme: string): ClipId => (/^[A-Z]$/.test(grapheme) ? nameClip(grapheme.toLowerCase()) : `letters/${grapheme}-sound`);
+/** Clip names are lower case, whatever the word ("I"). */
+export const wordClip = (word: string): ClipId => `words/${word.toLowerCase()}`;
 export const promptClip = (name: string): ClipId => `prompts/${name}`;
 
 /** An everyday word that begins with the grapheme's sound, if one has been recorded. Only ever heard. */
