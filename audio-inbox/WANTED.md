@@ -14,15 +14,11 @@ Complete.
 - [ ] `prompts/change-one-letter-to-make` : "Change one letter to make ... (the word follows: leave it hanging)" (word chains)
 - [ ] `prompts/what-word-is-it-now` : "What word is it now?" (word chains)
 - [ ] `prompts/tap-to-hear-tap-again-to-choose` : "Tap one to hear it. Tap it again to choose it." (word chains)
-- [ ] `words/the` : "the", said as "thuh", not "thee" (learned by heart)
-- [ ] `letters/th-sound` : the sound "th" makes in "the", alone, no trailing "uh"
-- [ ] `prompts/this-word-is` : "This word is"
 - [ ] `prompts/learn-this-part-by-heart` : "This part, we learn by heart."
-- [ ] `words/a` : "a", said as "uh", not "ay" (learned by heart)
 
 ## Island 3
 
-- [ ] `prompts/tap-what-it-says` : "Tap what it says."
+Complete.
 
 ## Island 4
 
@@ -30,20 +26,7 @@ Complete.
 
 ## Island 5
 
-- [ ] `words/cats` : "cats" (one cat, lots of cats)
-- [ ] `words/bats` : "bats" (one bat, lots of bats)
-- [ ] `words/maps` : "maps" (one map, lots of maps)
-- [ ] `words/dogs` : "dogs" (one dog, lots of dogs)
-- [ ] `words/pigs` : "pigs" (one pig, lots of pigs)
-- [ ] `words/bug` : "bug" (one bug, lots of bugs)
-- [ ] `words/bugs` : "bugs" (one bug, lots of bugs)
-- [ ] `words/trip` : "trip" (a word to build: r beside another consonant)
-- [ ] `words/drum` : "drum" (a word to build: r beside another consonant)
-- [ ] `words/crab` : "crab" (a word to build: r beside another consonant)
-- [ ] `words/frog` : "frog" (a word to build: r beside another consonant)
-- [ ] `words/flag` : "flag" (a word to build: l beside another consonant)
-- [ ] `words/clap` : "clap" (a word to build: l beside another consonant)
-- [ ] `words/help` : "help" (a word to build: l beside another consonant)
+Complete.
 
 ## Island 6
 
