@@ -3,8 +3,9 @@ import type { ChainItem, ChainStep, Word } from './items';
 import { shuffle, weighted } from './rng';
 import { blend, gpc, isVowel, shapeOf, soundsLike } from './skills';
 
-// Word chains: a word, then another one letter away, then another. Spelling and reading take turns,
-// spelling first. The rules it never breaks:
+// Word chains: a word, then another one letter away, then another. Spelling comes first, and every other step
+// after it is a reading one wherever the new word has a drawing; where it has none, that step is spelling too.
+// The rules it never breaks:
 //  - every step changes exactly one tile, in place (never a letter added or dropped);
 //  - every word is one the child can be asked to build: its letters and its shape taught, its clip recorded;
 //  - every letter says its usual sound, so a tile is worth the same in every word of the chain;
@@ -17,8 +18,6 @@ export const CHAIN_PROMPTS = {
   spell: 'change-one-letter-to-make',
   /** "What word is it now?" */
   read: 'what-word-is-it-now',
-  /** "Tap one to hear it. Tap it again to choose it." */
-  how: 'tap-to-hear-tap-again-to-choose',
 } as const;
 
 /** Where two words differ, if they are the same length and differ in exactly one tile; -1 otherwise. */
@@ -85,8 +84,8 @@ function walk(pool: Word[], steps: number, o: ChainOptions, ctx: GenContext): Wo
   return null;
 }
 
-/** How good a walk is: a favoured letter asked for in a spelling step counts most, then one seen at all, then tiles changed. */
-function score(path: Word[], o: ChainOptions): number {
+/** How good a walk is: a favoured letter asked for in a spelling step counts most, then one seen at all, then tiles changed, and a word to be read that has a drawing. */
+function score(path: Word[], o: ChainOptions, drawn: ReadonlySet<string>): number {
   let n = 0;
   const places = new Set<number>();
   for (let i = 1; i < path.length; i++) {
@@ -95,6 +94,7 @@ function score(path: Word[], o: ChainOptions): number {
     const fav = o.favour?.includes(path[i].graphemes[at]);
     n += fav ? (i % 2 === 1 ? 6 : 2) : path[i].graphemes.some((g) => o.favour?.includes(g)) ? 1 : 0;
     if (o.vowels && isVowel(path[i].graphemes[at])) n += 5;
+    if (i % 2 === 0 && drawn.has(path[i].text)) n += 0.4; // only between chains otherwise as good
   }
   return n + places.size * 2;
 }
@@ -137,21 +137,23 @@ function spellStep(from: Word, to: Word, at: number, pool: Word[], taught: strin
 }
 
 /**
- * The words set beside the right one in a reading step. Ones that differ from it only in the tile that changed
- * (the word it was a moment ago among them) come first, then others one letter away, then others of its length.
+ * A reading step: the new word and two others, each as a drawing. Only where the word has a drawing and there are two
+ * more drawn words the child can read to stand beside it; null if not. Ones that differ from it only in the tile that
+ * changed (the word it was a moment ago among them) come first, then others one letter away, then others of its length.
  */
-function readStep(to: Word, at: number, pool: Word[], ctx: GenContext): ChainStep | null {
+function readStep(to: Word, at: number, drawn: Word[], ctx: GenContext): ChainStep | null {
+  const others = drawn.filter((w) => w.text !== to.text);
+  if (others.length === drawn.length || others.length < 2) return null;
   const confused = ctx.confusions.get(to.text);
   const near = (w: Word) => {
     const d = changedAt(to.graphemes, w.graphemes);
-    return (d === at ? 6 : d >= 0 ? 3 : w.graphemes.length === to.graphemes.length ? 1 : 0.2) + 3 * (confused?.get(w.text) ?? 0);
+    // Near misses all but always: there are many drawn words, and few of them a letter away.
+    return (d === at ? 100 : d >= 0 ? 40 : w.graphemes.length === to.graphemes.length ? 1 : 0.2) + 3 * (confused?.get(w.text) ?? 0);
   };
-  const wrong = draw(pool.filter((w) => w.text !== to.text), 2, near, ctx);
-  if (wrong.length === 0) return null;
   return {
     mode: 'read', word: to.text, graphemes: to.graphemes, at,
     letters: [],
-    words: shuffle([to, ...wrong], ctx.rng).map((w) => w.text),
+    words: shuffle([to, ...draw(others, 2, near, ctx)], ctx.rng).map((w) => w.text),
     skills: [blend(shapeOf(to.graphemes))],
     supports: [...new Set(to.graphemes.map(gpc))],
   };
@@ -163,18 +165,21 @@ export function chainItem(ctx: GenContext, o: ChainOptions = {}): ChainItem | nu
   const all = chainWords(ctx);
   const pool = all.filter(o.only ?? (() => true));
   const taught = askableGraphemes(ctx);
+  const names = new Set(ctx.content.drawable.map((d) => d.name));
+  const drawn = all.filter((w) => names.has(w.text));
   const most = o.steps ?? 4;
   for (let steps = most; steps >= Math.min(most, o.min ?? 3); steps--) {
     let best: Word[] | null = null;
     for (let i = 0; i < DRAWS; i++) {
       const path = walk(pool, steps, o, ctx);
       if (!path) break; // none this long from any start
-      if (!best || score(path, o) > score(best, o)) best = path;
+      if (!best || score(path, o, names) > score(best, o, names)) best = path;
     }
     if (!best) continue;
     const made = best.slice(1).map((to, i) => {
       const at = changedAt(best![i].graphemes, to.graphemes);
-      return i % 2 === 0 ? spellStep(best![i], to, at, all, taught, ctx, o.vowels) : readStep(to, at, all, ctx);
+      // Every other step is read, where its word can be shown; where it cannot, it is spelt like the rest.
+      return (i % 2 === 1 && readStep(to, at, drawn, ctx)) || spellStep(best![i], to, at, all, taught, ctx, o.vowels);
     });
     if (made.some((s) => !s)) continue;
     return { kind: 'chain', key: key('chain', best[0].text), start: best[0].text, graphemes: best[0].graphemes, steps: made as ChainStep[] };

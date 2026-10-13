@@ -3,7 +3,8 @@ import { sfx } from '../audio/sound';
 import { promptClip, soundClip, wordClip } from '../content/content';
 import { CHAIN_PROMPTS } from '../learn/chains';
 import type { ChainItem } from '../learn/items';
-import { SPEAKER_ICON, type LetterTile } from '../scenes/letterTile';
+import type { LetterTile } from '../scenes/letterTile';
+import type { Thing } from '../scenes/things';
 import type { Touchable } from '../stage/touch';
 import type { Crossing, ExerciseModule } from './contract';
 import { JOINED, wordScale } from './wordRow';
@@ -11,8 +12,8 @@ import { JOINED, wordScale } from './wordRow';
 // Stepping stones: a word chain. A word stands on its tiles by a stream, and each step changes one letter of it.
 //   spell  The new word is said and one tile goes blank. The child taps the letter, of three, that makes the word.
 //          A wrong one goes onto the blank tile, what that spells is said if it is a word, and it comes back out.
-//   read   One tile changes by itself and nobody says the word. Below it are speakers: a tap on one says its
-//          word and lifts it, and a tap on the lifted one chooses it. Listening costs nothing.
+//   read   One tile changes by itself and nobody says the word. By it stand three drawings, and the child taps
+//          the one the word now names. A wrong one says what it is and goes; the question is asked again.
 // Each right step brings a stone up out of the stream. When the last is up the companion walks over.
 // Nothing is lost by a wrong answer; after two, or a long wait, the companion shows which.
 
@@ -29,15 +30,16 @@ const ROWS = {
 const REPLAY_AFTER = 6;
 const HELP_AFTER = { spell: 14, read: 22 };
 const BEFORE_REASK = 1.6;
-/** A speaker has to have been up this long before a second tap chooses it: a child's double tap is one tap. */
-const ARM = 0.55;
-const LIFTED = 0.16;
 /** How fast the companion goes over the stones. */
 const STROLL = 1.5;
 
 interface Option {
-  tile: LetterTile;
-  /** The letter on it, or the word it says. */
+  /** A letter to put in the word, or a drawing to pick: one or the other. */
+  tile?: LetterTile;
+  thing?: Thing;
+  /** Where it stands. */
+  at: THREE.Vector3;
+  /** The letter on the tile, or the word for the drawing. */
   value: string;
   makes?: string;
   out: boolean;
@@ -65,15 +67,12 @@ export const chainExercise: ExerciseModule<ChainItem> = {
     let row: LetterTile[] = [];
     let scale = 1;
     let options: Option[] = [];
-    let lifted: Option | null = null;
-    let armedAt = 0;
     let askedAt = Infinity;
     let busyUntil = 0;
     let lastHeard = 0;
     let tries = 0;
     let helped = false;
     let spelt = 0;
-    let read = 0;
     let timers: Array<{ at: number; fn: () => void }> = [];
 
     const item = () => items[index];
@@ -93,16 +92,17 @@ export const chainExercise: ExerciseModule<ChainItem> = {
     const place = () => {
       row.forEach((tile, i) => tile.goal.copy(slot(i)));
       options.forEach((o, i) => {
-        o.tile.goal.copy(o.inWord ? slot(step().at) : offered(i));
-        if (o.inWord) o.tile.goal.z += 0.15; // in front of the empty tile
-        if (o === lifted) o.tile.goal.y += LIFTED;
+        o.at.copy(o.inWord ? slot(step().at) : offered(i));
+        if (o.inWord) o.at.z += 0.15; // in front of the empty tile
+        o.tile?.goal.copy(o.at);
+        o.thing?.root.position.copy(o.at);
       });
     };
     const point = (o: Option | null) => {
       const want = kit.companion.want;
       want.pose = o ? 'point' : 'stand';
-      want.face = o ? o.tile.goal.clone().setY(o.tile.goal.y + 0.5) : null;
-      if (o) want.at.set(o.tile.goal.x - 0.6 * o.tile.scale, 0, o.tile.goal.z + 0.4);
+      want.face = o ? o.at.clone().setY(o.at.y + (o.tile ? 0.5 : 0.3)) : null;
+      if (o) want.at.set(o.at.x - 0.6 * (o.tile?.scale ?? 1), 0, o.at.z + 0.4);
       else if (crossing) want.at.copy(bank(false));
       if (o) kit.companion.nudge();
     };
@@ -111,7 +111,8 @@ export const chainExercise: ExerciseModule<ChainItem> = {
     const giveHelp = () => {
       if (helped || phase !== 'ask') return;
       helped = true;
-      right().tile.active = true;
+      const tile = right().tile;
+      if (tile) tile.active = true;
       point(right());
     };
 
@@ -120,7 +121,7 @@ export const chainExercise: ExerciseModule<ChainItem> = {
       const s = step();
       const clips = spelling()
         ? [...(first && spelt++ === 0 ? [promptClip(CHAIN_PROMPTS.spell)] : []), wordClip(s.word)]
-        : first ? [promptClip(CHAIN_PROMPTS.read), ...(read++ === 0 ? [promptClip(CHAIN_PROMPTS.how)] : [])] : [];
+        : [promptClip(CHAIN_PROMPTS.read)];
       const said = kit.line(clips, lead);
       lastHeard = t + said.lastAt;
       return said.end;
@@ -132,12 +133,11 @@ export const chainExercise: ExerciseModule<ChainItem> = {
       phase = 'ask';
       tries = 0;
       helped = false;
-      lifted = null;
       point(null);
       if (spelling()) {
         // The letter is wiped off its tile, and the empty tile shows where the new one goes.
         row[s.at].blank = true;
-        options = s.letters.map((l) => ({ tile: kit.tile(l.grapheme, rows().size), value: l.grapheme, makes: l.makes, out: false, inWord: false }));
+        options = s.letters.map((l) => ({ tile: kit.tile(l.grapheme, rows().size), at: kit.at(0, 0), value: l.grapheme, makes: l.makes, out: false, inWord: false }));
       } else {
         // The new letter drops into place by itself.
         sfx.whoosh();
@@ -145,9 +145,10 @@ export const chainExercise: ExerciseModule<ChainItem> = {
         const fresh = (row[s.at] = kit.tile(s.graphemes[s.at], scale));
         fresh.snap(slot(s.at));
         later(0.25, () => fresh.hop());
-        options = s.words.map((w) => ({ tile: kit.tile(SPEAKER_ICON, rows().size, true), value: w, out: false, inWord: false }));
+        options = s.words.map((w) => ({ thing: kit.thing(w), at: kit.at(0, 0), value: w, out: false, inWord: false }));
       }
-      options.forEach((o, i) => o.tile.snap(offered(i)));
+      options.forEach((o, i) => o.tile?.snap(offered(i)));
+      place();
       askedAt = t + Math.max(0.6, ask(0.45, true));
     };
 
@@ -195,16 +196,18 @@ export const chainExercise: ExerciseModule<ChainItem> = {
       hooks.attempt({ exercise: 'chain', skills: s.skills, supports: s.supports, target: answer(), answer: o.value, correct, try: tries, helped, ms });
       kit.hush();
       timers = [];
-      lifted = null;
       o.inWord = spelling();
-      o.tile.press();
+      o.tile?.press();
       if (correct) {
         phase = 'right';
-        o.tile.active = false;
+        if (o.tile) o.tile.active = false;
         place();
-        options.filter((x) => x !== o || !o.inWord).forEach((x) => x.tile.vanish());
+        options.filter((x) => x !== o).forEach((x) => (x.tile ?? x.thing)!.vanish());
+        // The drawing that was right stays while its word is said.
+        o.thing?.hop();
+        later(1.2, () => o.thing?.vanish());
         // The letter goes to the gap, and there turns into a tile the size of the word's own.
-        if (o.inWord) later(0.3, () => { o.tile.vanish(); row[s.at].vanish(); (row[s.at] = kit.tile(o.value, scale)).snap(slot(s.at)); });
+        if (o.inWord) later(0.3, () => { o.tile!.vanish(); row[s.at].vanish(); (row[s.at] = kit.tile(o.value, scale)).snap(slot(s.at)); });
         options = [];
         point(null);
         // The word is said, the stone comes up, and on to the next change or over the stream.
@@ -216,18 +219,14 @@ export const chainExercise: ExerciseModule<ChainItem> = {
       }
       sfx.oops();
       o.out = true;
-      let wait = 0.3;
-      if (o.inWord) {
-        // It stands in the word long enough to be seen there, and says what that spells: a word if it is one, its own sound if not.
-        const heard = kit.say(o.makes ? wordClip(o.makes) : soundClip(o.value), 0.45);
-        wait = 0.45 + Math.max(0.7, heard) + 0.2;
-        busyUntil = t + wait;
-        later(wait, () => { o.inWord = false; place(); });
-        later(wait, () => { o.tile.dim = true; });
-      } else {
-        o.tile.shake();
-        o.tile.dim = true;
-      }
+      // A wrong letter stands in the word long enough to be seen there, and says what that spells: a word if it is one,
+      // its own sound if not. A wrong drawing says what it is, and goes.
+      const heard = kit.say(o.thing || o.makes ? wordClip(o.makes ?? o.value) : soundClip(o.value), 0.45);
+      const wait = 0.45 + Math.max(0.7, heard) + 0.2;
+      busyUntil = t + wait;
+      o.thing?.vanish();
+      later(wait, () => { o.inWord = false; place(); });
+      later(wait, () => { if (o.tile) o.tile.dim = true; });
       place();
       later(wait + BEFORE_REASK, () => ask(0));
       lastHeard = t + wait + BEFORE_REASK;
@@ -235,14 +234,7 @@ export const chainExercise: ExerciseModule<ChainItem> = {
     };
 
     const tap = (o: Option) => {
-      if (phase !== 'ask' || t < askedAt || t < busyUntil || o.out) return;
-      if (spelling() || (lifted === o && t >= armedAt)) return choose(o);
-      // A speaker says its word and comes up; the others go back down.
-      o.tile.press();
-      kit.say(wordClip(o.value), 0.03);
-      if (lifted !== o) armedAt = t + ARM;
-      lifted = o;
-      place();
+      if (phase === 'ask' && t >= askedAt && t >= busyUntil && !o.out) choose(o);
     };
 
     next();
@@ -256,7 +248,7 @@ export const chainExercise: ExerciseModule<ChainItem> = {
           id: `letter:${i}`, object: tile.anchor, radius: tile.radius,
           onTap: () => { tile.press(); kit.say(soundClip(tile.text), 0.03); },
         }));
-        options.forEach((o, i) => out.push({ id: `option:${i}`, object: o.tile.anchor, radius: o.tile.radius, enabled: () => !o.out, onTap: () => tap(o) }));
+        options.forEach((o, i) => out.push({ id: `option:${i}`, object: o.tile?.anchor ?? o.thing!.root, radius: o.tile?.radius ?? 0.46, enabled: () => !o.out, onTap: () => tap(o) }));
         // The companion says the word. In a spelling step it has been said already; in a reading step that is help.
         out.push({ id: 'again', object: kit.companion.root, radius: 0.38, onTap: () => {
           kit.companion.act('greet');
@@ -285,7 +277,6 @@ export const chainExercise: ExerciseModule<ChainItem> = {
 
       debug() {
         if (phase !== 'ask' || t <= askedAt || t < busyUntil) return { waiting: true };
-        if (!spelling() && lifted === right() && t < armedAt) return { waiting: true };
         return { tap: [`option:${options.indexOf(right())}`] };
       },
 

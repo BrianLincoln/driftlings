@@ -24,7 +24,10 @@ const WORDS = [
 const ODD = ['is', 'as', 'his', 'has'];
 const LETTERS = 'amstpfinodcugbekhrl';
 
-function content(o: { words?: string[]; sounds?: string; prompts?: boolean } = {}): Content {
+// The words with drawings, as src/content/drawn.json has them.
+const DRAWN = ['cup','pot','bed','cat','bat','map','dog','pig','bug','mat','man','pan','fan','pin','tin','fin','tap','cap','cot','can','dot','top','mop','cod','dad','bud','bus','cab','cob','sun','net','nut','peg','tub','gum','mud','hat','hen','rat','log','lip'];
+
+function content(o: { words?: string[]; sounds?: string; prompts?: boolean; drawn?: string[] } = {}): Content {
   const sounds = o.sounds ?? `${LETTERS}z`;
   return {
     hasSound: (g) => sounds.includes(g),
@@ -35,7 +38,7 @@ function content(o: { words?: string[]; sounds?: string; prompts?: boolean } = {
     ],
     many: [],
     hearts: [],
-    drawable: [],
+    drawable: (o.drawn ?? DRAWN).map((name) => ({ name, on: false, in: false })),
     hasPrompt: () => o.prompts ?? true,
   };
 }
@@ -63,7 +66,11 @@ function check(c: ChainItem, ctx: GenContext): void {
     expect(s.graphemes.join('')).toBe(s.word);
     expect(changedAt(before, s.graphemes)).toBe(s.at);
     expect(s.at).toBeGreaterThanOrEqual(0);
-    expect(s.mode).toBe(i % 2 === 0 ? 'spell' : 'read');
+    // Spelling first; reading only on every other step after, and only of a word with a drawing.
+    if (i % 2 === 0) expect(s.mode).toBe('spell');
+    const drawn = new Set(ctx.content.drawable.map((d) => d.name));
+    if (s.mode === 'read') expect(drawn.has(s.word)).toBe(true);
+    if (i % 2 === 1 && s.mode === 'spell') expect(drawn.has(s.word) && [...ok.keys()].filter((w) => drawn.has(w)).length >= 3).toBe(false);
     const shape = blend(shapeOf(s.graphemes));
     expect(ctx.known.has(shape)).toBe(true);
     const target = s.graphemes[s.at];
@@ -92,9 +99,9 @@ function check(c: ChainItem, ctx: GenContext): void {
       expect(s.letters).toEqual([]);
       expect(s.words.filter((w) => w === s.word).length).toBe(1);
       expect(new Set(s.words).size).toBe(s.words.length);
-      expect(s.words.length).toBeGreaterThanOrEqual(2);
-      expect(s.words.length).toBeLessThanOrEqual(3);
-      for (const w of s.words) expect(ok.has(w)).toBe(true);
+      // Three drawings, each of a word the child can read.
+      expect(s.words.length).toBe(3);
+      for (const w of s.words) expect(ok.has(w) && drawn.has(w)).toBe(true);
       expect(s.skills).toEqual([shape]);
       expect(s.supports).toContain(gpc(target));
     }
@@ -228,12 +235,42 @@ describe('word chains', () => {
     expect(n).toBeGreaterThan(0);
   });
 
+  it('read only a word with a drawing, beside two other drawn words; a step that cannot be read is spelt', () => {
+    let reads = 0;
+    for (let seed = 1; seed <= 40; seed++) {
+      const c = chainItem(at('i1a4-boss', { seed }))!;
+      reads += c.steps.filter((s) => s.mode === 'read').length;
+      // Nothing is drawn: every step is spelling, and the chain is as long as ever.
+      const none = chainItem(at('i1a4-boss', { seed, content: content({ drawn: [] }) }))!;
+      expect(none.steps.map((s) => s.mode)).toEqual(['spell', 'spell', 'spell', 'spell']);
+      // Two drawn words are not enough to choose between.
+      const two = chainItem(at('i1a4-boss', { seed, content: content({ drawn: ['cat', 'bat'] }) }))!;
+      expect(two.steps.every((s) => s.mode === 'spell')).toBe(true);
+      // A drawing of a word the child cannot read yet is no use: h is not taught here.
+      for (const s of c.steps) expect(s.words).not.toContain('hat');
+    }
+    // With the drawings there are, most chains still have a word to read.
+    expect(reads).toBeGreaterThan(40);
+  });
+
+  it('set beside the word to read ones a letter away from it', () => {
+    let near = 0;
+    let all = 0;
+    for (let seed = 1; seed <= 60; seed++) {
+      for (const s of chainItem(at('i1a4-boss', { seed }))!.steps.filter((x) => x.mode === 'read')) {
+        all++;
+        if (s.words.some((w) => w !== s.word && changedAt([...w], s.graphemes) >= 0)) near++;
+      }
+    }
+    expect(near / all).toBeGreaterThan(0.8);
+  });
+
   it('are the same for the same seed, and need their lines recorded', () => {
     expect(wordsOf(chainItem(at('i1a3-boss', { seed: 7 }))!)).toEqual(wordsOf(chainItem(at('i1a3-boss', { seed: 7 }))!));
     expect(chainItem(at('i1a3-boss', { content: content({ prompts: false }) }))).toBeNull();
     const { hasPrompt: _, ...bare } = content();
     expect(chainItem(at('i1a3-boss', { content: bare }))).toBeNull();
-    expect(Object.values(CHAIN_PROMPTS).length).toBe(3);
+    expect(Object.values(CHAIN_PROMPTS).length).toBe(2);
   });
 });
 

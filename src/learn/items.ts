@@ -134,7 +134,7 @@ export interface ReadItem {
 /**
  * One step of a word chain: the word before it with one letter changed, in the same place.
  * spell: the new word is said, and the child puts in the letter that makes it.
- * read: the letter changes by itself, nobody says the new word, and the child picks it out by ear from a few.
+ * read: the letter changes by itself, nobody says the new word, and the child picks its drawing from three.
  */
 export interface ChainStep {
   mode: 'spell' | 'read';
@@ -148,13 +148,13 @@ export interface ChainStep {
    * `makes` is the word a wrong one would spell, where that is a word that can be said. Empty for read.
    */
   letters: Array<{ grapheme: string; makes?: string }>;
-  /** read: the words to choose between, each heard on a tap, the right one among them. Empty for spell. */
+  /** read: the words whose drawings are chosen between, the right one among them, in the order they stand. Empty for spell. */
   words: string[];
   skills: SkillId[];
   supports: SkillId[];
 }
 
-/** A word chain: a word, then three or four more, each one letter away from the last. Spelling and reading take turns. */
+/** A word chain: a word, then three or four more, each one letter away from the last. Spelling first; every other step after is reading, where its word has a drawing. */
 export interface ChainItem {
   kind: 'chain';
   key: string;

@@ -159,7 +159,7 @@ Our exercises against the eight steps:
 | `many` | 5 for lessons 20 and 21 | the ask stage |
 | `heart` | 7: meet an irregular word, then pick it out by ear; `blend` spells it | picking it out, and spelling it unaided |
 | `read` | 8, a first step: a phrase or a short sentence nobody says ("the cat", "I see a cat"), tap the thing it names | yes |
-| `chain` | 6: a word chain. One letter changes at a time, in place; spelling steps (the word is said, pick the letter that makes it) and reading steps (the letter changes by itself, nobody says the word, pick it out by ear) take turns | every step |
+| `chain` | 6: a word chain. One letter changes at a time, in place; spelling steps (the word is said, pick the letter that makes it), and between them reading steps where the new word has a drawing (the letter changes by itself, nobody says the word, tap its drawing among three) | every step |
 
 Word chains, as the game has them (`src/learn/chains.ts`, `src/exercises/chain.ts`):
 
@@ -171,12 +171,14 @@ Word chains, as the game has them (`src/learn/chains.ts`, `src/exercises/chain.t
 - Only words the child could be asked to build, every letter saying its usual sound: no "is" or "as", no irregular words.
 - A spelling step is evidence for the letter put in and for the word's shape; a reading step for the shape. The
   letters used along the way are credited a little on a right answer, as in `blend`.
-- A reading step is answered by ear: two or three speakers, a tap says a word and a second tap chooses it. Only nine
-  words have drawings, so pictures could stand in for the speakers in few steps; one way of answering was kept.
+- A reading step is answered with a picture and nothing is said: three drawings stand by the word and one tap picks.
+  A wrong one says what it is and goes. So a step is a reading one only where its word has a drawing
+  (`src/content/drawn.json`) and two more drawn words the child can read can stand beside it, near misses first;
+  where it would be reading but cannot be, it is a spelling step, and a chain can be all spelling.
 - A lesson on new word shapes (25, 27) gets a chain of those shapes if its words link up at least twice: at 27 that is
   slip, skip, skin. With the words added for the vowel review the longer ones link up well (slap, slip, slop; lamp, limp, lump)
   once they are recorded.
-- The exercise says three lines of its own (`CHAIN_PROMPTS`). Until all three are recorded no chain is offered at all.
+- The exercise says two lines of its own (`CHAIN_PROMPTS`). Until both are recorded no chain is offered at all.
 
 What UFLI does that the game does not yet:
 

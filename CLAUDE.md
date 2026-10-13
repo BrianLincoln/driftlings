@@ -39,7 +39,7 @@ the dev server; that is the real test. Fix what breaks when it breaks.
   nearest lesson first. What a lesson needs follows from the skill it teaches: a grapheme needs its
   sound, its keyword words (`src/content/keywords.json`: heard in "like in ...", never read) and, for
   a single letter, its name (two letters that make one sound, like qu, have none); a blending lesson needs enough buildable words from the graphemes taught
-  so far, and a lesson on new word shapes needs them of those shapes with its letter in. A lesson that goes back over a vowel names its words (`{ words }`). An irregular word needs its word and the sound of each of its tiles (the letter's name where the tile says that). Word chains need the three lines the exercise says (`CHAIN_PROMPTS` in `src/learn/chains.ts`); no chain is offered until all three are recorded. A new kind of skill gets its own rule in `scripts/audio-wanted.mjs`
+  so far, and a lesson on new word shapes needs them of those shapes with its letter in. A lesson that goes back over a vowel names its words (`{ words }`). An irregular word needs its word and the sound of each of its tiles (the letter's name where the tile says that). Word chains need the two lines the exercise says (`CHAIN_PROMPTS` in `src/learn/chains.ts`); no chain is offered until both are recorded. A new kind of skill gets its own rule in `scripts/audio-wanted.mjs`
 
 URL switches: `?reset` clears the progress of the child who played last, `?demo` fills the home island, `?scene=map|home|who|sleeper|friends|<node id>`
 (`who` is where children choose who is playing, with `&demo` a full row of six; `sleeper` replays the map scene where the sleeper takes the plank, `friends` the one where it gives it back;

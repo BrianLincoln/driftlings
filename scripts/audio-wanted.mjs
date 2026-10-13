@@ -112,11 +112,10 @@ for (const [title, steps] of STEPS) {
       }
       for (const [name, text] of [['this-word-is', 'This word is'], ['learn-this-part-by-heart', "Heart words don't follow the rules, so we learn them by heart."]]) if (!has(`prompts/${name}`)) want.push(`\`prompts/${name}\` : "${text}"`);
     } else if (step.chain) {
-      // The names are CHAIN_PROMPTS in src/learn/chains.ts: no chain is offered until all three exist.
+      // The names are CHAIN_PROMPTS in src/learn/chains.ts: no chain is offered until both exist.
       for (const [name, text] of [
         ['change-one-letter-to-make', 'Change one letter to make ... (the word follows: leave it hanging)'],
         ['what-word-is-it-now', 'What word is it now?'],
-        ['tap-to-hear-tap-again-to-choose', 'Tap one to hear it. Tap it again to choose it.'],
       ]) if (!has(`prompts/${name}`)) want.push(`\`prompts/${name}\` : "${text}" (word chains)`);
     } else if (step.sentence) {
       for (const w of step.sentence) if (!has(`words/${w}`)) want.push(`\`words/${w}\` : "${w}" (a sentence begins with it)`);
