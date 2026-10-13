@@ -5,7 +5,7 @@
   "i1a3": ["on", "cat", "cot", "dot", "pot", "top", "mop", "dip", "dim", "nod", "sad", "mad", "dad", "cap", "can", "cod"],
   "i1a4": ["up", "us", "bat", "bed", "big", "bit", "bud", "bus", "cab", "cob", "cup", "cut", "dig", "dog", "dug", "fun", "gap", "gas", "got", "gum", "mud", "net", "pig", "pun", "sun", "ten", "bug", "peg", "men", "set", "get", "tub", "nut"],
   "i2a1": ["kid", "hat", "hen", "him", "hop", "lip", "log", "rat", "red", "rub", "run", "elk", "milk"],
-  "i2a1 two consonants first": ["trip", "drum", "crab", "frog", "grab", "drop", "skip", "skin", "flag", "clap", "plum", "sled", "glad", "slip"],
+  "i2a1 two consonants first": ["trip", "drum", "crab", "frog", "grab", "drop", "skip", "skin", "flag", "clap", "plum", "sled", "glad", "slip", "drip", "trap", "clip", "flap", "slap", "flip", "slop", "crop", "drag", "flat", "plug", "slug"],
   "i2a1 two consonants last": ["help", "belt", "gulp", "held", "desk", "mask", "hand", "hunt"],
   "i2a2": ["wet", "win", "wig", "web", "jam", "jet", "jog", "jug", "yes", "yum", "yet", "yam", "fox", "box", "six", "mix", "wax", "quit", "quiz", "van", "vet", "vat", "zip", "zap", "zig"],
   "i2a2 two consonants first": ["swim", "twin", "twig", "swam", "squid"],
