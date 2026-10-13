@@ -63,6 +63,9 @@ export const C = {
   faceInk: '#2e1f28',
   parchment: '#fbf3e4',
   parchmentEdge: '#ead9bd',
+  /** The sea as the chart paints it, and the pale ink its waves are drawn in. */
+  chartSea: '#7fbfdc',
+  foamInk: '#eef7f6',
   /** Finished: the tick on a stone or a charted island. Matches `.glyph.done` in style.css. */
   done: '#2f6f5e',
   eyeWhite: '#fffdf8',
@@ -70,4 +73,8 @@ export const C = {
   /** The one glow colour. It means "touch this now" and the companion. Nothing else. */
   glow: '#ffd27a',
   amber: '#f4a455',
+  /** Letter cards: the frame round the parchment face. Bright, and none of them the glow colour. */
+  cards: ['#e8705f', '#5aa9c9', '#6fb37a', '#9a86d6', '#e58bb0'],
+  basket: '#c9925a',
+  basketDark: '#a06f42',
 } as const;

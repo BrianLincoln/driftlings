@@ -1,0 +1,8 @@
+{
+  "comment": "Words where an s is not just its usual sound at the start or middle of a word. `many`: things that can be drawn (scenes/things.ts has one for each), shown as one and then several while an s goes on the end of the word, grouped by what that s says. `sSaysZ`: short words whose last s says /z/. The game uses each once its clips exist.",
+  "many": {
+    "s": ["cup", "pot", "cat", "bat", "map"],
+    "z": ["bed", "dog", "pig", "bug"]
+  },
+  "sSaysZ": ["is", "as", "his", "has"]
+}

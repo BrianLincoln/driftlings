@@ -1,6 +1,6 @@
 import { areaSkills, type AreaDef, type NodeDef } from './curriculum';
-import { askableGraphemes, blendItem, catchItem, decodableWords, meetItem, pickLetterItem, readableWords, type GenContext } from './generator';
-import type { BlendItem, Item, PickLetterItem, Round } from './items';
+import { askableGraphemes, blendItem, catchItem, decodableWords, manyItem, manyWords, meetItem, oddAt, pickLetterItem, readableWords, type GenContext } from './generator';
+import type { BlendItem, Item, ManyItem, PickLetterItem, Round, Word } from './items';
 import { isDue, statusOf, type SkillState } from './model';
 import { shuffle, weighted } from './rng';
 import { blend, gpc, graphemeOf, shapeOf, type SkillId } from './skills';
@@ -25,6 +25,12 @@ export const SIZES = {
   checkpointBlends: 3,
   practicePicks: 5,
   practiceBlends: 2,
+  /** In a lesson about an ending: how many things are shown going from one to several, and how many are then asked about. */
+  manyShows: 3,
+  manyAsks: 4,
+  manyLessonPicks: 3,
+  checkpointMany: 2,
+  practiceMany: 3,
 };
 
 /** How much a skill needs attention right now. */
@@ -72,14 +78,15 @@ function picks(n: number, pool: string[], ctx: GenContext, now: number): PickLet
  * out and heard; letter lessons use these from the start (`early`), so words
  * being made of letters is familiar long before anything is asked.
  *
+ * `only` keeps the round to some of the words.
  * `intro` is the lesson that teaches the shapes, where the watcher first
  * jumbles the letters. It goes through the word list in order (the list starts
  * with the simplest), so it always opens on the same word, and the child is
  * shown how on the first word of each shape. Anywhere else the child is shown
  * how on the first word unless that word shape is already going well.
  */
-function blends(n: number, ctx: GenContext, now: number, opts: { favour?: readonly string[]; intro?: boolean; early?: boolean } = {}): BlendItem[] {
-  let pool = opts.early ? readableWords(ctx) : decodableWords(ctx);
+function blends(n: number, ctx: GenContext, now: number, opts: { favour?: readonly string[]; intro?: boolean; early?: boolean; only?: (w: Word) => boolean } = {}): BlendItem[] {
+  let pool = (opts.early ? readableWords(ctx) : decodableWords(ctx)).filter(opts.only ?? (() => true));
   const out: BlendItem[] = [];
   const shown = new Set<SkillId>();
   const favoured = (x: { graphemes: string[] }) => x.graphemes.filter((g) => opts.favour?.includes(g));
@@ -102,6 +109,38 @@ function blends(n: number, ctx: GenContext, now: number, opts: { favour?: readon
   return out;
 }
 
+/** "Which word is ...": the word for one or the word for several, turn about, going round the things given. */
+function manyAsks(n: number, pool: ReadonlyArray<{ base: string }>, ctx: GenContext): ManyItem[] {
+  const things = shuffle([...pool], ctx.rng);
+  const first = ctx.rng() < 0.5 ? 0 : 1;
+  return things.length ? nonNull(Array.from({ length: n }, (_, i) => manyItem(things[i % things.length].base, ctx, 'ask', (i + first) % 2 === 0))) : [];
+}
+
+const isEnding = (s: SkillId) => s.startsWith('suffix:') || s.startsWith('second:');
+
+/**
+ * A lesson about an s on the end. Three things go from one to several while the child taps the s on,
+ * then one of each pair of words is asked for. The lesson on s saying /z/ uses the things whose s says
+ * that, asks about one from before as well, and goes on to build the short words where s says it too.
+ */
+function planEnding(node: NodeDef, older: string[], ctx: GenContext, now: number): Round[] {
+  const z = node.teaches.some((s) => s.startsWith('second:'));
+  const all = manyWords(ctx);
+  // A different three each time where there are more; the questions go round all of the lesson's own.
+  const own = shuffle(all.filter((m) => (m.sound !== 's') === z), ctx.rng);
+  const before = z ? all.filter((m) => m.sound === 's') : [];
+  const odd = (w: Word) => w.graphemes.some((_, i) => oddAt(w, i));
+  return [
+    ...round([
+      ...nonNull(own.slice(0, SIZES.manyShows).map((m) => manyItem(m.base, ctx, 'show'))),
+      ...manyAsks(SIZES.manyAsks - (before.length ? 1 : 0), own, ctx),
+      ...manyAsks(1, before, ctx),
+    ]),
+    ...round(blends(SIZES.lessonBlends, ctx, now, z ? { only: odd } : {})),
+    ...round(spread(picks(SIZES.manyLessonPicks, older, ctx, now), ctx)),
+  ];
+}
+
 const round = (items: Item[]): Round[] => (items.length ? [{ exercise: items[0].kind, items }] : []);
 
 /**
@@ -114,6 +153,8 @@ export function planLesson(node: NodeDef, ctx: GenContext, now: number): Round[]
   const fresh = nonNull(node.teaches.map(graphemeOf)).filter((g) => ctx.content.hasSound(g));
   const older = askableGraphemes(ctx).filter((g) => !fresh.includes(g));
   const teachesBlending = node.teaches.some((s) => s.startsWith('blend:'));
+
+  if (node.teaches.some(isEnding)) return planEnding(node, older, ctx, now);
 
   if (teachesBlending) {
     return [
@@ -135,7 +176,7 @@ export function planLesson(node: NodeDef, ctx: GenContext, now: number): Round[]
   ];
 }
 
-/** A mini-boss or boss: the cumulative check for an area. Every letter appears at least once, and its words use them. */
+/** A mini-boss or boss: the cumulative check for an area. Every letter appears at least once, its words use them, and an ending taught here is asked about. */
 export function planCheckpoint(area: AreaDef, ctx: GenContext, now: number): Round[] {
   const letters = nonNull(areaSkills(area).map(graphemeOf)).filter((g) => ctx.known.has(gpc(g)) && ctx.content.hasSound(g));
   const once = nonNull(letters.map((g) => pickLetterItem(g, ctx)));
@@ -143,6 +184,7 @@ export function planCheckpoint(area: AreaDef, ctx: GenContext, now: number): Rou
   return [
     ...round(spread([...once, ...extra], ctx)),
     ...round(blends(SIZES.checkpointBlends, ctx, now, { favour: letters })),
+    ...round(areaSkills(area).some(isEnding) ? manyAsks(SIZES.checkpointMany, manyWords(ctx), ctx) : []),
   ];
 }
 
@@ -167,6 +209,7 @@ export function planPractice(ctx: GenContext, now: number, force = false): Round
   const rounds = [
     ...round(spread(picks(SIZES.practicePicks, pool, ctx, now), ctx)),
     ...(wantBlends ? round(blends(SIZES.practiceBlends, ctx, now)) : []),
+    ...(targets.some(isEnding) ? round(manyAsks(SIZES.practiceMany, manyWords(ctx), ctx)) : []),
   ];
   return rounds.length ? rounds : null;
 }

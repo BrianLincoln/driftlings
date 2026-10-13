@@ -9,6 +9,7 @@ import { seeded } from '../learn/rng';
 import { planCheckpoint, planLesson } from '../learn/scheduler';
 import { graphemeOf, type SkillId } from '../learn/skills';
 import { BIG_ONES, OPEN_AREAS, frontier } from './areas';
+import { uuid } from './children';
 import type { EventStore } from './store';
 
 // One child's game: the event log and everything derived from it. This is the
@@ -34,8 +35,9 @@ export class Game {
     void this.store.add(e);
   }
 
+  /** Unique on any device, so two devices' logs can be put together. */
   private id(): string {
-    return `${Date.now().toString(36)}-${Math.floor(this.rng() * 1e9).toString(36)}`;
+    return uuid();
   }
 
   get done(): Set<string> {

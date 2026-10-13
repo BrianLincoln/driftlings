@@ -5,49 +5,32 @@ Drop each clip in `audio-inbox/` under the folder and file name shown (any audio
 A keyword word only has to begin with the sound (x: end with it) and be said cleanly; if one will not
 come out right, swap it for another in `src/content/keywords.json`.
 
-## Island 1, area 1
+## Island 1
 
 Complete.
 
-## Island 1, area 2
+## Island 2
 
 Complete.
 
-## Island 1, area 3
+## Island 3
 
 Complete.
 
-## Island 1, area 4
+## Island 4
 
 Complete.
 
-## Island 2, area 1
+## Island 5
 
-Complete.
+- [ ] `words/cats` : "cats" (one cat, lots of cats)
+- [ ] `words/bats` : "bats" (one bat, lots of bats)
+- [ ] `words/maps` : "maps" (one map, lots of maps)
+- [ ] `words/dogs` : "dogs" (one dog, lots of dogs)
+- [ ] `words/pigs` : "pigs" (one pig, lots of pigs)
+- [ ] `words/bug` : "bug" (one bug, lots of bugs)
+- [ ] `words/bugs` : "bugs" (one bug, lots of bugs)
 
 ## Next: w j y x qu v z
 
-- [ ] `letters/w-sound` : the sound of "w" alone, no trailing "uh"
-- [ ] `letters/w-name` : the name of the letter "w"
-- [ ] `words/wet` : "wet" (keyword for w)
-- [ ] `words/win` : "win" (keyword for w)
-- [ ] `words/jam` : "jam" (keyword for j)
-- [ ] `words/jet` : "jet" (keyword for j)
-- [ ] `letters/y-sound` : the sound of "y" alone, no trailing "uh"
-- [ ] `letters/y-name` : the name of the letter "y"
-- [ ] `words/yes` : "yes" (keyword for y)
-- [ ] `words/yum` : "yum" (keyword for y)
-- [ ] `letters/x-sound` : the sound of "x" alone, no trailing "uh"
-- [ ] `letters/x-name` : the name of the letter "x"
-- [ ] `words/fox` : "fox" (keyword for x)
-- [ ] `words/box` : "box" (keyword for x)
-- [ ] `letters/qu-sound` : the sound of "qu" alone, no trailing "uh"
-- [ ] `words/quit` : "quit" (keyword for qu)
-- [ ] `words/queen` : "queen" (keyword for qu)
-- [ ] `letters/v-name` : the name of the letter "v"
-- [ ] `words/van` : "van" (keyword for v)
-- [ ] `words/vet` : "vet" (keyword for v)
-- [ ] `letters/z-sound` : the sound of "z" alone, no trailing "uh"
-- [ ] `letters/z-name` : the name of the letter "z"
-- [ ] `words/zip` : "zip" (keyword for z)
-- [ ] `words/zoo` : "zoo" (keyword for z)
+Complete.

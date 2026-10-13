@@ -3,12 +3,14 @@ import { PostChain, type Quality } from '../gfx/post';
 import { U, applyLightBands, beginBlobs, endBlobs } from '../gfx/uniforms';
 import { unlockAudio } from '../audio/sound';
 import type { Diorama } from '../scenes/diorama';
-import { applyFraming, layoutModeFor, type Insets, type LayoutMode } from './framing';
+import { applyFraming, layoutModeFor, type Framing, type Insets, type LayoutMode } from './framing';
 import { GlyphLayer } from './glyphs';
 import { QualityGovernor, renderScale } from './quality';
 import { pick, projectTargets } from './touch';
 
 const MAX_DT = 1 / 20;
+/** How many steps of that length one slow frame may be made up in. */
+const MAX_STEPS = 4;
 
 /** Owns the renderer, the camera, the frame loop, resize, and taps. */
 export class Stage {
@@ -61,7 +63,8 @@ export class Stage {
       this.panVel = 0;
     });
     canvas.addEventListener('pointermove', (e) => {
-      if (this.held === e.pointerId) this.current?.pointer?.('move', e.clientX, e.clientY);
+      // A mouse is followed whether or not its button is down: there is no finger to lift.
+      if (this.held === e.pointerId || (this.held === null && e.pointerType === 'mouse')) this.current?.pointer?.('move', e.clientX, e.clientY);
       const d = this.drag;
       if (!d || d.id !== e.pointerId) return;
       if (!d.moved && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 12) d.moved = true;
@@ -94,8 +97,16 @@ export class Stage {
   private worldPerPx(): number {
     const s = this.current;
     if (!s) return 0;
-    const d = this.camera.position.distanceTo(s.framing(this.mode).center);
+    const d = this.camera.position.distanceTo(this.aim(s).center);
     return (2 * d * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2)) / this.cssH;
+  }
+
+  /** The stage box as it is now, panned. */
+  private aim(s: Diorama): Framing {
+    const f = s.framing(this.mode);
+    f.center = f.center.clone();
+    f.center.x += this.pan;
+    return f;
   }
 
   /** Aim the camera for the current scene, layout and pan. */
@@ -103,9 +114,7 @@ export class Stage {
     const s = this.current;
     if (!s) return;
     const aspect = this.cssW / this.cssH;
-    const f = s.framing(this.mode);
-    f.center = f.center.clone();
-    f.center.x += this.pan;
+    const f = this.aim(s);
     applyFraming(this.camera, f, aspect, this.insets());
     // Where the horizon falls on screen, for the sky backdrop.
     const horizon = 0.5 + 0.5 * (Math.tan(THREE.MathUtils.degToRad(f.elevation)) / Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2));
@@ -199,8 +208,8 @@ export class Stage {
     this.frame();
   }
 
-  /** Advance and draw one frame. Exposed so tests can step at a fixed dt. */
-  step(dt: number): void {
+  /** Advance and draw one frame. Exposed so tests can step at a fixed dt. With `draw` false it only advances. */
+  step(dt: number, draw = true): void {
     const s = this.current;
     if (!s) return;
     U.uTime.value += dt;
@@ -217,6 +226,7 @@ export class Stage {
     s.update(dt, this.camera);
     if (s.reframing) this.frame();
     endBlobs();
+    if (!draw) return;
     this.post.render(s.scene, this.camera);
     this.glyphs.update(this.camera, this.cssW, this.cssH);
     this.frames++;
@@ -228,6 +238,10 @@ export class Stage {
     this.last = now;
     if (this.paused || document.hidden) return;
     if (this.governor.frame(real)) this.resize();
-    this.step(Math.min(real, MAX_DT));
+    // A slow frame is made up in several short steps and drawn once, so nothing in the game slows down with the
+    // frame rate; only a real stall (a tab left and come back to) is let go.
+    let left = Math.min(real, MAX_DT * MAX_STEPS);
+    for (; left > MAX_DT; left -= MAX_DT) this.step(MAX_DT, false);
+    this.step(left);
   }
 }

@@ -21,11 +21,11 @@ const AREAS = [
   ['i1a2-p', 'i1a2-f', 'i1a2-i', 'i1a2-n', 'i1a2-boss'],
   ['i1a3-o', 'i1a3-d', 'i1a3-c', 'i1a3-boss'],
   ['i1a4-u', 'i1a4-g', 'i1a4-b', 'i1a4-e', 'i1a4-boss'],
-  ['i2a1-k', 'i2a1-h', 'i2a1-r', 'i2a1-l', 'i2a1-boss'],
+  ['i2a1-add-s', 'i2a1-s-z', 'i2a1-k', 'i2a1-h', 'i2a1-r', 'i2a1-l', 'i2a1-boss'],
 ];
-const SHOOT = new Set(['i1a1-a', 'i1a1-blend', 'i1a1-boss', 'i1a2-p', 'i1a2-boss', 'i1a3-c', 'i1a3-boss', 'i1a4-boss', 'i2a1-k', 'i2a1-boss']);
+const SHOOT = new Set(['i1a1-a', 'i1a1-blend', 'i1a1-boss', 'i1a2-p', 'i1a2-boss', 'i1a3-c', 'i1a3-boss', 'i1a4-boss', 'i2a1-add-s', 'i2a1-s-z', 'i2a1-k', 'i2a1-boss']);
 /** How many little ones are home after each area. */
-const HOME = [5, 9, 12, 16, 20];
+const HOME = [5, 9, 12, 16, 22];
 
 if (!flags.has('--no-build')) execSync('npx vite build', { stdio: 'inherit' });
 mkdirSync('shots', { recursive: true });
@@ -83,7 +83,7 @@ for (const size of SIZES) {
       let done = false;
       for (let i = 0; i < 1500 && !done; i++) {
         const s = await page.evaluate(() => window.__dl.exercise());
-        const kind = !s ? 'none' : s.finished ? 'finished' : s.slide ? 'slide' : s.tap ? `tap:${s.tap[0].split(':')[0]}` : 'waiting';
+        const kind = !s ? 'none' : s.finished ? 'finished' : s.steer ? 'steer' : s.tap ? `tap:${s.tap[0].split(':')[0]}` : 'waiting';
         if (kind !== last && kind !== 'waiting' && SHOOT.has(node) && shots < 7) {
           await step(18);
           await shot(`${node}-${String(shots++).padStart(2, '0')}-${kind.replace(':', '-')}`);
@@ -92,7 +92,7 @@ for (const size of SIZES) {
         if (s?.tap) for (const id of s.tap) {
           if (!(await page.evaluate((t) => window.__dl.tap(t), id))) fail(`${size.name} ${node}: tap ${id} missed`);
         }
-        if (s?.slide) await page.evaluate(() => window.__dl.slide());
+        if (s?.steer) await page.evaluate(([x, z]) => window.__dl.steer(x, z), s.steer);
         await step(12);
         if (!s || s.finished) {
           await page.waitForTimeout(60);
@@ -118,8 +118,8 @@ for (const size of SIZES) {
   for (const [n, nodes] of AREAS.entries()) {
     const area = nodes[0].split('-')[0];
     if (n > 0) {
-      // At home the map button calls; it takes the ship out to the next island.
-      await page.click('button[data-name="map"]');
+      // At home the play button calls; it takes the ship out to the next island.
+      await page.click('button[data-name="play"]');
       await crossing('home', 'map', `${area}-out`, 1);
       await step(60);
       await shot(`${area}-map-start`);

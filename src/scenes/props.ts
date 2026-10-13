@@ -71,6 +71,7 @@ export interface Tile {
 let tileGeo: THREE.BufferGeometry | null = null;
 let footGeo: THREE.BufferGeometry | null = null;
 let haloGeo: THREE.BufferGeometry | null = null;
+let cardHaloGeo: THREE.BufferGeometry | null = null;
 
 export function buildTile(): Tile {
   tileGeo ??= place(
@@ -99,6 +100,39 @@ export function buildTile(): Tile {
   anchor.position.set(0, TILE.height * 0.5, TILE.depth / 2);
   slab.add(anchor);
   root.add(foot, slab);
+  return { root, slab, halo, anchor, mat };
+}
+
+/**
+ * A letter card: a coloured frame round a parchment face, no stone under it. It hangs in the air or lies
+ * in a hand, so its origin is its bottom edge. Same parts as a tile, so a `LetterTile` can wear either.
+ */
+export const CARD = { width: 0.86, height: 0.98, depth: 0.07, frame: 0.085 };
+
+const cardGeo = new Map<string, THREE.BufferGeometry>();
+
+export function buildCard(colour: string): Tile {
+  let geo = cardGeo.get(colour);
+  if (!geo) {
+    const { width: w, height: h, depth: d, frame: f } = CARD;
+    geo = merge(
+      place(paint(new RoundedBoxGeometry(w, h, d, 4, 0.03), colour), [0, h / 2, 0]),
+      place(paint(new RoundedBoxGeometry(w - 2 * f, h - 2 * f, d, 4, 0.03), C.parchment), [0, h / 2, 0.012]),
+    );
+    cardGeo.set(colour, geo);
+  }
+  const root = new THREE.Group();
+  const slab = new THREE.Group();
+  const mat = toonMaterial({ tag: TAG.tile, flag: -0.92 });
+  slab.add(new THREE.Mesh(geo, mat));
+  cardHaloGeo ??= place(paint(new RoundedBoxGeometry(CARD.width + 0.1, CARD.height + 0.1, CARD.depth * 0.5, 4, 0.06), C.glow), [0, CARD.height / 2, -0.01]);
+  const halo = new THREE.Mesh(cardHaloGeo, toonMaterial({ tag: TAG.tile, unlit: 1, flag: 0.3 }));
+  halo.visible = false;
+  slab.add(halo);
+  const anchor = new THREE.Object3D();
+  anchor.position.set(0, CARD.height / 2, CARD.depth / 2 + 0.012);
+  slab.add(anchor);
+  root.add(slab);
   return { root, slab, halo, anchor, mat };
 }
 

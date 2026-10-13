@@ -1,9 +1,10 @@
 import { COATS, SPECIES, type Rescue } from '../cast/species';
-import { ISLANDS, type AreaDef, type IslandDef, type NodeDef } from '../learn/curriculum';
+import { AREAS, type AreaDef, type NodeDef } from '../learn/curriculum';
 
-// The areas the game goes to, in order, and the big one who lives on each.
-// An area is open once it has a big one here and a place in scenes/places.ts
-// (a test checks the two agree); the learning layer knows about the rest already.
+// The islands the game goes to, in order, and the big one who lives on each.
+// An island (an "area" in the code) is open once it has a big one here and a
+// place in scenes/places.ts (a test checks the two agree); the learning layer
+// knows about the rest already.
 
 /**
  * How a big one carries on until it has had its turn. `sleepy` snores through the little ones
@@ -28,19 +29,12 @@ export const BIG_ONES: Record<string, BigOne> = {
   i1a1: big('tusk', 'slate', 'sleepy'),
   i1a2: big('glider', 'rose', 'watchful'),
   i1a3: big('kit', 'apricot', 'restless'),
-  // The last of the island, and the biggest by a head.
+  // The biggest by a head.
   i1a4: big('cub', 'plum', 'stirring', 1.4),
   i2a1: big('lop', 'cocoa', 'huffy'),
 };
 
-const open = (island: IslandDef): AreaDef[] => island.areas.filter((a) => a.id in BIG_ONES);
-export const OPEN_AREAS: AreaDef[] = ISLANDS.flatMap(open);
-
-/** The island an area belongs to, the open areas on it, and where the area comes among them: one chart's worth. */
-export function watersOf(area: AreaDef): { island: IslandDef; areas: AreaDef[]; isle: number } {
-  const island = ISLANDS.find((i) => i.areas.includes(area))!;
-  return { island, areas: open(island), isle: open(island).indexOf(area) };
-}
+export const OPEN_AREAS: AreaDef[] = AREAS.filter((a) => a.id in BIG_ONES);
 
 /** The checkpoint that ends an area. */
 export const closerOf = (area: AreaDef): NodeDef => area.nodes[area.nodes.length - 1];

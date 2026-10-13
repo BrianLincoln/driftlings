@@ -5,6 +5,7 @@ import type { Companion } from '../cast/companion';
 import type { AttemptDraft } from '../learn/events';
 import type { Item } from '../learn/items';
 import type { LetterTile } from '../scenes/letterTile';
+import type { Thing } from '../scenes/things';
 import type { LayoutMode } from '../stage/framing';
 import type { Touchable } from '../stage/touch';
 
@@ -23,6 +24,10 @@ export interface ExerciseKit {
   readonly companion: Companion;
   /** Make a letter tile (or an icon tile). The kit animates and disposes of it. */
   tile(text: string, scale?: number, icon?: boolean): LetterTile;
+  /** A letter on a coloured card instead of a stone tile. `hue` picks the colour; any whole number will do. */
+  card(text: string, hue: number, scale?: number): LetterTile;
+  /** An everyday thing to stand on the grass, by its word ("cup"). The exercise places it; the kit animates and disposes of it. */
+  thing(name: string): Thing;
   /** A place in the front row of tiles, or in the nearer row of options. */
   spot(row: 'tiles' | 'options', index: number, count: number): THREE.Vector3;
   /** Where the companion stands when it is not at a tile. */
@@ -31,6 +36,10 @@ export interface ExerciseKit {
   besideSpot(tile: LetterTile): THREE.Vector3;
   /** Horizontal screen position of a tile, in CSS pixels. For drags. */
   screenX(tile: LetterTile): number;
+  /** The other way: how far across the clearing a screen position is, on the ground at depth `z`. */
+  aim(xPx: number, z: number): number;
+  /** How high the top edge of the view is, at depth `z`. Anything above it is out of sight. */
+  ceiling(z: number): number;
   /** Play a narration clip; returns its length in seconds. */
   say(clip: ClipId, delay?: number): number;
   /** Say several clips in a row, with the pauses speech needs between them. */
@@ -61,8 +70,8 @@ export interface ExerciseRun {
   /** The viewport changed shape: put things back in their spots. */
   layout(): void;
   pointer?(phase: 'down' | 'move' | 'up', x: number, y: number): void;
-  /** For scripted play: the ids to tap next, or a request to slide. */
-  debug?(): { tap?: string[]; slide?: boolean; waiting?: boolean };
+  /** For scripted play: the ids to tap next, or where on the ground to hold the pointer. */
+  debug?(): { tap?: string[]; steer?: [x: number, z: number]; waiting?: boolean };
   dispose(): void;
 }
 

@@ -78,11 +78,28 @@ html, body {
 
 .bar {
   position: absolute;
-  top: calc(8px + var(--sat));
-  left: calc(10px + var(--sal));
-  display: flex;
-  gap: 10px;
-  pointer-events: auto;
+  inset: 0;
+}
+
+.bar .round { position: absolute; pointer-events: auto; }
+.bar .left { top: calc(8px + var(--sat)); left: calc(10px + var(--sal)); }
+.bar .right { top: calc(8px + var(--sat)); right: calc(10px + var(--sar)); }
+
+/* Play: the one big button, in the glow colour because it is the thing to touch. */
+.bar .play {
+  --size: clamp(84px, 11vmin, 112px);
+  width: var(--size);
+  height: var(--size);
+  bottom: calc(max(56px, 10vh) + var(--sab));
+  left: calc(50% - var(--size) / 2);
+  background: #ffd27a;
+  box-shadow: 0 0 0 3px var(--ink), 0 5px 0 3px rgba(74, 46, 54, 0.3);
+}
+
+.bar .play svg { width: 60%; height: 60%; }
+
+@media (max-height: 480px) {
+  .bar .play { --size: 68px; bottom: calc(max(32px, 10vh) + var(--sab)); }
 }
 
 .round {
@@ -100,7 +117,6 @@ html, body {
 }
 
 .round:active { transform: scale(0.88); }
-.round.on { background: #ffd27a; }
 .round svg { width: 28px; height: 28px; }
 
 #veil {
@@ -156,3 +172,101 @@ html, body {
   0%, 100% { box-shadow: 0 0 0 2.5px var(--ink), 0 0 0 2.5px rgba(255, 210, 122, 0); }
   50% { box-shadow: 0 0 0 2.5px var(--ink), 0 0 0 9px rgba(255, 210, 122, 0.75); }
 }
+
+.bar .play.calling { animation: play-calling 1.6s ease-in-out infinite; }
+/* The button itself stays put, so it is always where the finger is going: only what is on it breathes. */
+.bar .play.calling svg { animation: play-breathing 1.6s ease-in-out infinite; }
+
+@keyframes play-breathing {
+  50% { scale: 1.14; }
+}
+
+@keyframes play-calling {
+  0%, 100% { box-shadow: 0 0 0 3px var(--ink), 0 5px 0 3px rgba(74, 46, 54, 0.3), 0 0 0 3px rgba(255, 246, 220, 0); }
+  50% { box-shadow: 0 0 0 3px var(--ink), 0 5px 0 3px rgba(74, 46, 54, 0.3), 0 0 0 14px rgba(255, 246, 220, 0.7); }
+}
+
+/* A child's name under their creature: a label, pale with an ink edge like the sleeper's z's. */
+.glyph.name {
+  color: #fff6dc;
+  -webkit-text-stroke: 0.2em var(--ink);
+  paint-order: stroke fill;
+}
+
+/* The grown-ups' corner. Its button does nothing unless held: a ring closes round it while it is,
+   and runs back out if it is let go early (grownups.ts sets --turn each frame). */
+.grownups-open {
+  position: absolute;
+  top: calc(8px + var(--sat));
+  right: calc(10px + var(--sar));
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.grownups-open[hidden], .grownups[hidden] { display: none; }
+
+.grownups-open::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  background: conic-gradient(var(--ink) var(--turn, 0deg), transparent 0);
+  -webkit-mask: radial-gradient(closest-side, transparent 82%, #000 84%);
+  mask: radial-gradient(closest-side, transparent 82%, #000 84%);
+}
+
+.grownups {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(74, 46, 54, 0.45);
+  pointer-events: auto;
+  font-family: 'Andika', ui-rounded, system-ui, sans-serif;
+  color: var(--ink);
+}
+
+.grownups .card {
+  box-sizing: border-box;
+  width: min(100%, 430px);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 18px;
+  border-radius: 20px;
+  background: var(--parchment);
+  box-shadow: 0 0 0 2.5px var(--ink), 0 5px 0 2.5px rgba(74, 46, 54, 0.25);
+}
+
+.grownups h2 { margin: 0 0 12px; font-size: 22px; font-weight: 400; }
+.grownups p { margin: 12px 0; font-size: 14px; line-height: 1.35; opacity: 0.8; }
+.grownups .row { display: flex; align-items: center; gap: 10px; min-height: 48px; margin-bottom: 10px; }
+.grownups .row.confirm span { flex: 1; font-size: 15px; line-height: 1.25; }
+
+.grownups button, .grownups input {
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  border: 0;
+  border-radius: 12px;
+  min-height: 44px;
+  box-shadow: 0 0 0 2px var(--ink);
+}
+
+.grownups input {
+  flex: 1;
+  min-width: 0;
+  padding: 0 12px;
+  background: #fff;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.grownups button { padding: 0 14px; background: #fff; cursor: pointer; }
+.grownups button:disabled { opacity: 0.35; cursor: default; }
+.grownups button.look { flex: none; width: 52px; height: 52px; padding: 4px; border-radius: 50%; }
+.grownups button.look svg { display: block; width: 100%; height: 100%; }
+.grownups button.quiet { box-shadow: none; background: none; text-decoration: underline; }
+.grownups button.danger { background: #ef9c93; }
+.grownups button.wide { display: block; width: 100%; }
+.grownups button.primary { background: #ffd27a; }

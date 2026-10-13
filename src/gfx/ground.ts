@@ -28,8 +28,8 @@ export function islandHeight(s: IslandShape, x: number, z: number): number {
 
 /** A small island: a disc with a gentle mound, grass in the middle, a sand rim. */
 export function buildIsland(s: IslandShape): THREE.Mesh {
-  const rings = 26;
-  const segs = 72;
+  const rings = Math.max(26, Math.round(s.radius * 1.6));
+  const segs = Math.max(72, Math.round(s.radius * 5));
   // A ring grid rather than a fan, so the mound is smooth.
   const grid = new THREE.RingGeometry(0.001, 1.08, segs, rings);
   grid.rotateX(-Math.PI / 2);

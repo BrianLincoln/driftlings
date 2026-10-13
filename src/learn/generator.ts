@@ -1,7 +1,7 @@
-import type { BlendItem, BlendStage, CatchItem, Content, MeetItem, PickLetterItem } from './items';
+import type { BlendItem, BlendStage, CatchItem, Content, ManyItem, MeetItem, PickLetterItem, Word } from './items';
 import type { SkillState } from './model';
 import { shuffle, weighted, type Rng } from './rng';
-import { blend, gpc, graphemeOf, shapeOf, soundsLike, type SkillId } from './skills';
+import { blend, gpc, graphemeOf, second, shapeOf, soundsLike, suffix, type SkillId } from './skills';
 
 // Builds items from what the child knows and what audio exists. Two rules it
 // never breaks: an item only asks about taught skills, and an item is only
@@ -76,13 +76,17 @@ export function catchItem(target: string, ctx: GenContext, count = 4, nOthers = 
   return { kind: 'catch', key: key('catch', target), target, others, count, skills: [], supports: [gpc(target)] };
 }
 
-/** Words the child can sound out letter by letter: every letter taught and heard. */
-export function readableWords(ctx: GenContext): Array<{ text: string; graphemes: string[] }> {
-  return ctx.content.words.filter((w) => w.graphemes.every((g) => ctx.known.has(gpc(g)) && ctx.content.hasSound(g)));
+/** True where a letter of the word says something other than its usual sound. */
+export const oddAt = (w: Word, i: number): boolean => !!w.sounds && w.sounds[i] !== w.graphemes[i];
+
+/** Words the child can sound out letter by letter: every letter taught and heard, and its second sound taught where it makes that. */
+export function readableWords(ctx: GenContext): Word[] {
+  return ctx.content.words.filter((w) => w.graphemes.every((g, i) =>
+    ctx.known.has(gpc(g)) && ctx.content.hasSound(w.sounds?.[i] ?? g) && (!oddAt(w, i) || ctx.known.has(second(g)))));
 }
 
 /** Words the child can be asked to build: readable, and the word's shape taught. */
-export function decodableWords(ctx: GenContext): Array<{ text: string; graphemes: string[] }> {
+export function decodableWords(ctx: GenContext): Word[] {
   return readableWords(ctx).filter((w) => ctx.known.has(blend(shapeOf(w.graphemes))));
 }
 
@@ -95,8 +99,34 @@ export function blendItem(word: string, ctx: GenContext, stage: BlendStage = 'fr
     key: key('blend', word),
     word,
     graphemes: w.graphemes,
+    sounds: w.sounds ?? w.graphemes,
     stage,
     skills: [blend(shapeOf(w.graphemes))],
-    supports: w.graphemes.map(gpc),
+    supports: w.graphemes.flatMap((g, i) => (oddAt(w, i) ? [gpc(g), second(g)] : [gpc(g)])),
+  };
+}
+
+/** Things whose word can take its s: the ending taught, and s's second sound too where the s says that. */
+export function manyWords(ctx: GenContext): Array<{ base: string; sound: string }> {
+  if (!ctx.known.has(suffix('s'))) return [];
+  return ctx.content.many.filter((m) =>
+    ctx.content.hasSound(m.sound) && (m.sound === 's' || ctx.known.has(second('s'))) && [...m.base].every((g) => ctx.known.has(gpc(g))));
+}
+
+/** `plural` is which of the two words is said when asking. Showing asks nothing, so it is evidence of nothing. */
+export function manyItem(base: string, ctx: GenContext, stage: ManyItem['stage'], plural = true): ManyItem | null {
+  const m = manyWords(ctx).find((x) => x.base === base);
+  if (!m) return null;
+  const ask = stage === 'ask';
+  return {
+    kind: 'many',
+    key: key('many', base),
+    base,
+    graphemes: [...base],
+    sound: m.sound,
+    stage,
+    target: plural || !ask ? `${base}s` : base,
+    skills: ask ? [suffix('s')] : [],
+    supports: ask && m.sound !== 's' ? [second('s')] : [],
   };
 }

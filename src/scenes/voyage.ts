@@ -52,8 +52,10 @@ const KEEP_UP = 0.9;
 
 /** What stands on the home island, as [how far out (0 to 1), angle round from the mooring, kind]. */
 const HOME_DRESSING: Array<[number, number, Dress]> = [
-  [0.8, -0.55, 'tree'], [0.7, -0.28, 'tree'], [0.6, 0.02, 'tree'], [0.74, 0.36, 'tree'], [0.46, -0.16, 'tree'],
-  [0.44, 0.3, 'tree'], [0.84, 0.72, 'tree'], [0.86, -0.08, 'bush'], [0.82, 0.2, 'bush'], [0.9, -0.36, 'rock'],
+  [0.91, -0.24, 'tree'], [0.87, -0.12, 'tree'], [0.83, 0.01, 'tree'], [0.89, 0.16, 'tree'], [0.76, -0.07, 'tree'],
+  [0.76, 0.13, 'tree'], [0.93, 0.32, 'tree'], [0.94, -0.04, 'bush'], [0.92, 0.09, 'bush'], [0.96, -0.16, 'rock'],
+  [0.9, -0.42, 'tree'], [0.88, 0.48, 'tree'], [0.8, -0.33, 'tree'], [0.81, 0.3, 'tree'], [0.7, 0.04, 'tree'], [0.72, -0.2, 'tree'],
+  [0.86, -0.56, 'tree'], [0.9, 0.62, 'tree'],
 ];
 
 export function createVoyage(plan: VoyagePlan): Diorama {

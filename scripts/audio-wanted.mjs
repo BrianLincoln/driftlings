@@ -4,23 +4,26 @@
 // What a lesson needs depends on what it teaches:
 //   a grapheme       its sound, its letter name (single letters only), and its keyword words
 //   blending words   enough buildable words made only of graphemes taught so far
+//   an ending        the lines that explain it, and for each thing shown as one and several
+//                    (src/content/endings.json) its word with the s; for s saying /z/, two short words where it does too
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const json = (p) => JSON.parse(readFileSync(p, 'utf8'));
 const manifest = existsSync('src/content/audio-manifest.json') ? json('src/content/audio-manifest.json') : {};
 const keywords = json('src/content/keywords.json');
+const endings = json('src/content/endings.json');
 const words = Object.values(json('src/content/words.json')).filter(Array.isArray).flat();
 const has = (id) => id in manifest;
 
 // The lessons in order, a step past what the curriculum lists so recording can run ahead of building.
-// A string is a grapheme; { blend: n } is a lesson that needs n buildable words.
+// A string is a grapheme; { blend: n } is a lesson that needs n buildable words; { ending: 's' | 'z' } is an s on the end, saying that.
 const STEPS = [
-  ['Island 1, area 1', ['a', 'm', 's', 't', { blend: 4 }]],
-  ['Island 1, area 2', ['p', 'f', 'i', 'n']],
-  ['Island 1, area 3', ['o', 'd', 'c']],
-  ['Island 1, area 4', ['u', 'g', 'b', 'e']],
-  ['Island 2, area 1', ['k', 'h', 'r', 'l']],
+  ['Island 1', ['a', 'm', 's', 't', { blend: 4 }]],
+  ['Island 2', ['p', 'f', 'i', 'n']],
+  ['Island 3', ['o', 'd', 'c']],
+  ['Island 4', ['u', 'g', 'b', 'e']],
+  ['Island 5', [{ ending: 's' }, { ending: 'z' }, 'k', 'h', 'r', 'l']],
   ['Next: w j y x qu v z', ['w', 'j', 'y', 'x', 'qu', 'v', 'z']],
 ];
 
@@ -46,6 +49,21 @@ for (const [title, steps] of STEPS) {
       if (!has(`letters/${step}-sound`)) want.push(`\`letters/${step}-sound\` : the sound of "${step}" alone, no trailing "uh"`);
       if (step.length === 1 && !has(`letters/${step}-name`)) want.push(`\`letters/${step}-name\` : the name of the letter "${step}"`);
       for (const w of keywords[step] ?? []) if (!has(`words/${w}`)) want.push(`\`words/${w}\` : "${w}" (keyword for ${step})`);
+    } else if (step.ending) {
+      const z = step.ending === 'z';
+      const prompts = z
+        ? [['sometimes-s-makes-the-sound', 'Sometimes, S makes the sound']]
+        : [['add-s-means-more-than-one', 'When we add S to the end of a word, it means more than one.'], ['one', 'One'], ['lots-of', 'Lots of'], ['which-word-is', 'Which word is']];
+      for (const [name, text] of prompts) if (!has(`prompts/${name}`)) want.push(`\`prompts/${name}\` : "${text}"`);
+      if (z && !has('letters/z-sound')) want.push('`letters/z-sound` : the sound of "z" alone, no trailing "uh"');
+      for (const base of endings.many[step.ending]) {
+        for (const w of [base, `${base}s`]) if (!has(`words/${w}`)) want.push(`\`words/${w}\` : "${w}" (one ${base}, lots of ${base}s)`);
+      }
+      if (z) {
+        const ok = endings.sSaysZ.filter((w) => [...w].every((c) => taught.has(c)));
+        const short = 2 - ok.filter((w) => has(`words/${w}`)).length;
+        for (const w of ok.filter((w) => !has(`words/${w}`)).slice(0, Math.max(0, short))) want.push(`\`words/${w}\` : "${w}" (s says /z/)`);
+      }
     } else {
       const ok = words.filter((w) => buildable(w) && [...w].every((c) => taught.has(c)));
       const short = step.blend - ok.filter((w) => has(`words/${w}`)).length;

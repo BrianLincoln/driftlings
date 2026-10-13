@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { ISLAND_1, ISLAND_2, allNodes, currentNode, findNode, knownSkills, rescueIndex, rescuesHome } from './curriculum';
+import { AREAS, allNodes, currentNode, findNode, knownSkills, rescueIndex, rescuesHome } from './curriculum';
 import type { Attempt } from './events';
-import { askableGraphemes, blendItem, catchItem, decodableWords, pickLetterItem, type GenContext } from './generator';
+import { askableGraphemes, blendItem, catchItem, decodableWords, manyItem, pickLetterItem, readableWords, type GenContext } from './generator';
 import type { Content, Item, Round } from './items';
 import { TUNING, applyOutcome, confusions, emptyState, foldSkills, isDue, quality, statusOf, type SkillState } from './model';
 import { seeded } from './rng';
 import { SIZES, gate, need, planCheckpoint, planLesson, planPractice, practiceTargets } from './scheduler';
-import { blend, gpc, graphemeOf, shapeOf, soundsLike, type SkillId } from './skills';
+import { blend, gpc, graphemeOf, second, shapeOf, soundsLike, suffix, type SkillId } from './skills';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -14,7 +14,7 @@ const T0 = 1_700_000_000_000;
 
 const WORDS = ['am', 'at', 'mat', 'sat', 'map', 'pin', 'ant'];
 function content(sounds: string, words = WORDS): Content {
-  return { hasSound: (g) => sounds.includes(g), hasName: (g) => sounds.includes(g) && g !== 'n', words: words.map((text) => ({ text, graphemes: [...text] })) };
+  return { hasSound: (g) => sounds.includes(g), hasName: (g) => sounds.includes(g) && g !== 'n', words: words.map((text) => ({ text, graphemes: [...text] })), many: [] };
 }
 
 function ctxFor(done: string[], opts: Partial<GenContext> & { seed?: number } = {}): GenContext {
@@ -37,7 +37,7 @@ function attempt(skill: SkillId, at: number, o: Partial<Attempt> = {}): Attempt 
   };
 }
 
-const A1 = ISLAND_1.areas[0];
+const A1 = AREAS[0];
 const ids = A1.nodes.map((x) => x.id);
 const itemsOf = (rounds: Round[]): Item[] => rounds.flatMap((r) => r.items);
 
@@ -67,7 +67,7 @@ describe('skills and curriculum', () => {
   it('sends rescues home only when the area checkpoint is done', () => {
     expect(rescuesHome(new Set(ids.slice(0, 5)))).toEqual([]);
     expect(rescuesHome(new Set(ids))).toEqual([0, 1, 2, 3, 4]);
-    expect(rescueIndex(ISLAND_1.areas[1].nodes[0].id)).toBe(5);
+    expect(rescueIndex(AREAS[1].nodes[0].id)).toBe(5);
   });
 });
 
@@ -241,6 +241,7 @@ describe('scheduler', () => {
       return ctx.known.has(gpc(item.target)) && sounds.includes(item.target) && item.target !== 'n' &&
         item.others.length > 0 && !item.others.includes(item.target) && item.skills.length === 0;
     }
+    if (item.kind === 'many') return false; // nothing here can be shown as one and several
     return item.graphemes.every((g) => ctx.known.has(gpc(g)) && sounds.includes(g)) &&
       (item.stage === 'read' || ctx.known.has(blend(shapeOf(item.graphemes)))) && WORDS.includes(item.word);
   };
@@ -393,23 +394,25 @@ describe('scheduler', () => {
 });
 
 describe('the k h r l area', () => {
-  const A = ISLAND_2.areas[0];
+  const A = AREAS[4];
   const before = allNodes().slice(0, allNodes().indexOf(A.nodes[0])).map((x) => x.id);
   // As the game has it: one word to build with k, two with l, and a long list of older words.
   const older = ['am', 'at', 'mat', 'sat', 'map', 'pin', 'dog', 'cat', 'cot', 'bed', 'sun', 'pig', 'net', 'cup', 'bus', 'top'];
   const words = [...older, 'kid', 'hat', 'hen', 'rat', 'red', 'lip', 'log', 'elk', 'milk'];
+  // The area opens with the two lessons on an s at the end; its letters come after.
+  const letters = A.nodes.slice(2, 6);
   const ctxAt = (n: number, seed: number) =>
-    ctxFor([...before, ...A.nodes.slice(0, n + 1).map((x) => x.id)], { seed, content: { ...content('amstpfinodcugbekhrl', words), hasName: () => true } });
+    ctxFor([...before, ...A.nodes.slice(0, n + 3).map((x) => x.id)], { seed, content: { ...content('amstpfinodcugbekhrl', words), hasName: () => true } });
   const blendsOf = (rounds: Round[]) => itemsOf(rounds).flatMap((i) => (i.kind === 'blend' ? [i] : []));
 
-  it('follows the island 1 boss and skips the plural lessons', () => {
-    expect(A.nodes.map((x) => x.ufli)).toEqual([22, 23, 24, 26, null]);
+  it('follows the island 1 boss, with the lessons on an s at the end first', () => {
+    expect(A.nodes.map((x) => x.ufli)).toEqual([20, 21, 22, 23, 24, 26, null]);
     expect(rescueIndex(A.nodes[0].id)).toBe(16);
   });
 
   it('always uses the new letter in a word, however few words it has', () => {
     for (let seed = 1; seed <= 60; seed++) {
-      A.nodes.slice(0, 4).forEach((node, n) => {
+      letters.forEach((node, n) => {
         const rounds = planLesson(node, ctxAt(n, seed), T0);
         expect(rounds.map((r) => r.exercise)).toEqual(['meet', 'pick-letter', 'catch', 'blend']);
         const built = blendsOf(rounds);
@@ -421,7 +424,7 @@ describe('the k h r l area', () => {
 
   it('only sounds out a word whose shape is not taught, and keeps it out of the checkpoint', () => {
     for (let seed = 1; seed <= 60; seed++) {
-      for (const i of blendsOf(planLesson(A.nodes[3], ctxAt(3, seed), T0))) expect(i.stage === 'read').toBe(i.word === 'elk' || i.word === 'milk');
+      for (const i of blendsOf(planLesson(letters[3], ctxAt(3, seed), T0))) expect(i.stage === 'read').toBe(i.word === 'elk' || i.word === 'milk');
       const check = blendsOf(planCheckpoint(A, ctxAt(4, seed), T0));
       expect(check.length).toBe(SIZES.checkpointBlends);
       // Three words, each bringing one of the area's letters the others have not.
@@ -435,12 +438,89 @@ describe('the k h r l area', () => {
     expect(soundsLike('c', 'd')).toBe(false);
     for (let seed = 1; seed <= 80; seed++) {
       const ctx = ctxAt(4, seed);
-      for (const i of itemsOf([...planLesson(A.nodes[0], ctxAt(0, seed), T0), ...planCheckpoint(A, ctx, T0)])) {
+      for (const i of itemsOf([...planLesson(letters[0], ctxAt(0, seed), T0), ...planCheckpoint(A, ctx, T0)])) {
         if (i.kind === 'pick-letter' && 'ck'.includes(i.target)) expect(i.choices.filter((g) => 'ck'.includes(g))).toEqual([i.target]);
       }
       expect(pickLetterItem('c', ctx)!.choices).not.toContain('k');
       expect(catchItem('k', ctx)!.others).not.toContain('c');
     }
+  });
+});
+
+describe('an s on the end', () => {
+  const A = AREAS[4];
+  const [addS, sZ] = A.nodes;
+  const before = allNodes().slice(0, allNodes().indexOf(addS)).map((x) => x.id);
+  const many = [{ base: 'cup', sound: 's' }, { base: 'pot', sound: 's' }, { base: 'top', sound: 's' }, { base: 'bed', sound: 'z' }, { base: 'pan', sound: 'z' }, { base: 'pin', sound: 'z' }];
+  const words = [
+    ...['am', 'at', 'mat', 'sat', 'cup', 'pot', 'bed'].map((text) => ({ text, graphemes: [...text] })),
+    ...['is', 'as', 'his'].map((text) => ({ text, graphemes: [...text], sounds: [...text.slice(0, -1), 'z'] })),
+  ];
+  const ctxAt = (done: string[], seed = 1, sounds = 'amstpfinodcugbez') =>
+    ctxFor([...before, ...done], { seed, content: { hasSound: (g) => sounds.includes(g), hasName: () => true, words, many } });
+  const manys = (rounds: Round[]) => itemsOf(rounds).flatMap((i) => (i.kind === 'many' ? [i] : []));
+
+  it('teaches the ending and the second sound as skills of their own', () => {
+    expect(addS.teaches).toEqual([suffix('s')]);
+    expect(sZ.teaches).toEqual([second('s')]);
+    expect(graphemeOf(suffix('s'))).toBeNull();
+    expect(graphemeOf(second('s'))).toBeNull();
+  });
+
+  it('shows nothing as one and several before the ending is taught, and nothing whose s says /z/ before that is', () => {
+    expect(manyItem('cup', ctxAt([]), 'show')).toBeNull();
+    expect(manyItem('cup', ctxAt([addS.id]), 'show')!.target).toBe('cups');
+    expect(manyItem('bed', ctxAt([addS.id]), 'show')).toBeNull();
+    expect(manyItem('bed', ctxAt([addS.id, sZ.id]), 'ask', false)).toMatchObject({ target: 'bed', sound: 'z', skills: [suffix('s')], supports: [second('s')] });
+    expect(manyItem('bed', ctxAt([addS.id, sZ.id], 1, 'amstpfinodcugbe'), 'show')).toBeNull(); // no clip of the /z/ sound
+  });
+
+  it('counts a show as evidence of nothing', () => {
+    expect(manyItem('cup', ctxAt([addS.id]), 'show')).toMatchObject({ skills: [], supports: [] });
+  });
+
+  it('opens the first lesson with three things whose s says /s/, then asks for one word of each pair, both kinds', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const rounds = planLesson(addS, ctxAt([addS.id], seed), T0);
+      expect(rounds.map((r) => r.exercise)).toEqual(['many', 'blend', 'pick-letter']);
+      const items = manys(rounds);
+      expect(items.map((i) => i.stage)).toEqual(['show', 'show', 'show', 'ask', 'ask', 'ask', 'ask']);
+      expect(items.every((i) => i.sound === 's')).toBe(true);
+      const asked = items.slice(3).map((i) => i.target === i.base);
+      expect(asked).toContain(true);
+      expect(asked).toContain(false);
+      // Words where s says /z/ are not read yet.
+      expect(itemsOf(rounds).some((i) => i.kind === 'blend' && i.sounds.includes('z'))).toBe(false);
+    }
+  });
+
+  it('gives the second lesson the things whose s says /z/, one from before, and only words where s says it', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const rounds = planLesson(sZ, ctxAt([addS.id, sZ.id], seed), T0);
+      const items = manys(rounds);
+      expect(items.slice(0, 3).map((i) => `${i.stage} ${i.sound}`)).toEqual(['show z', 'show z', 'show z']);
+      expect(items.slice(3).map((i) => i.sound)).toEqual(['z', 'z', 'z', 's']);
+      const built = itemsOf(rounds).flatMap((i) => (i.kind === 'blend' ? [i] : []));
+      expect(built.map((i) => i.word).sort()).toEqual(['as', 'is']);
+      expect(built[0]).toMatchObject({ sounds: [built[0].word[0], 'z'], supports: expect.arrayContaining([second('s')]) });
+    }
+  });
+
+  it('keeps a word where s says /z/ out of reach until that is taught, and its other letters are', () => {
+    const texts = (ctx: GenContext) => readableWords(ctx).map((w) => w.text);
+    expect(texts(ctxAt([addS.id]))).not.toContain('is');
+    expect(texts(ctxAt([addS.id, sZ.id]))).toContain('is');
+    expect(texts(ctxAt([addS.id, sZ.id]))).not.toContain('his');
+  });
+
+  it('asks about the ending again in the area checkpoint, and in practice when it is shaky', () => {
+    const done = A.nodes.map((x) => x.id);
+    expect(manys(planCheckpoint(A, ctxAt(done), T0)).map((i) => i.stage)).toEqual(['ask', 'ask']);
+    const shaky = { ...emptyState(suffix('s')), seen: 4, strength: 0.2, lastAt: T0, dueAt: T0 + DAY };
+    const practice = planPractice(ctxAt(done, 1), T0, false) ?? [];
+    expect(manys(practice).length).toBe(0);
+    const aimed = planPractice({ ...ctxAt(done), states: new Map([[suffix('s'), shaky]]) }, T0) ?? [];
+    expect(manys(aimed).length).toBe(SIZES.practiceMany);
   });
 });
 

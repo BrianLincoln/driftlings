@@ -24,7 +24,7 @@ export function wavesGeo(): THREE.BufferGeometry {
   const hump = (x: number, z: number) => {
     const g = new THREE.TorusGeometry(0.13, 0.016, 5, 10, Math.PI).rotateX(-Math.PI / 2).scale(1, 1, 0.6);
     g.computeVertexNormals();
-    return place(paint(g, C.ink), [x, 0, z]);
+    return place(paint(g, C.foamInk), [x, 0, z]);
   };
   return merge(hump(-0.27, 0), hump(0, 0), hump(0.2, 0.2));
 }

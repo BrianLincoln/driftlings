@@ -1,4 +1,5 @@
 import manifest from './audio-manifest.json';
+import endings from './endings.json';
 import keywordGroups from './keywords.json';
 import wordGroups from './words.json';
 import type { Content } from '../learn/items';
@@ -32,6 +33,13 @@ const allWords = Object.entries(wordGroups as Record<string, string[] | string>)
 export const CONTENT: Content = {
   hasSound: (g) => hasClip(soundClip(g)),
   hasName: (g) => hasClip(nameClip(g)),
-  // These are all regular words: one letter, one sound.
-  words: allWords.filter((w) => hasClip(wordClip(w))).map((text) => ({ text, graphemes: [...text] })),
+  words: [
+    // Regular words: one letter, one sound.
+    ...allWords.map((text) => ({ text, graphemes: [...text] })),
+    // And the few where the s on the end says /z/.
+    ...endings.sSaysZ.map((text) => ({ text, graphemes: [...text], sounds: [...text.slice(0, -1), 'z'] })),
+  ].filter((w) => hasClip(wordClip(w.text))),
+  many: Object.entries(endings.many)
+    .flatMap(([sound, bases]) => bases.map((base) => ({ base, sound })))
+    .filter((m) => hasClip(wordClip(m.base)) && hasClip(wordClip(`${m.base}s`))),
 };

@@ -24,7 +24,7 @@ export const blendExercise: ExerciseModule<BlendItem> = {
   kind: 'blend',
   clips: (items) => [
     promptClip('oh-no-mixed-up-tap-in-order'), promptClip('oh-no'), promptClip('tap-the-letters-to-build-the-word'),
-    ...items.flatMap((i) => [...i.graphemes.map(soundClip), wordClip(i.word)]),
+    ...items.flatMap((i) => [...i.sounds.map(soundClip), wordClip(i.word)]),
   ],
 
   start(items, kit, hooks) {
@@ -104,8 +104,8 @@ export const blendExercise: ExerciseModule<BlendItem> = {
     };
 
     /** The last letter has been tapped: hear it out before anything else happens. */
-    const lastLetter = (tile: LetterTile, then: 'jumble' | 'celebrate') => {
-      joinAt = t + 0.03 + kit.say(soundClip(tile.text), 0.03) + BEFORE_WORD;
+    const lastLetter = (sound: string, then: 'jumble' | 'celebrate') => {
+      joinAt = t + 0.03 + kit.say(soundClip(sound), 0.03) + BEFORE_WORD;
       joinThen = then;
       guide();
     };
@@ -145,11 +145,13 @@ export const blendExercise: ExerciseModule<BlendItem> = {
       const tile = tiles[i];
       if (phase === 'sound') {
         tile.press();
-        if (i !== nextSound) return void kit.say(soundClip(tile.text), 0.03);
+        // In the sounding-out row the tiles stand in word order, so a tile's place is its sound's.
+        const sound = item().sounds[i];
+        if (i !== nextSound) return void kit.say(soundClip(sound), 0.03);
         nextSound++;
         kit.nod();
-        if (nextSound >= n()) return lastLetter(tile, item().stage === 'read' ? 'celebrate' : 'jumble');
-        kit.say(soundClip(tile.text), 0.03);
+        if (nextSound >= n()) return lastLetter(sound, item().stage === 'read' ? 'celebrate' : 'jumble');
+        kit.say(soundClip(sound), 0.03);
         guide();
         return;
       }
@@ -179,19 +181,20 @@ export const blendExercise: ExerciseModule<BlendItem> = {
       }
       // A chosen letter turns green where it stands. Nothing moves until the
       // last one is chosen; then they all slide into the word together.
+      const sound = item().sounds[placed.length];
       placed.push(tile);
       tile.done = true;
       wrongHere = 0;
       tile.hop();
       if (placed.length < n()) {
-        kit.say(soundClip(tile.text), 0.03);
+        kit.say(soundClip(sound), 0.03);
         kit.nod();
         guide();
         return;
       }
       if (scored) report(true, item().word);
       order = placed;
-      lastLetter(tile, 'celebrate');
+      lastLetter(sound, 'celebrate');
     };
 
     next();

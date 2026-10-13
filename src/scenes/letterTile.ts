@@ -32,9 +32,12 @@ export class LetterTile {
   /** The letter is wiped off for a moment; the slab stays. For when something stands in front of it. */
   blank = false;
   gone = false;
+  /** Extra lean, in radians, set from outside: a card rocking as it comes down. */
+  tip = 0;
 
-  constructor(readonly text: string, private glyphs: GlyphLayer, readonly scale = 1, icon = false) {
-    this.tile = buildTile();
+  /** `tile` is what it is made of: a stone tile unless told otherwise (see `buildCard`). */
+  constructor(readonly text: string, private glyphs: GlyphLayer, readonly scale = 1, icon = false, tile: Tile = buildTile()) {
+    this.tile = tile;
     this.root = this.tile.root;
     this.anchor = this.tile.anchor;
     this.glyph = glyphs.add(text, this.anchor, 0.74 * scale, icon);
@@ -97,7 +100,7 @@ export class LetterTile {
     this.root.scale.setScalar(pop * this.scale);
     const sy = this.sq.step(1, 220, 13, dt);
     squash(this.tile.slab, sy);
-    this.tile.slab.rotation.z = this.lean.step(0, 140, 10, dt) * 0.05;
+    this.tile.slab.rotation.z = this.lean.step(0, 140, 10, dt) * 0.05 + this.tip;
     this.tile.halo.visible = this.active && !this.dim;
     this.tile.halo.scale.setScalar(1 + 0.012 * Math.sin(this.pulse * 3.2));
     this.tile.mat.uniforms.uGlint.value = this.active && !this.dim ? 0.6 : 0;

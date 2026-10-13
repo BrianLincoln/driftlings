@@ -7,11 +7,15 @@ export type WordShape = 'vc' | 'cvc' | 'ccvc' | 'cvcc' | 'other';
  * gpc:m       the letter-sound correspondence m -> /m/
  * blend:cvc   blending a word of that shape
  * heart:the   an irregular word known by heart
+ * suffix:s    an s on the end of a word: more than one of the thing
+ * second:s    the other sound a letter makes: s saying /z/, as in "is" and "beds"
  */
-export type SkillId = `gpc:${string}` | `blend:${WordShape}` | `heart:${string}`;
+export type SkillId = `gpc:${string}` | `blend:${WordShape}` | `heart:${string}` | `suffix:${string}` | `second:${string}`;
 
 export const gpc = (grapheme: string): SkillId => `gpc:${grapheme}`;
 export const blend = (shape: WordShape): SkillId => `blend:${shape}`;
+export const suffix = (ending: string): SkillId => `suffix:${ending}`;
+export const second = (grapheme: string): SkillId => `second:${grapheme}`;
 
 export function graphemeOf(id: SkillId): string | null {
   return id.startsWith('gpc:') ? id.slice(4) : null;

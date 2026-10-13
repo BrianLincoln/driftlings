@@ -33,6 +33,8 @@ export interface BlendItem {
   key: string;
   word: string;
   graphemes: string[];
+  /** What each letter says here, as the letter that usually says it: i, z for "is". */
+  sounds: string[];
   stage: BlendStage;
   skills: SkillId[];
   supports: SkillId[];
@@ -55,7 +57,27 @@ export interface CatchItem {
   supports: SkillId[];
 }
 
-export type Item = MeetItem | PickLetterItem | BlendItem | CatchItem;
+/**
+ * One of a thing, then several: an s goes on the end of its word.
+ * show: the child sees one, then more, and taps the s on; nothing is asked.
+ * ask: the word for one and the word for several stand side by side, one is said, and the child picks it.
+ */
+export interface ManyItem {
+  kind: 'many';
+  key: string;
+  /** The word for one, e.g. "cup". The word for several is this with an s. */
+  base: string;
+  graphemes: string[];
+  /** What the s says on the end of this word: 's' or 'z'. */
+  sound: string;
+  stage: 'show' | 'ask';
+  /** The word said: `base`, or `base` with its s. For show, always the one with the s. */
+  target: string;
+  skills: SkillId[];
+  supports: SkillId[];
+}
+
+export type Item = MeetItem | PickLetterItem | BlendItem | CatchItem | ManyItem;
 export type ItemKind = Item['kind'];
 
 /** One exercise's worth of items, played in order. */
@@ -64,12 +86,20 @@ export interface Round {
   items: Item[];
 }
 
+export interface Word {
+  text: string;
+  graphemes: string[];
+  sounds?: string[];
+}
+
 /** What the generator may draw on. Built from the audio manifest and the word list. */
 export interface Content {
   /** True if an isolated sound clip exists for this grapheme. */
   hasSound(grapheme: string): boolean;
   /** True if a clip of this letter's name exists. */
   hasName(grapheme: string): boolean;
-  /** Decodable words that have a spoken clip. */
-  words: ReadonlyArray<{ text: string; graphemes: string[] }>;
+  /** Decodable words that have a spoken clip. `sounds` is given where a letter does not say its usual sound. */
+  words: ReadonlyArray<Word>;
+  /** Words for a thing that can be shown, one and several, with what the s says on the end. Both words have clips. */
+  many: ReadonlyArray<{ base: string; sound: string }>;
 }

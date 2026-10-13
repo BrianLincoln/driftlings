@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PALETTES } from '../gfx/palette';
+import { C, PALETTES } from '../gfx/palette';
 import { buildIsland, buildWater, islandHeight, type IslandShape } from '../gfx/ground';
 import { buildSky } from '../gfx/sky';
 import { pushBlob } from '../gfx/uniforms';
@@ -18,7 +18,8 @@ import type { Diorama, StageContext } from './diorama';
 import { Dust } from './dust';
 import { LetterTile } from './letterTile';
 import { Pips } from '../ui/pips';
-import { PROP_MAT, bushGeo, rockGeo, treeGeo } from './props';
+import { PROP_MAT, buildCard, bushGeo, rockGeo, treeGeo } from './props';
+import { Thing } from './things';
 
 // The host for exercises: a small clearing, the companion, and whoever is
 // watching. It plays a list of rounds, one exercise after another, and lends
@@ -82,6 +83,7 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
   let mode: LayoutMode = 'wide';
   let ctx: StageContext | null = null;
   const tiles: LetterTile[] = [];
+  const things: Thing[] = [];
   let run: ExerciseRun | null = null;
   let roundIndex = -1;
   let pause = 0;
@@ -95,15 +97,25 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
   const zoom = new Spring(0);
   let zoomGoal = 0;
 
+  const stand = (t: LetterTile) => {
+    t.lean_back(mode === 'tall' ? -0.2 : -0.1);
+    scene.add(t.root);
+    tiles.push(t);
+    return t;
+  };
+  /** Where a spot on the ground, `x` across at depth `z`, falls on screen: -1 at the left edge, 1 at the right. */
+  const across = (x: number, z: number) => v.set(x, y(x, z), z).project(ctx!.camera).x;
+
   const kit: ExerciseKit = {
     get mode() { return mode; },
     companion,
-    tile(text, scale = 1, icon = false) {
-      const t = new LetterTile(text, ctx!.glyphs, scale, icon);
-      t.lean_back(mode === 'tall' ? -0.2 : -0.1);
-      scene.add(t.root);
-      tiles.push(t);
-      return t;
+    tile: (text, scale = 1, icon = false) => stand(new LetterTile(text, ctx!.glyphs, scale, icon)),
+    card: (text, hue, scale = 1) => stand(new LetterTile(text, ctx!.glyphs, scale, false, buildCard(C.cards[Math.abs(hue) % C.cards.length]))),
+    thing(name) {
+      const thing = new Thing(name, prop);
+      scene.add(thing.root);
+      things.push(thing);
+      return thing;
     },
     spot(row, index, count) {
       const z = row === 'tiles' ? 1.2 : 2.75;
@@ -121,6 +133,16 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
     screenX(tile) {
       tile.anchor.getWorldPosition(v).project(ctx!.camera);
       return (v.x * 0.5 + 0.5) * ctx!.size().width;
+    },
+    aim(xPx, z) {
+      // The camera looks straight down the clearing, so across the screen is across the ground.
+      const [a, b] = [across(-1, z), across(1, z)];
+      return -1 + (2 * ((xPx / ctx!.size().width) * 2 - 1 - a)) / (b - a);
+    },
+    ceiling(z) {
+      const o = ctx!.camera.position;
+      v.set(0, 1, 0.5).unproject(ctx!.camera).sub(o);
+      return o.y + (v.y * (z - o.z)) / v.z;
     },
     say,
     line: sayLine,
@@ -275,6 +297,14 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
           tiles.splice(i, 1);
         } else if (t.root.scale.x > 0.5) pushBlob(t.root.position.x, t.root.position.z, 0.5 * t.scale, 1.15);
       }
+      for (let i = things.length - 1; i >= 0; i--) {
+        const th = things[i];
+        th.update(dt);
+        if (th.gone) {
+          scene.remove(th.root);
+          things.splice(i, 1);
+        } else if (th.root.scale.x > 0.5) pushBlob(th.root.position.x, th.root.position.z, 0.34, 1.1);
+      }
       companion.viewer.copy(camera.position);
       guest.lookTarget = companion.want.face ?? camera.position;
       guest.update(dt);
@@ -284,12 +314,8 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
     },
     // For scripted play.
     debug: () => (finished ? { finished: true } : pause > 0 || !run ? { waiting: true } : run.debug?.() ?? { waiting: true }),
-    debugSlide() {
-      if (!run?.pointer || !ctx) return;
-      const w = ctx.size().width;
-      run.pointer('down', 2, 300);
-      for (let x = 2; x <= w; x += 6) run.pointer('move', x, 300);
-      run.pointer('up', w, 300);
+    debugSteer(x: number, z: number) {
+      if (run?.pointer && ctx) run.pointer('move', (across(x, z) * 0.5 + 0.5) * ctx.size().width, 300);
     },
-  } as Diorama & { debug(): unknown; debugSlide(): void };
+  } as Diorama & { debug(): unknown; debugSteer(x: number, z: number): void };
 }

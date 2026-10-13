@@ -13,12 +13,13 @@ export interface DebugHooks {
   quality(q: Quality): void;
   targets(): Array<{ id: string; x: number; y: number; r: number }>;
   tap(id: string): boolean;
-  /** Pan a wide scene to a world x offset. */
+  /** Pan a wide scene this far, in world units across the middle of the picture. */
   pan(x: number): void;
   info(): Record<string, unknown>;
-  /** What the running exercise wants next: ids to tap, a slide, or nothing yet. */
-  exercise(): { tap?: string[]; slide?: boolean; waiting?: boolean; finished?: boolean } | null;
-  slide(): void;
+  /** What the running exercise wants next: ids to tap, somewhere to hold the pointer, or nothing yet. */
+  exercise(): { tap?: string[]; steer?: [number, number]; waiting?: boolean; finished?: boolean } | null;
+  /** In an exercise, move the pointer to a place across the clearing (world x, on the ground at depth z). At home, put the companion there. */
+  steer(x: number, z: number): void;
   /** Mark nodes done without playing them. */
   complete(ids: string[]): void;
   events(): unknown[];
@@ -30,7 +31,7 @@ declare global {
   }
 }
 
-export function installHooks(stage: Stage, goto: (name: string, instant?: boolean) => Promise<void>, game: Game): DebugHooks {
+export function installHooks(stage: Stage, goto: (name: string, instant?: boolean) => Promise<void>, game: () => Game): DebugHooks {
   const hooks: DebugHooks = {
     ready: false,
     goto: (name) => goto(name, true),
@@ -49,9 +50,9 @@ export function installHooks(stage: Stage, goto: (name: string, instant?: boolea
     },
     pan: (x) => stage.panTo(x),
     exercise: () => (stage.scene as unknown as { debug?: () => never })?.debug?.() ?? null,
-    slide: () => (stage.scene as unknown as { debugSlide?: () => void })?.debugSlide?.(),
-    complete: (ids) => ids.forEach((id) => game.completeNode(id)),
-    events: () => game.events,
+    steer: (x, z) => (stage.scene as unknown as { debugSteer?: (x: number, z: number) => void })?.debugSteer?.(x, z),
+    complete: (ids) => ids.forEach((id) => game().completeNode(id)),
+    events: () => game().events,
     info: () => ({
       scene: stage.scene?.name,
       layout: stage.layoutMode,

@@ -1,5 +1,5 @@
 import type * as THREE from 'three';
-import type { IslandShape } from '../gfx/ground';
+import { shoreRadius, type IslandShape } from '../gfx/ground';
 import { PALETTES, type ScenePalette } from '../gfx/palette';
 import { bushGeo, rockGeo, treeGeo } from './props';
 
@@ -44,7 +44,12 @@ const rock = (seed: number, size: number, wide: [number, number], tall: [number,
   ({ geo: rockGeo(seed, size), wide, tall, r: size + 0.05 });
 
 /** Home has no map of its own, but the crossing and the chart need to know it. */
-export const HOME_SHAPE: IslandShape = { radius: 10.5, rise: 0.7, sand: 1.3, seed: 1.7 };
+export const HOME_SHAPE: IslandShape = { radius: 24, rise: 1.0, sand: 1.3, seed: 1.7 };
+/**
+ * Scenes on the far shore of home (who.ts, landfall.ts, and the landing in homeIsland.ts) were laid out when
+ * that shore was about ten units from the middle. Add this to a z from then to get the same spot on the beach now.
+ */
+export const HOME_BACK = 10.13 - shoreRadius(HOME_SHAPE, Math.PI);
 export const HOME_PALETTE: ScenePalette = PALETTES.goldenNoon;
 
 export const PLACES: Record<string, Place> = {
@@ -145,12 +150,12 @@ export const PLACES: Record<string, Place> = {
     ],
     chart: [[-0.6, -0.25, 'rock', 11], [0.05, -0.68, 'rock', 14], [-0.3, -0.5, 'tree', 31]],
   },
-  // The first of the second island's: three green lobes with deep bays between, a copse on one, the stones in a hook.
+  // Three green lobes with deep bays between, a copse on one, the stones in a wide zigzag.
   i2a1: {
     shape: { radius: 7.4, rise: 0.55, sand: 1.2, seed: 5.6, bays: 2.6 },
     palette: PALETTES.goldenNoon,
-    wideZ: [0.3, 1.1, 0.9, -0.4],
-    tallX: [-0.9, 0.6, -0.6, 0.9],
+    wideZ: [1.0, -0.4, 0.9, -0.5, 1.0, -0.3],
+    tallX: [-0.9, 0.6, -0.6, 0.9, -0.3, 0.7],
     bigSide: 1,
     scenery: () => [
       tree(13, [6.3, -2.2], [-2.7, -4.6]),

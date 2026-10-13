@@ -1,63 +1,100 @@
-// What is drawn where on the chart. Each island of the curriculum has a sheet
-// of its own: home, and every area there will be on that island, found or not.
+import type { LayoutMode } from '../stage/framing';
+import { SHORE } from './chartIsles';
+
+// What is drawn where on the chart. There is one chart: home at one end, and
+// every island the curriculum lists, found or not, winding away from it across
+// the sea. Nothing is placed by hand: the sheet is cut into as many spots as there
+// are islands, and each island strays about inside its own, so they never line up
+// and a new island only gives the others a little less sea.
 
 /**
- * Everything on a sheet for one layout, as fractions of the sheet's half-width and half-depth
- * (so -1,-1 is the far left corner): home, each area's island in order as [x, z, size while it is
- * still blank], the compass, and the little wave marks. `isle` is the size of home and of a found
- * island: every one of them has to fit at that size, and lie far enough from home for a line to
- * be drawn between them. `box` is what has to fit on screen, and `tilt` how steeply we look down
- * on the sheet, in degrees.
+ * Everything on the sheet for one layout, in the sheet's own units from its middle: home, each island
+ * in order, the compass and the little wave marks. `isle` is the size home and a found island are drawn
+ * at, and `marks` the size of the compass and waves beside what they are on a roomy sheet. `box` is what
+ * has to fit on screen, and `tilt` how steeply we look down on the sheet, in degrees.
  */
 export interface SheetLayout {
   size: [number, number];
-  isle: number;
-  home: [number, number];
   box: [number, number];
   tilt: number;
-  areas: Array<[number, number, number]>;
+  isle: number;
+  marks: number;
+  home: [number, number];
+  areas: Array<[number, number]>;
   compass: [number, number];
   waves: Array<[number, number]>;
 }
 
-export interface Sheet {
-  /** The outline of each area's island, found or not, in the order the areas come. */
-  seeds: number[];
-  wide: SheetLayout;
-  tall: SheetLayout;
-}
+const PAPER = {
+  wide: { size: [10.4, 5.5], box: [11.2, 5.3], tilt: 68 },
+  tall: { size: [4.7, 8.0], box: [5.0, 7.9], tilt: 74 },
+} satisfies Record<LayoutMode, Pick<SheetLayout, 'size' | 'box' | 'tilt'>>;
 
-const WIDE = { size: [10.4, 5.5], home: [-0.66, 0.28], box: [11.2, 5.3], tilt: 68, compass: [-0.8, -0.58] } satisfies Partial<SheetLayout>;
-const TALL = { size: [4.7, 8.0], home: [-0.3, 0.72], box: [5.0, 7.9], tilt: 74, compass: [0.56, 0.74] } satisfies Partial<SheetLayout>;
+/** Clear paper inside the edge, and how many spots' worth of the sheet's length home keeps to itself. */
+const EDGE = 0.45;
+const HOME_ROOM = 2;
+/**
+ * How far across its spot an island's shore reaches from its middle, and the furthest it ever reaches
+ * however few islands there are: there will be dozens, and the chart is mostly sea from the start.
+ */
+const FILL = 0.22;
+const BIGGEST = 0.36;
+/** How much of the sea left in its spot an island strays into, away from the middle. */
+const STRAY = 0.95;
+const WAVES = 10;
 
-/** By the id of the island in the curriculum. */
-export const SHEETS: Record<string, Sheet> = {
-  // Four islands, each further from home than the last.
-  i1: {
-    seeds: [2.6, 3.1, 5.4, 0.6],
-    wide: {
-      ...WIDE, isle: 0.8,
-      areas: [[0.17, -0.4, 0.6], [0.72, 0.42, 0.62], [0.74, -0.45, 0.48], [0.23, 0.44, 0.5]],
-      waves: [[-0.3, 0.72], [-0.08, -0.84], [-0.42, -0.3], [0.5, -0.82], [0.9, -0.06], [-0.9, 0.82]],
-    },
-    tall: {
-      ...TALL, isle: 0.56,
-      areas: [[0.3, -0.08, 0.5], [-0.42, -0.27, 0.5], [0.4, -0.5, 0.4], [-0.36, -0.74, 0.36]],
-      waves: [[0.5, 0.36], [-0.7, 0.4], [0.5, -0.86], [-0.74, -0.52], [0.74, -0.2], [0.1, 0.92]],
-    },
-  },
-  // New waters: one island so far, a long way out.
-  i2: {
-    seeds: [4.0],
-    wide: {
-      ...WIDE, isle: 0.9,
-      areas: [[0.52, -0.2, 0.6]],
-      waves: [[-0.3, 0.72], [0.38, 0.66], [-0.36, -0.36], [0.2, -0.82], [0.9, 0.3], [-0.9, 0.82]],
-    },
-    tall: {
-      ...TALL, isle: 0.68,
-      areas: [[0.22, -0.42, 0.5]],
-      waves: [[0.5, 0.36], [-0.7, 0.4], [-0.2, -0.84], [0.7, -0.74], [-0.72, -0.5], [0.1, 0.92]],
-    },
-  },
+/** The same scatter every time: -1 to 1 for each `n`. */
+const scatter = (n: number) => {
+  const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return (s - Math.floor(s)) * 2 - 1;
 };
+
+/** The sheet for `count` islands. Home is at the left of a wide sheet and the bottom of a tall one. */
+export function sheetLayout(mode: LayoutMode, count: number): SheetLayout {
+  const paper = PAPER[mode];
+  const tall = mode === 'tall';
+  const long = paper.size[tall ? 1 : 0] - 2 * EDGE;
+  const short = paper.size[tall ? 0 : 1] - 2 * EDGE;
+  // As many islands abreast as leaves each the biggest spot.
+  let rows = 1;
+  let cell = 0;
+  for (let r = 1; r <= count; r++) {
+    const c = Math.min(short / r, long / (Math.ceil(count / r) + HOME_ROOM));
+    if (c > cell + 1e-9) [rows, cell] = [r, c];
+  }
+  const cols = Math.ceil(count / rows);
+  const first = -long / 2 + HOME_ROOM * cell;
+  const [colStep, rowStep] = [(long / 2 - first) / cols, short / rows];
+  /** Home's side of the sheet: toward the viewer on a wide one, the left on a tall one. */
+  const side = tall ? -1 : 1;
+  /** `along` runs away from home, `across` toward home's side. */
+  const at = (along: number, across: number): [number, number] => (tall ? [side * across, -along] : [along, side * across]);
+  const shore = Math.min(FILL * cell, BIGGEST);
+  // Two neighbours that both stray as far as they can toward each other still have sea between them.
+  const [strayAlong, strayAcross] = [STRAY * (colStep / 2 - shore), STRAY * (rowStep / 2 - shore)];
+
+  const areas = Array.from({ length: count }, (_, i) => {
+    const col = Math.floor(i / rows);
+    // Each row sets off from where the last one ended.
+    const row = col % 2 ? rows - 1 - (i % rows) : i % rows;
+    return at(first + (col + 0.5) * colStep + scatter(i + 1) * strayAlong, ((rows - 1) / 2 - row) * rowStep + scatter(i + 7.3) * strayAcross);
+  });
+  // Waves are drawn where four spots meet, which no island strays as far as.
+  const corners: Array<[number, number]> = [];
+  for (let c = 0; c < cols; c++) for (let r = 1; r < rows; r++) {
+    const n = c * 31 + r;
+    corners.push(at(first + c * colStep + scatter(n + 0.4) * 0.25 * shore, (rows / 2 - r) * rowStep + scatter(n + 0.9) * 0.25 * shore));
+  }
+  // Any few of them, not a line of them.
+  const some = corners.map((c, i) => [scatter(i + 3.1), c] as const).sort((a, b) => a[0] - b[0]).slice(0, WAVES).map(([, c]) => c);
+
+  return {
+    ...paper,
+    isle: shore / SHORE,
+    marks: Math.min(0.5, cell / 1.9),
+    home: at(-long / 2 + 0.6 * cell, short * 0.22),
+    areas,
+    compass: at(-long / 2 + 0.6 * cell, -short * 0.27),
+    waves: some,
+  };
+}

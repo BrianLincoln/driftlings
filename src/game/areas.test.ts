@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { ISLANDS } from '../learn/curriculum';
-import { SHEETS } from '../scenes/chartSheets';
+import { AREAS } from '../learn/curriculum';
+import { SHORE } from '../scenes/chartIsles';
+import { sheetLayout } from '../scenes/chartSheets';
 import { PLACES } from '../scenes/places';
-import { BIG_ONES, OPEN_AREAS, frontier, lessonsOf, watersOf } from './areas';
+import { BIG_ONES, OPEN_AREAS, frontier, lessonsOf } from './areas';
 
-const AREAS = ISLANDS.flatMap((i) => i.areas);
 const all = (ids: string[]) => new Set(ids.flatMap((id) => AREAS.find((a) => a.id === id)!.nodes.map((n) => n.id)));
 
 describe('areas', () => {
@@ -23,36 +23,21 @@ describe('areas', () => {
     expect(Object.keys(PLACES).sort()).toEqual(Object.keys(BIG_ONES).sort());
   });
 
-  it('has a sheet of the chart for every island, with room for every area there will be', () => {
-    for (const island of ISLANDS) {
-      const sheet = SHEETS[island.id];
-      expect(sheet, island.id).toBeDefined();
-      for (const part of [sheet.seeds, sheet.wide.areas, sheet.tall.areas]) expect(part.length, island.id).toBe(island.areas.length);
-      expect(sheet.tall.waves.length).toBe(sheet.wide.waves.length);
-    }
-  });
-
-  it('draws a found island clear of the others and of the sheet\'s edge, and far enough from home for a line between', () => {
-    for (const [id, sheet] of Object.entries(SHEETS)) for (const mode of ['wide', 'tall'] as const) {
-      const s = sheet[mode];
-      const at = ([u, v]: number[]) => [(u * s.size[0]) / 2, (v * s.size[1]) / 2];
-      const r = 1.25 * s.isle;
-      const gap = (a: number[], b: number[]) => Math.hypot(at(a)[0] - at(b)[0], at(a)[1] - at(b)[1]);
-      s.areas.forEach((a, i) => {
-        const [x, z] = at(a);
-        expect(Math.abs(x) + r, `${id} ${mode} ${i}`).toBeLessThanOrEqual(s.size[0] / 2);
-        expect(Math.abs(z) + r, `${id} ${mode} ${i}`).toBeLessThanOrEqual(s.size[1] / 2);
-        expect(gap(a, s.home), `${id} ${mode} ${i} from home`).toBeGreaterThan(2 * (r + 0.6) + 0.5);
-        for (const b of s.areas.slice(0, i)) expect(gap(a, b), `${id} ${mode} ${i}`).toBeGreaterThan(2 * r);
+  it('draws every island on the one chart clear of the others and of the edge, with room for a line from home, however many there are', () => {
+    for (const count of [1, 2, AREAS.length, 12, 43, 60]) for (const mode of ['wide', 'tall'] as const) {
+      const s = sheetLayout(mode, count);
+      const r = SHORE * s.isle;
+      const gap = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+      expect(s.areas.length).toBe(count);
+      [s.home, ...s.areas].forEach((a, i, all) => {
+        const tag = `${count} ${mode} ${i}`;
+        expect(Math.abs(a[0]) + r, tag).toBeLessThanOrEqual(s.size[0] / 2 - 0.3);
+        expect(Math.abs(a[1]) + r, tag).toBeLessThanOrEqual(s.size[1] / 2 - 0.3);
+        for (const b of all.slice(0, i)) expect(gap(a, b), tag).toBeGreaterThan(2 * r);
+        // The line stops a little off each shore, and the toy ship (about 1.3 times `isle` long) needs that much of it to sail.
+        if (i > 0) expect(gap(a, s.home), `${tag} from home`).toBeGreaterThan(2 * r + 2.4 * s.isle);
       });
-    }
-  });
-
-  it('keeps each island to its own sheet', () => {
-    for (const a of OPEN_AREAS) {
-      const w = watersOf(a);
-      expect(w.island.areas).toContain(a);
-      expect(w.areas[w.isle]).toBe(a);
+      for (const w of [s.compass, ...s.waves]) for (const a of [s.home, ...s.areas]) expect(gap(w, a), `${count} ${mode} marks`).toBeGreaterThan(r);
     }
   });
 

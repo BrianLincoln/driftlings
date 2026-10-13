@@ -76,6 +76,8 @@ export class Creature {
 
   /** If set, wandering stays around this spot rather than the scene origin. */
   home = new THREE.Vector3();
+  /** The way it turns, more or less, when it gets where it is going and nobody says otherwise. */
+  facing = 0;
   readonly size: number;
   /** Its body material, for anything extra that should share its colour and its greyness. */
   readonly skin: ToonMaterial;
@@ -127,6 +129,11 @@ export class Creature {
 
   hopTo(x: number, z: number): void {
     this.goal = new THREE.Vector3(x, 0, z);
+  }
+
+  /** On its way somewhere. */
+  get moving(): boolean {
+    return this.goal !== null;
   }
 
   /** Stop where it is. */
@@ -228,9 +235,9 @@ export class Creature {
   }
 
   /** A small acknowledging bounce. */
-  nod(): void {
+  nod(quiet = false): void {
     this.sq.kick(2.6);
-    sfx.hop();
+    if (!quiet) sfx.hop();
   }
 
   sit(): void {
@@ -268,7 +275,7 @@ export class Creature {
       if (dist < 0.08) {
         this.goal = null;
         this.hopPhase = 0;
-        this.restYaw = (Math.random() - 0.5) * 1.3;
+        this.restYaw = this.facing + (Math.random() - 0.5) * 1.3;
       } else {
         this.yaw += angleDelta(this.yaw, Math.atan2(dx, dz)) * (1 - Math.exp(-8 * this.pace * dt));
         const before = this.hopPhase;

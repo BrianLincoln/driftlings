@@ -12,7 +12,7 @@ import type { Diorama } from './diorama';
 import { SIZE } from './blockade';
 import { bound } from './detour';
 import { Dust } from './dust';
-import { HOME_SHAPE } from './places';
+import { HOME_BACK, HOME_SHAPE } from './places';
 import { PROP_MAT, buildFarIsles, bushGeo, rockGeo, treeGeo } from './props';
 import { Raft } from './raft';
 import { BOW, Ship } from './ship';
@@ -37,7 +37,7 @@ export interface LandfallPlan {
 
 const y = (x: number, z: number) => islandHeight(HOME_SHAPE, x, z);
 /** Where the ship ends up, off the far shore, and the way it is heading when it gets there. */
-const BERTH = new THREE.Vector3(0.5, 0, -HOME_SHAPE.radius - 3.5);
+const BERTH = new THREE.Vector3(0.5, 0, -14 + HOME_BACK);
 const YAW = -0.34;
 const AHEAD = new THREE.Vector3(Math.cos(YAW), 0, -Math.sin(YAW));
 /** Seconds it takes to come in, and from how far off. */
@@ -47,9 +47,9 @@ const FROM = 19;
 const FIRST_OFF = COME_IN + 0.35;
 const NEXT_OFF = 0.36;
 /** Where the big one comes down. */
-const BIG_LANDS = new THREE.Vector3(-3.0, 0, -8.7);
+const BIG_LANDS = new THREE.Vector3(-3.0, 0, -8.7 + HOME_BACK);
 
-/** What stands at the edges of the picture, as [x, z, kind]. */
+/** What stands at the edges of the picture, as [x, z, kind], with z as it was on a smaller island (see HOME_BACK). */
 const DRESSING: Array<[number, number, 'tree' | 'bush' | 'rock']> = [
   [9.6, -6.0, 'tree'], [11.2, -3.6, 'tree'], [7.0, -8.6, 'bush'], [-6.6, -9.3, 'rock'], [8.4, -4.6, 'bush'], [-1.2, -6.2, 'bush'],
 ];
@@ -72,9 +72,9 @@ export function createLandfall(plan: LandfallPlan): Diorama {
   const shadows: Array<[number, number, number, number]> = [];
   DRESSING.forEach(([x, z, kind], i) => {
     const m = new THREE.Mesh(kind === 'tree' ? treeGeo(11 + i * 12) : kind === 'bush' ? bushGeo(40 + i * 7) : rockGeo(60 + i, 0.4), prop);
-    m.position.set(x, y(x, z) - 0.04, z);
+    m.position.set(x, y(x, z + HOME_BACK) - 0.04, z + HOME_BACK);
     scene.add(m);
-    shadows.push([x, z, kind === 'tree' ? 0.95 : 0.5, kind === 'tree' ? 1.5 : 1.15]);
+    shadows.push([x, z + HOME_BACK, kind === 'tree' ? 0.95 : 0.5, kind === 'tree' ? 1.5 : 1.15]);
   });
   const dust = new Dust(16);
   scene.add(dust.root);
@@ -91,17 +91,17 @@ export function createLandfall(plan: LandfallPlan): Diorama {
   come(0, true);
 
   const leavers: Leaver[] = [];
-  const spot = (i: number, n: number, z: number) => new THREE.Vector3(1.2 + (i - (n - 1) / 2) * 0.85, 0, z + (i % 2) * 0.5);
+  const spot = (i: number, n: number, z: number) => new THREE.Vector3(1.2 + (i - (n - 1) / 2) * 0.85, 0, z + HOME_BACK + (i % 2) * 0.5);
   const companion = new Companion();
   companion.quiet = true;
   scene.add(companion.root);
   const n = plan.ashore ? plan.crew.length : 0;
-  leavers.push({ who: companion, at: FIRST_OFF, land: new THREE.Vector3(3.4, 0, -9.0), then: new THREE.Vector3(4.2, 0, -5.2), state: 'aboard' });
+  leavers.push({ who: companion, at: FIRST_OFF, land: new THREE.Vector3(3.4, 0, -9.0 + HOME_BACK), then: new THREE.Vector3(4.2, 0, -5.2 + HOME_BACK), state: 'aboard' });
   const little = plan.crew.map((who, i) => {
     const c = new Creature(who);
     scene.add(c.root);
     ship.seat(c);
-    if (plan.ashore) leavers.push({ who: c, at: FIRST_OFF + 0.5 + i * NEXT_OFF, land: spot(i, n, -9.4), then: spot(i, n, -3.5).multiplyScalar(1.6).setZ(-3.5), state: 'aboard' });
+    if (plan.ashore) leavers.push({ who: c, at: FIRST_OFF + 0.5 + i * NEXT_OFF, land: spot(i, n, -9.4), then: spot(i, n, -3.5).setX((1.2 + (i - (n - 1) / 2) * 0.85) * 1.6), state: 'aboard' });
     return c;
   });
   let big: Creature | null = null;
@@ -136,13 +136,13 @@ export function createLandfall(plan: LandfallPlan): Diorama {
     framing(m: LayoutMode): Framing {
       if (big && t >= cutAt) {
         // Along the shore from the other side: the raft, the water, and the sand it is making for.
-        const center = new THREE.Vector3(-3.6, 1.7, -11.6);
+        const center = new THREE.Vector3(-3.6, 1.7, -11.6 + HOME_BACK);
         return m === 'tall' ? { center, width: 8.6, height: 7.0, elevation: 16, azimuth: -52, fov: 34 } : { center, width: 10.5, height: 6.2, elevation: 11, azimuth: -38 };
       }
       // From up the beach and off to the bow side, so the ship comes in toward us and ends up side on.
       return m === 'tall'
-        ? { center: new THREE.Vector3(1.6, 1.5, -11.2), width: 5.4, height: 7.2, elevation: 14, azimuth: 44, fov: 34 }
-        : { center: new THREE.Vector3(1.3, 1.9, -12.0), width: 9.0, height: 5.6, elevation: 8, azimuth: 26 };
+        ? { center: new THREE.Vector3(1.6, 1.5, -11.2 + HOME_BACK), width: 5.4, height: 7.2, elevation: 14, azimuth: 44, fov: 34 }
+        : { center: new THREE.Vector3(1.3, 1.9, -12.0 + HOME_BACK), width: 9.0, height: 5.6, elevation: 8, azimuth: 26 };
     },
     layout() {},
     enter() {},

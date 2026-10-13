@@ -36,6 +36,8 @@ export function projectTargets(list: Touchable[], cam: THREE.PerspectiveCamera, 
     if (t.offset) c.add(t.offset);
     edge.copy(c).addScaledVector(up, t.radius).project(cam);
     c.project(cam);
+    // Behind the camera, or beyond what it draws: not there to be touched.
+    if (Math.abs(c.z) > 1) continue;
     out.push({
       id: t.id,
       x: (c.x * 0.5 + 0.5) * w,
