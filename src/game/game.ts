@@ -1,6 +1,6 @@
 import { rescue, type Rescue } from '../cast/species';
 import { CONTENT } from '../content/content';
-import { allNodes, findNode, knownSkills, rescueIndex, rescuesHome, type AreaDef } from '../learn/curriculum';
+import { allNodes, findNode, knownSkills, rescueIndex, rescuesHome, settled, type AreaDef } from '../learn/curriculum';
 import { attemptsOf, doneNodes, type AttemptDraft, type LogEvent } from '../learn/events';
 import type { GenContext } from '../learn/generator';
 import type { Round } from '../learn/items';
@@ -40,8 +40,9 @@ export class Game {
     return uuid();
   }
 
+  /** The nodes finished: those the log says, and every node of an area whose checkpoint is among them. */
   get done(): Set<string> {
-    return doneNodes(this.events);
+    return settled(doneNodes(this.events));
   }
 
   /** The area being explored: the first one not finished. */

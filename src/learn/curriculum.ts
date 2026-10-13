@@ -12,6 +12,13 @@ export interface NodeDef {
   /** UFLI lesson number this node corresponds to, or null where the checkpoint is ours. */
   ufli: number | null;
   teaches: SkillId[];
+  /** For a lesson on word shapes: the letters its words should have in them, where there are such words. */
+  favours?: string[];
+  /**
+   * Added to its area after children had already played it. Its rescue is numbered after the area's others,
+   * so nobody a child has already woken turns into somebody else.
+   */
+  late?: boolean;
 }
 
 export interface AreaDef {
@@ -20,6 +27,8 @@ export interface AreaDef {
 }
 
 const lesson = (id: string, ufli: number, ...teaches: SkillId[]): NodeDef => ({ id, kind: 'lesson', ufli, teaches });
+/** A lesson on building words of new shapes, added to an area already out (see `late`). */
+const shapes = (id: string, ufli: number, favours: string[], ...teaches: SkillId[]): NodeDef => ({ ...lesson(id, ufli, ...teaches), favours, late: true });
 const check = (id: string, kind: 'miniboss' | 'boss', ufli: number | null): NodeDef => ({ id, kind, ufli, teaches: [] });
 
 /** Every island there is, in the order the ship finds them. Each is one area: a few lessons and the checkpoint that ends it. */
@@ -73,9 +82,12 @@ export const AREAS: AreaDef[] = [
       lesson('i2a1-s-z', 21, second('s')),
       lesson('i2a1-k', 22, gpc('k')),
       lesson('i2a1-h', 23, gpc('h')),
-      // UFLI gives r and l two lessons each (24 and 25, 26 and 27); each is one node here.
+      // UFLI gives r and l two lessons each. The first is the letter; the second is the letter next to another
+      // consonant: 25 is r after one at the start of a word (trip), 27 is l there (flag) and before one at the end (milk).
       lesson('i2a1-r', 24, gpc('r')),
+      shapes('i2a1-r2', 25, ['r'], blend('ccvc')),
       lesson('i2a1-l', 26, gpc('l')),
+      shapes('i2a1-l2', 27, ['l'], blend('ccvc'), blend('cvcc')),
       check('i2a1-boss', 'miniboss', null),
     ],
   },
@@ -89,6 +101,21 @@ export function findNode(id: string): { node: NodeDef; area: AreaDef } | null {
     if (node) return { node, area };
   }
   return null;
+}
+
+/** The checkpoint that ends an area. */
+export const closerOf = (area: AreaDef): NodeDef => area.nodes[area.nodes.length - 1];
+
+/**
+ * What counts as done, from the nodes the log says were finished. Beating an area's checkpoint settles the
+ * whole area, so a lesson added to it afterwards is done too: the island stays finished, what the lesson
+ * teaches is known (and is shown how the first time it comes up, having never been tried), and its little
+ * one comes home with the rest. A child still on the island finds the new lesson on the path as the next to do.
+ */
+export function settled(done: ReadonlySet<string>): Set<string> {
+  const out = new Set(done);
+  for (const area of AREAS) if (done.has(closerOf(area).id)) for (const n of area.nodes) out.add(n.id);
+  return out;
 }
 
 /** Every skill taught by the given completed nodes. */
@@ -105,18 +132,23 @@ export function currentNode(area: AreaDef, done: ReadonlySet<string>): NodeDef |
   return area.nodes.find((n) => !done.has(n.id)) ?? null;
 }
 
-/** Which rescue a lesson node gives: its position among all lesson nodes. */
+/** The lesson nodes in the order their rescues are numbered: area by area, a late lesson after the others of its area. */
+const rescueOrder = (): NodeDef[] => AREAS.flatMap((a) => {
+  const lessons = a.nodes.filter((n) => n.kind === 'lesson');
+  return [...lessons.filter((n) => !n.late), ...lessons.filter((n) => n.late)];
+});
+
+/** Which rescue a lesson node gives. */
 export function rescueIndex(nodeId: string): number {
-  return allNodes().filter((n) => n.kind === 'lesson').findIndex((n) => n.id === nodeId);
+  return rescueOrder().findIndex((n) => n.id === nodeId);
 }
 
 /** Rescues that have gone home: those from areas whose closing checkpoint is done. */
 export function rescuesHome(done: ReadonlySet<string>): number[] {
   const out: number[] = [];
   for (const area of AREAS) {
-    const closer = area.nodes[area.nodes.length - 1];
-    if (!done.has(closer.id)) continue;
+    if (!done.has(closerOf(area).id)) continue;
     for (const n of area.nodes) if (n.kind === 'lesson') out.push(rescueIndex(n.id));
   }
-  return out;
+  return out.sort((a, b) => a - b);
 }

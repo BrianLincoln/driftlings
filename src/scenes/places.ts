@@ -150,12 +150,12 @@ export const PLACES: Record<string, Place> = {
     ],
     chart: [[-0.6, -0.25, 'rock', 11], [0.05, -0.68, 'rock', 14], [-0.3, -0.5, 'tree', 31]],
   },
-  // Three green lobes with deep bays between, a copse on one, the stones in a wide zigzag.
+  // Three green lobes with deep bays between, a copse on one, the stones in a wide zigzag (eight of them: three across when the view is tall).
   i2a1: {
     shape: { radius: 7.4, rise: 0.55, sand: 1.2, seed: 5.6, bays: 2.6 },
     palette: PALETTES.goldenNoon,
-    wideZ: [1.0, -0.4, 0.9, -0.5, 1.0, -0.3],
-    tallX: [-0.9, 0.6, -0.6, 0.9, -0.3, 0.7],
+    wideZ: [1.0, -0.4, 0.9, -0.5, 1.0, -0.4, 0.9, -0.3],
+    tallX: [-0.95, 0.05, 0.95, 0.0, -0.95, 0.05, 0.95, 0.1],
     bigSide: 1,
     scenery: () => [
       tree(13, [6.3, -2.2], [-2.7, -4.6]),

@@ -30,6 +30,11 @@ export interface ExerciseKit {
   thing(name: string): Thing;
   /** A place in the front row of tiles, or in the nearer row of options. */
   spot(row: 'tiles' | 'options', index: number, count: number): THREE.Vector3;
+  /**
+   * How big a tile can be for `count` of them to stand in the front row with air between them and stay in view:
+   * 1 where there is room. A row that uses it spaces its tiles by the same amount (see the blend exercise).
+   */
+  fit(count: number): number;
   /** Where the companion stands when it is not at a tile. */
   sideSpot(): THREE.Vector3;
   /** Where the companion stands to point at a tile. */

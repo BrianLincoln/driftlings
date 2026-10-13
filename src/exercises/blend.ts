@@ -19,6 +19,9 @@ const REPLAY_AFTER = 7;
 const HELP_AFTER = 12;
 /** After the last letter's sound has finished, a beat of quiet before the letters close up and the word is said. */
 const BEFORE_WORD = 0.45;
+/** How far one full-size tile stands from the next: while each is a sound of its own, and once they are a word. */
+const APART = 1.14;
+const JOINED = 0.94;
 
 export const blendExercise: ExerciseModule<BlendItem> = {
   kind: 'blend',
@@ -64,17 +67,20 @@ export const blendExercise: ExerciseModule<BlendItem> = {
     /** The tile that belongs in the next gap. Either of two matching letters will do. */
     const wanted = () => tiles.find((tile) => !placed.includes(tile) && tile.text === item().graphemes[placed.length]);
 
+    /** Place `i` of the row. A long word's tiles are smaller (`kit.fit`) and stand closer by as much, so four or five fit as three do. */
+    const at = (i: number, gap: number) => {
+      const p = kit.spot('tiles', i, n());
+      p.x = (i - (n() - 1) / 2) * gap * kit.fit(n());
+      return p;
+    };
+
     const place = () => {
       if (phase === 'build') {
-        tiles.forEach((tile, i) => tile.goal.copy(kit.spot('tiles', slots[i], n())));
+        tiles.forEach((tile, i) => tile.goal.copy(at(slots[i], APART)));
         return;
       }
-      order.forEach((tile, i) => {
-        const p = kit.spot('tiles', i, n());
-        // Once sounded out, the tiles close up until they touch and read as one word.
-        if (phase !== 'sound') p.x = (i - (n() - 1) / 2) * 0.94;
-        tile.goal.copy(p);
-      });
+      // Once sounded out, the tiles close up until they touch and read as one word.
+      order.forEach((tile, i) => tile.goal.copy(at(i, phase === 'sound' ? APART : JOINED)));
     };
 
     const guide = () => {
@@ -89,7 +95,7 @@ export const blendExercise: ExerciseModule<BlendItem> = {
     const next = () => {
       index++;
       if (index >= items.length) return hooks.finished();
-      tiles = item().graphemes.map((g) => kit.tile(g));
+      tiles = item().graphemes.map((g, _, all) => kit.tile(g, kit.fit(all.length)));
       order = [...tiles];
       placed = [];
       nextSound = 0;
@@ -98,7 +104,7 @@ export const blendExercise: ExerciseModule<BlendItem> = {
       helped = false;
       joinAt = Infinity;
       go('sound');
-      tiles.forEach((tile, i) => tile.snap(kit.spot('tiles', i, n())));
+      tiles.forEach((tile, i) => tile.snap(at(i, APART)));
       openAt = t + 0.4;
       guide();
     };

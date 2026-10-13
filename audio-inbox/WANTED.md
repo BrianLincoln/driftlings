@@ -30,6 +30,13 @@ Complete.
 - [ ] `words/pigs` : "pigs" (one pig, lots of pigs)
 - [ ] `words/bug` : "bug" (one bug, lots of bugs)
 - [ ] `words/bugs` : "bugs" (one bug, lots of bugs)
+- [ ] `words/trip` : "trip" (a word to build: r beside another consonant)
+- [ ] `words/drum` : "drum" (a word to build: r beside another consonant)
+- [ ] `words/crab` : "crab" (a word to build: r beside another consonant)
+- [ ] `words/frog` : "frog" (a word to build: r beside another consonant)
+- [ ] `words/flag` : "flag" (a word to build: l beside another consonant)
+- [ ] `words/clap` : "clap" (a word to build: l beside another consonant)
+- [ ] `words/help` : "help" (a word to build: l beside another consonant)
 
 ## Next: w j y x qu v z
 

@@ -23,7 +23,7 @@ anything about UFLI; do not go from memory.
   nearest lesson first. What a lesson needs follows from the skill it teaches: a grapheme needs its
   sound, its keyword words (`src/content/keywords.json`: heard in "like in ...", never read) and, for
   a single letter, its name; a blending lesson needs enough buildable words from the graphemes taught
-  so far. A new kind of skill gets its own rule in `scripts/audio-wanted.mjs`
+  so far, and a lesson on new word shapes needs them of those shapes with its letter in. A new kind of skill gets its own rule in `scripts/audio-wanted.mjs`
 
 URL switches: `?reset` clears the progress of the child who played last, `?demo` fills the home island, `?scene=map|home|who|sleeper|friends|<node id>`
 (`who` is where children choose who is playing, with `&demo` a full row of six; `sleeper` replays the map scene where the sleeper takes the plank, `friends` the one where it gives it back;
@@ -84,6 +84,10 @@ Add its nodes to `scripts/play.mjs` and its map to `scripts/shots.mjs`, run `npm
 and look at the chart in both layouts. Nothing on the chart is placed by hand: `src/scenes/chartSheets.ts`
 cuts the sheet into a spot for every area the curriculum lists, so adding one to the list makes the rest a
 little smaller. An eleventh big one needs a spot at home (`DENS` in `homeIsland.ts`).
+
+A lesson added to an area children have already played is marked `late` in the curriculum. Saved progress is keyed
+by node id: a beaten checkpoint settles its whole area (`settled`), so nobody is sent back, and a child still there
+finds the new lesson next on the path.
 
 ## Adding an exercise
 

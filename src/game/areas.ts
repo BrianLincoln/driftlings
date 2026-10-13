@@ -1,5 +1,5 @@
 import { COATS, SPECIES, type Rescue } from '../cast/species';
-import { AREAS, type AreaDef, type NodeDef } from '../learn/curriculum';
+import { AREAS, closerOf, type AreaDef, type NodeDef } from '../learn/curriculum';
 
 // The islands the game goes to, in order, and the big one who lives on each.
 // An island (an "area" in the code) is open once it has a big one here and a
@@ -36,8 +36,7 @@ export const BIG_ONES: Record<string, BigOne> = {
 
 export const OPEN_AREAS: AreaDef[] = AREAS.filter((a) => a.id in BIG_ONES);
 
-/** The checkpoint that ends an area. */
-export const closerOf = (area: AreaDef): NodeDef => area.nodes[area.nodes.length - 1];
+export { closerOf };
 export const isFinished = (area: AreaDef, done: ReadonlySet<string>): boolean => done.has(closerOf(area).id);
 export const lessonsOf = (area: AreaDef): NodeDef[] => area.nodes.filter((n) => n.kind === 'lesson');
 
