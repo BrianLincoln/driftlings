@@ -3,6 +3,7 @@ import { Spring } from '../../cast/spring';
 import { TAG } from '../../gfx/glsl';
 import { toonMaterial } from '../../gfx/materials';
 import { bug, cat, dog, pig } from './animals';
+import { fan, fin, man, mat, pan, pin, tap, tin } from './batch1';
 import { bat, bed, cup, map, pot } from './objects';
 import { part, type Drawing } from './parts';
 
@@ -11,7 +12,7 @@ import { part, type Drawing } from './parts';
 // to the clearing's camera. A word can only be shown as a thing if it has a recipe here.
 // docs/things.md has the rules a drawing follows, and how to look at one.
 
-const RECIPES: Record<string, () => Drawing> = { cup, pot, bed, cat, bat, map, dog, pig, bug };
+const RECIPES: Record<string, () => Drawing> = { cup, pot, bed, cat, bat, map, dog, pig, bug, mat, man, pan, fan, pin, tin, fin, tap };
 
 export const THING_NAMES = Object.keys(RECIPES);
 
