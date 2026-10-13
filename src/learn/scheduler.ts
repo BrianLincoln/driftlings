@@ -82,23 +82,28 @@ function picks(n: number, pool: string[], ctx: GenContext, now: number): PickLet
  * `intro` is the lesson that teaches the shapes, where the watcher first
  * jumbles the letters. It goes through the word list in order (the list starts
  * with the simplest), so it always opens on the same word, and the child is
- * shown how on the first word of each shape. Anywhere else the child is shown
- * how on the first word unless that word shape is already going well.
+ * shown how on the first word of each shape. No shape takes more than its
+ * share of the round while another has a word left. Anywhere else the child is
+ * shown how on the first word unless that word shape is already going well.
  */
 function blends(n: number, ctx: GenContext, now: number, opts: { favour?: readonly string[]; intro?: boolean; early?: boolean; only?: (w: Word) => boolean } = {}): BlendItem[] {
   let pool = (opts.early ? readableWords(ctx) : decodableWords(ctx)).filter(opts.only ?? (() => true));
   const out: BlendItem[] = [];
   const shown = new Set<SkillId>();
   const favoured = (x: { graphemes: string[] }) => x.graphemes.filter((g) => opts.favour?.includes(g));
+  const shapeOfWord = (x: { graphemes: string[] }) => blend(shapeOf(x.graphemes));
+  const share = Math.ceil(n / Math.max(1, new Set(pool.map(shapeOfWord)).size));
+  const room = (xs: Word[]) => xs.find((x) => out.filter((i) => i.skills[0] === shapeOfWord(x)).length < share);
   while (out.length < n && pool.length > 0) {
     // Words with a favoured letter come first, and one with a favoured letter no word has used yet before those:
     // however long the word list gets, a new letter is seen in a word, and a checkpoint's words go round its letters.
     const used = new Set(out.flatMap((i) => i.graphemes));
     const unseen = pool.filter((x) => favoured(x).some((g) => !used.has(g)));
     const any = unseen.length ? unseen : pool.filter((x) => favoured(x).length > 0);
-    const w = opts.intro ? pool[0] : weighted(any.length ? any : pool, (x) => need(ctx.states.get(blend(shapeOf(x.graphemes))), now), ctx.rng);
+    const from = any.length ? any : pool;
+    const w = opts.intro ? room(from) ?? room(pool) ?? from[0] : weighted(from, (x) => need(ctx.states.get(shapeOfWord(x)), now), ctx.rng);
     pool = pool.filter((x) => x.text !== w.text); // each word once per round
-    const shape = blend(shapeOf(w.graphemes));
+    const shape = shapeOfWord(w);
     const status = statusOf(ctx.states.get(shape));
     const guide = opts.intro ? !shown.has(shape) : out.length === 0 && (status === 'new' || status === 'shaky');
     const item = blendItem(w.text, ctx, !ctx.known.has(shape) ? 'read' : guide ? 'guided' : 'free');
@@ -157,8 +162,10 @@ export function planLesson(node: NodeDef, ctx: GenContext, now: number): Round[]
   if (node.teaches.some(isEnding)) return planEnding(node, older, ctx, now);
 
   if (teachesBlending) {
+    // Only words of the shapes this lesson is about: a later one has every earlier shape to hand as well.
+    const own = (w: Word) => node.teaches.includes(blend(shapeOf(w.graphemes)));
     return [
-      ...round(blends(SIZES.blendLessonBlends, ctx, now, { intro: true })),
+      ...round(blends(SIZES.blendLessonBlends, ctx, now, { intro: true, only: own, favour: node.favours })),
       ...round(spread(picks(SIZES.blendLessonPicks, older, ctx, now), ctx)),
     ];
   }

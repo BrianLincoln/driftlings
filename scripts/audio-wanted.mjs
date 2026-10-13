@@ -4,6 +4,8 @@
 // What a lesson needs depends on what it teaches:
 //   a grapheme       its sound, its letter name (single letters only), and its keyword words
 //   blending words   enough buildable words made only of graphemes taught so far
+//   new word shapes  the same, of the shapes the lesson teaches and with its letter in them (r in "trip", l in "flag" and
+//                    "milk"): the lesson's words are shared evenly between its shapes, as the scheduler shares them
 //   an ending        the lines that explain it, and for each thing shown as one and several
 //                    (src/content/endings.json) its word with the s; for s saying /z/, two short words where it does too
 
@@ -17,18 +19,19 @@ const words = Object.values(json('src/content/words.json')).filter(Array.isArray
 const has = (id) => id in manifest;
 
 // The lessons in order, a step past what the curriculum lists so recording can run ahead of building.
-// A string is a grapheme; { blend: n } is a lesson that needs n buildable words; { ending: 's' | 'z' } is an s on the end, saying that.
+// A string is a grapheme; { blend: n } is a lesson that needs n buildable words, of `shapes` (vc and cvc unless given)
+// and with the letter `having` in them if given; { ending: 's' | 'z' } is an s on the end, saying that.
 const STEPS = [
   ['Island 1', ['a', 'm', 's', 't', { blend: 4 }]],
   ['Island 2', ['p', 'f', 'i', 'n']],
   ['Island 3', ['o', 'd', 'c']],
   ['Island 4', ['u', 'g', 'b', 'e']],
-  ['Island 5', [{ ending: 's' }, { ending: 'z' }, 'k', 'h', 'r', 'l']],
+  ['Island 5', [{ ending: 's' }, { ending: 'z' }, 'k', 'h', 'r', { blend: 4, shapes: ['ccvc'], having: 'r' }, 'l', { blend: 4, shapes: ['ccvc', 'cvcc'], having: 'l' }]],
   ['Next: w j y x qu v z', ['w', 'j', 'y', 'x', 'qu', 'v', 'z']],
 ];
 
 const VOWELS = 'aeiou';
-const buildable = (w) => /^(vc|cvc)$/.test([...w].map((c) => (VOWELS.includes(c) ? 'v' : 'c')).join(''));
+const shapeOf = (w) => [...w].map((c) => (VOWELS.includes(c) ? 'v' : 'c')).join('');
 
 const lines = [
   '# Audio wanted',
@@ -65,9 +68,14 @@ for (const [title, steps] of STEPS) {
         for (const w of ok.filter((w) => !has(`words/${w}`)).slice(0, Math.max(0, short))) want.push(`\`words/${w}\` : "${w}" (s says /z/)`);
       }
     } else {
-      const ok = words.filter((w) => buildable(w) && [...w].every((c) => taught.has(c)));
-      const short = step.blend - ok.filter((w) => has(`words/${w}`)).length;
-      for (const w of ok.filter((w) => !has(`words/${w}`)).slice(0, Math.max(0, short))) want.push(`\`words/${w}\` : "${w}" (a word to build)`);
+      const shapes = step.shapes ?? ['vc', 'cvc'];
+      // With one shape or the old two, any mix will do; new shapes each get their share of the lesson.
+      for (const group of step.shapes ? shapes.map((s) => [s]) : [shapes]) {
+        const ok = words.filter((w) => group.includes(shapeOf(w)) && [...w].every((c) => taught.has(c)) && (!step.having || w.includes(step.having)));
+        const short = Math.ceil((step.blend * group.length) / shapes.length) - ok.filter((w) => has(`words/${w}`)).length;
+        const why = step.having ? `a word to build: ${step.having} beside another consonant` : 'a word to build';
+        for (const w of ok.filter((w) => !has(`words/${w}`)).slice(0, Math.max(0, short))) want.push(`\`words/${w}\` : "${w}" (${why})`);
+      }
     }
   }
   lines.push(`## ${title}`, '', ...(want.length ? want.map((l) => `- [ ] ${l}`) : ['Complete.']), '');

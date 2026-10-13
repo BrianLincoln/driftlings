@@ -18,7 +18,7 @@ import type { Diorama, StageContext } from './diorama';
 import { Dust } from './dust';
 import { LetterTile } from './letterTile';
 import { Pips } from '../ui/pips';
-import { PROP_MAT, buildCard, bushGeo, rockGeo, treeGeo } from './props';
+import { PROP_MAT, TILE, buildCard, bushGeo, rockGeo, treeGeo } from './props';
 import { Thing } from './things';
 
 // The host for exercises: a small clearing, the companion, and whoever is
@@ -122,6 +122,11 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
       const gap = row === 'tiles' ? Math.min(1.14, (mode === 'tall' ? 3.5 : 6) / count) : (mode === 'tall' ? 1.05 : 1.2);
       const x = (index - (count - 1) / 2) * gap;
       return new THREE.Vector3(x, y(x, z), z);
+    },
+    fit(count) {
+      // A tile is 1.14 from the next at full size; the row may be as wide as the stage box less a margin.
+      const room = mode === 'tall' ? 3.6 : 6.4;
+      return Math.min(1, room / (TILE.width + (count - 1) * 1.14));
     },
     sideSpot: () => (mode === 'tall' ? new THREE.Vector3(-1.35, 0, 3.75) : new THREE.Vector3(-2.9, 0, 2.0)),
     besideSpot(tile) {

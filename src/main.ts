@@ -8,7 +8,7 @@ import { BIG_ONES, OPEN_AREAS, closerOf, isFinished, lessonsOf } from './game/ar
 import { Game } from './game/game';
 import { newChild, type Child } from './game/children';
 import { lastChild, openDevice, rememberChild } from './game/store';
-import { AREAS, findNode, rescueIndex, type AreaDef } from './learn/curriculum';
+import { AREAS, findNode, rescueIndex, type AreaDef, type NodeDef } from './learn/curriculum';
 import { blend, graphemeOf, shapeOf } from './learn/skills';
 import { rescue, type Rescue } from './cast/species';
 import { createAreaMap, type MapNode } from './scenes/areaMap';
@@ -89,6 +89,15 @@ async function boot(): Promise<void> {
         found: i <= isle ? { place: PLACES[AREAS[i].id], finished: isFinished(AREAS[i], done) } : null,
       })),
     };
+  };
+  /**
+   * What a word-building lesson's stone shows: the word it opens on, the first in the list of a shape it teaches (with its
+   * letter in, where it has one). A stone's tile holds three letters, so of a longer word it shows the two consonants that stand together.
+   */
+  const opensOn = (n: NodeDef): string => {
+    const fits = CONTENT.words.filter((w) => n.teaches.includes(blend(shapeOf(w.graphemes))));
+    const word = (fits.find((w) => n.favours?.some((g) => w.graphemes.includes(g))) ?? fits[0])?.text ?? n.favours?.[0] ?? '';
+    return word.length > 3 ? word.match(/[^aeiou]{2}/)?.[0] ?? word.slice(0, 2) : word;
   };
   const allDone = (area: AreaDef) => new Set([...game.done, ...OPEN_AREAS.slice(0, OPEN_AREAS.indexOf(area) + 1).flatMap((a) => a.nodes.map((n) => n.id))]);
 
@@ -187,7 +196,7 @@ async function boot(): Promise<void> {
         id: n.id,
         state: done.has(n.id) ? 'done' : n.id === currentId ? 'current' : 'locked',
         // The word-building lesson shows the word it opens on: the first in the list of a shape it teaches.
-        label: n.kind !== 'lesson' ? '' : letter ?? ending ?? CONTENT.words.find((w) => n.teaches.includes(blend(shapeOf(w.graphemes))))?.text ?? '',
+        label: n.kind !== 'lesson' ? '' : letter ?? ending ?? opensOn(n),
         rescue: n.kind === 'lesson' ? rescue(rescueIndex(n.id)) : null,
         boss: n.kind !== 'lesson',
       };
