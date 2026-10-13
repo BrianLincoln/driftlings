@@ -17,7 +17,7 @@ anything about UFLI; do not go from memory.
   prints ok/FAIL and saves screenshots to `shots/play-*`
 - `npm run shots` : screenshot each area's map and the home island (from the landing, and with the companion sent
   to three other parts of it) at four sizes into `shots/`.
-  `npm run shots -- chart@i1a2` takes any `?scene=` at one area; `-- crews` is home with every crew
+  `npm run shots -- chart@i1a2` takes any `?scene=` at one area, `-- chart@sea3` the chart of a later sea; `-- crews` is home with every crew
 - `npm run audio` : take in clips from `audio-inbox/`, rebuild `public/audio/` and the manifest
 - `npm run audio:wanted` : write `audio-inbox/WANTED.md`, the clips the lessons ahead are missing,
   nearest lesson first. What a lesson needs follows from the skill it teaches: a grapheme needs its
@@ -30,7 +30,8 @@ URL switches: `?reset` clears the progress of the child who played last, `?demo`
 `leave` holds the ship pulling away, `chart` the same with the chart unrolled over it, `arrive` the landing
 at home with everyone getting off; `sail` plays the whole crossing home),
 `?area=i1a2` goes to that area whatever the progress (alone, or with any of the scenes above),
-`?isles=43` draws the chart as it will be with that many islands, `?q=low`.
+`?isles=43` draws the chart as it will be with that many islands (more sheets, not smaller islands), `?sea=3` with
+`?scene=chart` the sheet of the third sea as on the crossing to its last island, `?q=low`.
 
 Pushing to `main` deploys `dist/` to GitHub Pages. Tell the owner a change is ready locally
 before committing and deploying.
@@ -75,15 +76,16 @@ before committing and deploying.
 ## Opening an area
 
 An area is an island: the curriculum (`src/learn/curriculum.ts`) is one flat list of them, `AREAS`, in the
-order the ship finds them, and there is one chart with all of them on it. (The ids, `i1a1` to `i2a1`, are
+order the ship finds them. The chart has a sheet for each sea of six of them (`SEA` in `src/scenes/chartSheets.ts`),
+and a crossing shows the sheet of the sea it is in. (The ids, `i1a1` to `i2a1`, are
 left over from when areas were grouped; saved progress uses them, so they stay.)
 
 The curriculum already lists it. Give it a big one in `BIG_ONES`
 (`src/game/areas.ts`) and an entry in `PLACES` (`src/scenes/places.ts`); a test checks the two agree.
 Add its nodes to `scripts/play.mjs` and its map to `scripts/shots.mjs`, run `npm run audio:wanted`,
 and look at the chart in both layouts. Nothing on the chart is placed by hand: `src/scenes/chartSheets.ts`
-cuts the sheet into a spot for every area the curriculum lists, so adding one to the list makes the rest a
-little smaller. An eleventh big one needs a spot at home (`DENS` in `homeIsland.ts`).
+cuts each sea's sheet into six spots, and an island's spot follows only from its place in the list, so adding
+one to the end moves none of the others and the seventh of a sea starts a new sheet. An eleventh big one needs a spot at home (`DENS` in `homeIsland.ts`).
 
 ## Adding an exercise
 

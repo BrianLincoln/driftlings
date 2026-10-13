@@ -16,14 +16,16 @@ import { sheetLayout, type SheetLayout } from './chartSheets';
 // The chart, held up in front of the ship as it gets under way (voyage.ts): a
 // scroll that unrolls across the picture. Home is drawn on it under its little
 // house, each island found so far under its flag (with a tick once it is
-// finished), and further off the pale blank shapes of every place nobody has
-// been to yet: one chart for the whole game. A dashed line joins home and the island this crossing is to or from,
+// finished), and further off the pale blank shapes of the places nobody has
+// been to yet. It shows one sea at a time (chartSheets.ts): the one this crossing is in. A dashed line joins home and the island this crossing is to or from,
 // a cross marks where we are going, and a toy ship sails the line, rubbing out
 // the dashes as it passes.
 
 export interface ChartPlan {
   to: Port;
-  /** Every island there is, in order: the outline of each, and for those found so far what is drawn on it. The rest stay blank. */
+  /** Which sea this crossing is in, from 0: it has a sheet of its own. */
+  sea: number;
+  /** Every island of that sea, in order: the outline of each, and for those found so far what is drawn on it. The rest stay blank. */
   isles: Array<{ seed: number; found: { place: Place; finished: boolean } | null }>;
   /** Which of them this crossing is to or from. */
   isle: number;
@@ -57,7 +59,7 @@ const UP = new THREE.Vector3(0, 1, 0);
 const LAND = 0.064;
 
 export function createChart(plan: ChartPlan): Chart {
-  const SHEET: Record<LayoutMode, SheetLayout> = { wide: sheetLayout('wide', plan.isles.length), tall: sheetLayout('tall', plan.isles.length) };
+  const SHEET: Record<LayoutMode, SheetLayout> = { wide: sheetLayout('wide', plan.sea, plan.isles.length), tall: sheetLayout('tall', plan.sea, plan.isles.length) };
   const root = new THREE.Group();
   root.matrixAutoUpdate = false;
   root.visible = false;

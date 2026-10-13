@@ -4,6 +4,7 @@
 //   npm run shots                 all scenes, all sizes
 //   npm run shots -- blend        one scene
 //   npm run shots -- chart@i1a2   a scene at one area (any `?scene=` name, then `@` and the area)
+//   npm run shots -- chart@sea3   the chart's sheet for a later sea
 //   npm run shots -- crews        the home island with every open area's crew, as play leaves it
 //   npm run shots -- --no-build   reuse dist/
 //
@@ -64,7 +65,7 @@ for (const size of SIZES) {
   for (const scene of SCENES) {
     const [name, area] = scene.split('@');
     const low = flags.has('--low') ? '&q=low' : '';
-    await page.goto(name === 'crews' ? `${base}?reset&scene=map${low}` : `${base}?scene=${name}${area ? `&area=${area}` : ''}&demo${low}`);
+    await page.goto(name === 'crews' ? `${base}?reset&scene=map${low}` : `${base}?scene=${name}${area ? (/^sea\d+$/.test(area) ? `&sea=${area.slice(3)}` : `&area=${area}`) : ''}&demo${low}`);
     await page.waitForFunction(() => window.__dl?.ready === true, null, { timeout: 15000 });
     if (name === 'crews') {
       // Everyone comes up from the ship; wait until the last of them has found its spot.

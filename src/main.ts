@@ -15,6 +15,7 @@ import { createAreaMap, type MapNode } from './scenes/areaMap';
 import { createExerciseScene } from './scenes/exerciseScene';
 import { createHomeIsland } from './scenes/homeIsland';
 import { createLandfall } from './scenes/landfall';
+import { SEA, placeInSea, seaOf } from './scenes/chartSheets';
 import { PLACES } from './scenes/places';
 import { createVoyage, type Port } from './scenes/voyage';
 import { createWho } from './scenes/who';
@@ -77,17 +78,25 @@ async function boot(): Promise<void> {
   /** The little ones waiting on deck: everyone woken so far on an island that is not finished with. */
   const onDeck = (area: AreaDef): Rescue[] =>
     isFinished(area, game.done) ? [] : lessonsOf(area).filter((n) => game.done.has(n.id)).map((n) => rescue(rescueIndex(n.id)));
-  /** What the chart shows on a crossing to or from `area`: every island there is, those up to this one found, and ticked if finished. */
+  /** What the chart shows on a crossing to or from `area`: every island of its sea, those up to this one found, and ticked if finished. */
   const charted = (area: AreaDef, done = game.done) => {
-    const isle = AREAS.indexOf(area);
-    // `?isles=43` draws the chart as it will be with that many islands, the extra ones blank.
-    const count = Math.max(AREAS.length, Number(params.get('isles')) || 0);
+    // `?sea=3` draws the third sea instead, as on the crossing to its last island, and `?isles=43` the chart as it
+    // will be with that many islands, the extra ones blank. Islands not made yet borrow the look of ones that are.
+    const ahead = Math.max(0, Math.floor(Number(params.get('sea')) || 0));
+    const count = Math.max(AREAS.length, Number(params.get('isles')) || 0, ahead * SEA);
+    const last = ahead ? Math.min(ahead * SEA, count) - 1 : AREAS.indexOf(area);
+    const first = seaOf(last) * SEA;
+    const lent = (i: number) => PLACES[(AREAS[i] ?? OPEN_AREAS[i % OPEN_AREAS.length]).id];
     return {
-      isle,
-      isles: Array.from({ length: count }, (_, i) => ({
-        seed: PLACES[AREAS[i]?.id]?.shape.seed ?? 1.3 + i * 1.7,
-        found: i <= isle ? { place: PLACES[AREAS[i].id], finished: isFinished(AREAS[i], done) } : null,
-      })),
+      sea: seaOf(last),
+      isle: placeInSea(last),
+      isles: Array.from({ length: Math.min(SEA, count - first) }, (_, n) => {
+        const i = first + n;
+        return {
+          seed: PLACES[AREAS[i]?.id]?.shape.seed ?? 1.3 + i * 1.7,
+          found: i <= last ? { place: lent(i), finished: AREAS[i] ? isFinished(AREAS[i], done) : i < last } : null,
+        };
+      }),
     };
   };
   const allDone = (area: AreaDef) => new Set([...game.done, ...OPEN_AREAS.slice(0, OPEN_AREAS.indexOf(area) + 1).flatMap((a) => a.nodes.map((n) => n.id))]);
