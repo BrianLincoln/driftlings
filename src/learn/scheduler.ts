@@ -1,11 +1,11 @@
-import { areaSkills, type AreaDef, type NodeDef } from './curriculum';
+import { areaSkills, areaVowels, type AreaDef, type NodeDef } from './curriculum';
 import { chainItem } from './chains';
 import { askableGraphemes, catchItem, heartBuild, heartFind, heartMeet, heartWords, manyItem, manyWords, meetItem, oddAt, pickLetterItem, type GenContext } from './generator';
 import { readItem, type ReadWant } from './reads';
 import type { ChainItem, ReadItem, Round, Word } from './items';
 import { isDue, statusOf, type SkillState } from './model';
 import { shuffle, weighted } from './rng';
-import { SIZES, blends, manyAsks, need, nonNull, picks, round, spread } from './rounds';
+import { SIZES, blends, manyAsks, need, nonNull, picks, round, spread, vowelPicks } from './rounds';
 import { blend, gpc, graphemeOf, heart, heartOf, shapeOf, type SkillId } from './skills';
 
 export { SIZES, need } from './rounds';
@@ -43,7 +43,7 @@ function planEnding(node: NodeDef, older: string[], ctx: GenContext, now: number
 /** What every lesson ends with once there are irregular words: anything about them that is owed, and words to read in silence. */
 function closing(node: NodeDef, ctx: GenContext, now: number): Round[] {
   const h = hearts(ctx, now, nonNull(node.teaches.map(heartOf)));
-  return [...h.rounds, ...round(reads(SIZES.lessonReads, ctx, h.met))];
+  return [...h.rounds, ...round(node.review ? reads(SIZES.reviewReads, ctx, h.met, node.favours) : reads(SIZES.lessonReads, ctx, h.met))];
 }
 
 /** An irregular word the child has answered about at least once. Until then it has to be met before anything asks about it. */
@@ -85,14 +85,15 @@ const SCENES = false;
 /**
  * Words read in silence: first a phrase ("the bug"), then sentences that say which thing ("I see a bug"), once the child
  * has met the words they begin with; a phrase again until then. Only irregular words the child has met stand in them.
+ * `tell` are vowels to be told apart (pan, pin).
  */
-function reads(n: number, ctx: GenContext, met: readonly string[]): ReadItem[] {
+function reads(n: number, ctx: GenContext, met: readonly string[], tell: readonly string[] = []): ReadItem[] {
   const out: ReadItem[] = [];
   for (let i = 0; i < n; i++) {
     const want: ReadWant = i === 0 ? 'phrase' : SCENES && ctx.rng() < 0.5 ? 'scene' : 'sentence';
     // Not the same thing twice running, where chance allows another.
-    let item = readItem(ctx, met, want, SIZES.sentenceTiles);
-    for (let tries = 0; item && out.length && tries < 4 && item.target.thing === out[out.length - 1].target.thing; tries++) item = readItem(ctx, met, want, SIZES.sentenceTiles);
+    let item = readItem(ctx, met, want, SIZES.sentenceTiles, tell);
+    for (let tries = 0; item && out.length && tries < 4 && item.target.thing === out[out.length - 1].target.thing; tries++) item = readItem(ctx, met, want, SIZES.sentenceTiles, tell);
     if (item) out.push(item);
   }
   return out;
@@ -112,6 +113,34 @@ function chains(ctx: GenContext, now: number, favour: readonly string[] = [], ow
 }
 
 /**
+ * The chains of a lesson that goes back over vowels, and of its checkpoint: two, each changing the vowel wherever its
+ * words allow (sat, sit, set). The first is of three-letter words, where a vowel has the most neighbours; the second of
+ * the lesson's new shapes if they link up, and of any longer words if not, so more sounds are held while the vowel moves.
+ */
+function vowelChains(ctx: GenContext, now: number, vowels: readonly string[], own: readonly SkillId[] = []): ChainItem[] {
+  const weight = (w: Word) => need(ctx.states.get(blend(shapeOf(w.graphemes))), now);
+  const any = { steps: SIZES.chainSteps, favour: vowels, weight, vowels: true };
+  const long = (w: Word) => w.graphemes.length > 3;
+  const short = chainItem(ctx, { ...any, min: SIZES.chainLeast, only: (w) => !long(w) });
+  const ofOwn = own.length ? chainItem(ctx, { ...any, min: SIZES.shapeChainLeast, only: (w) => own.includes(blend(shapeOf(w.graphemes))) }) : null;
+  return nonNull([short, ofOwn ?? chainItem(ctx, { ...any, min: SIZES.shapeChainLeast, only: long })]);
+}
+
+/**
+ * A lesson that goes back over short vowels. A sound is matched to its vowel with only vowels to choose between;
+ * then words with the lesson's vowels are built, the first two of a new shape if the lesson brings one (shown how).
+ */
+function planReview(node: NodeDef, ctx: GenContext, now: number): Round[] {
+  const vowels = node.favours ?? [];
+  const own = (w: Word) => node.teaches.includes(blend(shapeOf(w.graphemes)));
+  const fresh = blends(node.teaches.length ? SIZES.lessonBlends : 0, ctx, now, { intro: true, only: own, favour: vowels });
+  return [
+    ...round(vowelPicks(SIZES.reviewPicks, vowels, ctx, now)),
+    ...round([...fresh, ...blends(SIZES.reviewBlends - fresh.length, ctx, now, { favour: vowels, only: (w) => !own(w) })]),
+  ];
+}
+
+/**
  * A lesson. `ctx.known` must already include what the node teaches.
  * New letters are met, then practised with older letters mixed in, then caught as they fall, then used in words
  * (only sounded out and heard until the lesson that teaches word building).
@@ -122,6 +151,7 @@ function chains(ctx: GenContext, now: number, favour: readonly string[] = [], ow
 export function planLesson(node: NodeDef, ctx: GenContext, now: number): Round[] {
   const letters = [...nonNull(node.teaches.map(graphemeOf)), ...(node.favours ?? [])];
   const shapes = node.teaches.filter((s) => s.startsWith('blend:'));
+  if (node.review) return [...planReview(node, ctx, now), ...round(vowelChains(ctx, now, node.favours ?? [], shapes)), ...closing(node, ctx, now)];
   return [...teaching(node, ctx, now), ...round(chains(ctx, now, letters, shapes)), ...closing(node, ctx, now)];
 }
 
@@ -156,6 +186,16 @@ function teaching(node: NodeDef, ctx: GenContext, now: number): Round[] {
 
 /** A mini-boss or boss: the cumulative check for an area. Every letter appears at least once, its words use them, an ending taught here is asked about, and there is a word chain. */
 export function planCheckpoint(area: AreaDef, ctx: GenContext, now: number): Round[] {
+  const vowels = areaVowels(area);
+  // An area that went back over the vowels: every one of them is asked for and stands in a word, of the new shapes most of all.
+  if (vowels.length) {
+    return [
+      ...round(vowelPicks(SIZES.checkpointPicks, vowels, ctx, now)),
+      ...round(blends(SIZES.reviewCheckBlends, ctx, now, { favour: vowels })),
+      ...round(vowelChains(ctx, now, vowels)),
+      ...closingCheck(area, ctx, now, vowels),
+    ];
+  }
   const letters = nonNull(areaSkills(area).map(graphemeOf)).filter((g) => ctx.known.has(gpc(g)) && ctx.content.hasSound(g));
   const once = nonNull(letters.map((g) => pickLetterItem(g, ctx)));
   const extra = picks(Math.max(0, SIZES.checkpointPicks - once.length), letters, ctx, now);
@@ -169,11 +209,11 @@ export function planCheckpoint(area: AreaDef, ctx: GenContext, now: number): Rou
 }
 
 /** A checkpoint asks for each irregular word its area taught, has each spelled unaided, and ends on words read in silence. */
-function closingCheck(area: AreaDef, ctx: GenContext, now: number): Round[] {
+function closingCheck(area: AreaDef, ctx: GenContext, now: number, tell: readonly string[] = []): Round[] {
   const own = nonNull(areaSkills(area).map(heartOf));
   const h = hearts(ctx, now, [], own);
   const builds = nonNull(own.filter((w) => h.met.includes(w)).map((w) => heartBuild(w, ctx, 'free')));
-  return [...h.rounds, ...round(builds), ...round(reads(SIZES.checkpointReads, ctx, h.met))];
+  return [...h.rounds, ...round(builds), ...round(reads(SIZES.checkpointReads, ctx, h.met, tell))];
 }
 
 /** Skills that are overdue or shaky. An empty list means no practice is called for. */

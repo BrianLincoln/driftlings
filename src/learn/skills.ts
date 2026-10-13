@@ -1,7 +1,7 @@
 // The unit of learning. Everything the scheduler, generator and parent view
 // talk about is a skill id. This layer has no dependency on rendering.
 
-export type WordShape = 'vc' | 'cvc' | 'ccvc' | 'cvcc' | 'other';
+export type WordShape = 'vc' | 'cvc' | 'ccvc' | 'cvcc' | 'ccvcc' | 'cccvc' | 'other';
 
 /**
  * gpc:m       the letter-sound correspondence m -> /m/
@@ -27,6 +27,9 @@ export function heartOf(id: SkillId): string | null {
 }
 
 const VOWELS = new Set(['a', 'e', 'i', 'o', 'u']);
+/** True of a grapheme that is a short vowel: the middle of every word so far. */
+export const isVowel = (g: string): boolean => VOWELS.has(g[0]);
+const SHAPES: ReadonlySet<string> = new Set(['vc', 'cvc', 'ccvc', 'cvcc', 'ccvcc', 'cccvc']);
 
 /**
  * A word cut into its graphemes: one per sound, so "quit" is qu, i, t. `multi` are the graphemes of more than one
@@ -46,10 +49,10 @@ export function splitGraphemes(spelling: string, multi: readonly string[]): stri
   });
 }
 
-/** Shape of a word from its graphemes, e.g. ['s','a','t'] -> 'cvc'. A grapheme of two letters is one place: qu, i, t is cvc too. */
+/** Shape of a word from its graphemes, e.g. ['s','a','t'] -> 'cvc'. A grapheme of two letters is one place: qu, i, t is cvc too. The longest are five places: stamp, strap. */
 export function shapeOf(graphemes: string[]): WordShape {
-  const s = graphemes.map((g) => (VOWELS.has(g[0]) ? 'v' : 'c')).join('');
-  return s === 'vc' || s === 'cvc' || s === 'ccvc' || s === 'cvcc' ? s : 'other';
+  const s = graphemes.map((g) => (isVowel(g) ? 'v' : 'c')).join('');
+  return SHAPES.has(s) ? (s as WordShape) : 'other';
 }
 
 /** Letters that make the same sound. Hearing the sound cannot tell them apart, so neither is offered beside the other. */

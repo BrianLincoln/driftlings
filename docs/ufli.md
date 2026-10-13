@@ -86,7 +86,7 @@ Lessons not listed add none. The review lessons (35 to 41, 49, 53) add none and 
 
 ## Where the game is
 
-Lessons 1 to 34 of 128, on six islands: the whole alphabet unit. Next is the review of short vowels with longer words (35 to 41), then digraphs (42 on).
+Lessons 1 to 41 of 128, on seven islands: the whole alphabet unit and the review of short vowels with longer words. Next is digraphs (42 on).
 
 | Island | UFLI | Notes |
 |---|---|---|
@@ -96,7 +96,8 @@ Lessons 1 to 34 of 128, on six islands: the whole alphabet unit. Next is the rev
 | `i1a4` | 15–19 | 19 is the checkpoint |
 | `i2a1` | 20–27 | 25 (`i2a1-r2`) teaches CCVC with r after another consonant; 27 (`i2a1-l2`) CCVC with l, and CVCC. Both were added after the island was out: see below |
 | `i2a2` | 28–34 | w j y x qu v z, one lesson each. The checkpoint is ours and a boss: the alphabet ends here |
-| next | 35–41 | review of each short vowel, with CCVCC and CCCVC words |
+| `i2a3` | 35–41 | one short vowel a lesson, no new letter: a, i, o, then a, i and o together (and CCVCC), u (and CCCVC), e. 41 (all five) is the checkpoint. See below |
+| next | 42–53 | digraphs |
 
 Blends, as the game has them:
 
@@ -112,6 +113,29 @@ Blends, as the game has them:
   shapes (shown how the first time one comes up) and finds two more little ones at home. A child still on the
   island does 25 and 27 before the checkpoint. The two new little ones are numbered after the island's others
   (`late`), so nobody already woken changes.
+
+The review of the short vowels (35 to 41), as the game has it:
+
+- **No new skill kind.** A vowel is already a skill (`gpc:a`); a review lesson is a node marked `review` whose `favours` are
+  its vowels, and it teaches nothing unless it brings a word shape. Telling vowels apart is scored where it is asked: as
+  the vowel's own skill, with the wrong vowel picked remembered as a confusion, so the next choices set that one beside it.
+- **Two new shapes**, `blend:ccvcc` (stamp) at 38 and `blend:cccvc` (strap) at 39. UFLI has all five shapes in every one of
+  the seven lessons; here 35 to 37 stay in the shapes already known, so only the vowel is new work, and each new shape
+  comes where the lesson's vowels have the most words of it (three consonants first hardly exist with short e).
+- **A review lesson** is: five sounds each matched to its vowel with only vowels to choose between (most of them the
+  lesson's own, never all); four words to build with the lesson's vowel, the first two of a new shape and shown how if it
+  brings one; two word chains; then the usual reading. The checkpoint asks for all five vowels and builds five words.
+- **Chains turn on the vowel** here (`vowels` in `ChainOptions`): a step that changes the vowel is taken wherever the words
+  allow (sat, sit, set), a vowel asked for has only vowels beside it, and a reading step's other words differ in that
+  tile (pin, pan, pun). The first chain is of three-letter words, the second of longer ones (the lesson's new shape if
+  its words link: scrap, strap, strip).
+- **Reading tells vowels apart** where the drawings allow: the thing to read is one whose word is another's but for the
+  vowel, with that other beside it. Today that is cap/cup, cat/cot, map/mop, pan/pin, fan/fin, tap/top; every new drawing
+  with a twin (pen, pig/peg, bag/bug, hat/hut) joins in by itself.
+- **The new words** (`i2a3` groups in `words.json`, about 220) are spelled mostly with early letters (stop, lamp, stamp).
+  They are marked `late` and held back until their shape is taught, so the first four islands' words stay two and three
+  letters long; from lesson 25 or 27 the four-letter ones may turn up in building and chains.
+- Not done: am/an as a point of its own at 35 (as at 11); words of the shape VCC (ant, end, elf) are still `other` and only heard.
 
 The last letters, as the game has them:
 
@@ -150,8 +174,8 @@ Word chains, as the game has them (`src/learn/chains.ts`, `src/exercises/chain.t
 - A reading step is answered by ear: two or three speakers, a tap says a word and a second tap chooses it. Only nine
   words have drawings, so pictures could stand in for the speakers in few steps; one way of answering was kept.
 - A lesson on new word shapes (25, 27) gets a chain of those shapes if its words link up at least twice: at 27 that is
-  slip, skip, skin. The four-letter words in `words.json` hardly link (crab and grab, held and help, those three), so
-  until more are added (drip, trap, clip, flap, slap would join them up) chains are almost all three-letter words.
+  slip, skip, skin. With the words added for the vowel review the longer ones link up well (slap, slip, slop; lamp, limp, lump)
+  once they are recorded.
 - The exercise says three lines of its own (`CHAIN_PROMPTS`). Until all three are recorded no chain is offered at all.
 
 What UFLI does that the game does not yet:
@@ -160,8 +184,7 @@ What UFLI does that the game does not yet:
 2. **Letter to sound** (step 2). Everything we have runs sound to letter.
 3. **Word chains that add or drop a letter** (step 6). Chains that swap one are in (`chain`, above), once their lines are recorded.
 4. **Sounds with no letters** (step 1): blending and segmenting by ear.
-5. **Longer blends** (35 to 41). CCVC and CVCC are taught (25, 27); CCVCC and CCCVC are not, and `shapeOf` calls
-   them `other`. The blend exercise already holds five tiles in both layouts.
+5. **Longer words still** (63 on): six sounds (sprint) and more than one syllable are `other` to `shapeOf`.
 6. **Heart words** (step 7). Seventeen of UFLI's twenty-two by lesson 34 are taught, one to a lesson, some a lesson or two
    late (`docs/heart-words.md` has the table). Not yet: look, book (they need the short oo), and (regular, but a shape
    nothing teaches), and is, as are ordinary words from lesson 21. None can be heard until its clip is recorded.

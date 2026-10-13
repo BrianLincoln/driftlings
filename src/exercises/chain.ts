@@ -22,8 +22,9 @@ const MOST = 0.85;
  * so the word can be read over the top; on a wide one they are side by side. The stream is in front of both.
  */
 const ROWS = {
-  tall: { word: [0, 0.45], offered: [0, 2.45], gap: 0.92, size: 0.7 },
-  wide: { word: [-1.3, 1.0], offered: [2.05, 1.5], gap: 0.98, size: 0.8 },
+  tall: { word: [0, 0.45], offered: [0, 2.45], gap: 0.92, size: 0.7, apart: [0, 0] },
+  // `apart`: how far a word of five tiles, and what is offered, step aside on a wide screen to stay clear of each other.
+  wide: { word: [-1.3, 1.0], offered: [2.05, 1.5], gap: 0.98, size: 0.8, apart: [0.4, 0.1] },
 } as const;
 const REPLAY_AFTER = 6;
 const HELP_AFTER = { spell: 14, read: 22 };
@@ -86,8 +87,9 @@ export const chainExercise: ExerciseModule<ChainItem> = {
     const bank = (far: boolean) => crossing!.place(far !== back() ? item().steps.length + 1 : 0);
 
     const rows = () => ROWS[kit.mode];
-    const slot = (i: number): THREE.Vector3 => kit.at(rows().word[0] + (i - (row.length - 1) / 2) * JOINED * scale, rows().word[1]);
-    const offered = (i: number): THREE.Vector3 => kit.at(rows().offered[0] + (i - (options.length - 1) / 2) * rows().gap, rows().offered[1]);
+    const apart = (i: 0 | 1) => (row.length > 4 ? rows().apart[i] : 0);
+    const slot = (i: number): THREE.Vector3 => kit.at(rows().word[0] - apart(0) + (i - (row.length - 1) / 2) * JOINED * scale, rows().word[1]);
+    const offered = (i: number): THREE.Vector3 => kit.at(rows().offered[0] + apart(1) + (i - (options.length - 1) / 2) * rows().gap, rows().offered[1]);
     const place = () => {
       row.forEach((tile, i) => tile.goal.copy(slot(i)));
       options.forEach((o, i) => {

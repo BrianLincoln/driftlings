@@ -177,6 +177,8 @@ export interface Word {
   text: string;
   graphemes: string[];
   sounds?: string[];
+  /** Kept back until its shape has been taught: never sounded out and heard ahead of that, as other words are. */
+  late?: boolean;
 }
 
 /** What the generator may draw on. Built from the audio manifest and the word list. */

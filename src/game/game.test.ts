@@ -79,7 +79,9 @@ describe('the word list', () => {
     for (const s of allNodes().flatMap((n) => n.teaches).filter((t) => t.startsWith('blend:'))) expect(shapes.has(s.slice(6) as 'cvc'), s).toBe(true);
     // Before the fifth island every lesson's words are two or three letters long, bar the keywords that happen to be decodable.
     const early = taughtBy('i1a4');
-    const long = words.filter((w) => w.length > 3 && split(w).every((g) => early.has(g)));
+    // The words of the vowel review (i2a3) are spelled with early letters too (stop, stamp): the game holds each back until its shape is taught.
+    const review = new Set(groups.filter(([g]) => g.startsWith('i2a3')).flatMap(([, list]) => list));
+    const long = words.filter((w) => w.length > 3 && !review.has(w) && split(w).every((g) => early.has(g)));
     expect(long).toEqual(['nest']);
   });
 });

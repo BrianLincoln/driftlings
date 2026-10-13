@@ -125,7 +125,8 @@ describe('where two words differ', () => {
 describe('word chains', () => {
   it('hold their rules at every node, for many seeds', () => {
     let made = 0;
-    for (const node of allNodes()) {
+    // The lessons that go back over vowels teach no letter, and their chains have tests of their own (review.test.ts).
+    for (const node of allNodes().filter((n) => !n.review)) {
       for (let seed = 1; seed <= 60; seed++) {
         const ctx = at(node.id, { seed });
         const c = chainItem(ctx);
@@ -276,8 +277,9 @@ describe('the scheduler and chains', () => {
         const ctx = at(n.id, { seed });
         const rounds = n.kind === 'lesson' ? planLesson(n, ctx, T0) : planCheckpoint(findNode(n.id)!.area, ctx, T0);
         const cs = chainsIn(rounds);
-        expect(cs.length).toBe(1);
-        check(cs[0], ctx);
+        // A lesson that goes back over vowels, and its checkpoint, have two: one of short words and one of longer.
+        expect(cs.length).toBe(findNode(n.id)!.area.nodes.some((x) => x.review) ? 2 : 1);
+        for (const c of cs) check(c, ctx);
         expect(rounds.filter((r) => r.exercise === 'chain').length).toBe(1);
       }
     }

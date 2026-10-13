@@ -1,8 +1,8 @@
-import { blendItem, decodableWords, manyItem, pickLetterItem, readableWords, type GenContext } from './generator';
+import { askableGraphemes, blendItem, decodableWords, manyItem, pickLetterItem, readableWords, type GenContext } from './generator';
 import type { BlendItem, Item, ManyItem, PickLetterItem, Round, Word } from './items';
 import { isDue, statusOf, type SkillState } from './model';
 import { shuffle, weighted } from './rng';
-import { blend, gpc, shapeOf, type SkillId } from './skills';
+import { blend, gpc, isVowel, shapeOf, type SkillId } from './skills';
 
 // What the scheduler makes its rounds from: how many of each thing, how much a skill needs attention,
 // and the runs of items (letters to pick, words to build, endings to ask about) that lessons, checkpoints and practice share.
@@ -42,6 +42,11 @@ export const SIZES = {
   chainSteps: 4,
   chainLeast: 3,
   shapeChainLeast: 2,
+  /** A lesson that goes back over a vowel: sounds to match to a vowel, words to build, things to read. Its checkpoint builds a word for each vowel. */
+  reviewPicks: 5,
+  reviewBlends: 4,
+  reviewReads: 3,
+  reviewCheckBlends: 5,
 };
 
 /** How much a skill needs attention right now. */
@@ -82,6 +87,21 @@ export function picks(n: number, pool: string[], ctx: GenContext, now: number): 
     Array.from({ length: n }, () =>
       pickLetterItem(weighted(pool, (g) => need(ctx.states.get(gpc(g)), now), ctx.rng), ctx)),
   );
+}
+
+/**
+ * Which vowel makes this sound: only vowels to choose between. Most are the lesson's own (`favoured`, turn about,
+ * and the first of all), the rest the other vowels by need, so the answer is never the same all the way through.
+ */
+export function vowelPicks(n: number, favoured: readonly string[], ctx: GenContext, now: number): PickLetterItem[] {
+  const vowels = askableGraphemes(ctx).filter(isVowel);
+  if (vowels.length === 0) return [];
+  const own = favoured.filter((g) => vowels.includes(g));
+  const rest = vowels.filter((g) => !own.includes(g));
+  const nOwn = rest.length ? Math.max(Math.ceil(n * SIZES.newShare), Math.min(n, own.length)) : n;
+  const targets = Array.from({ length: n }, (_, i) =>
+    own.length && (i < nOwn || !rest.length) ? own[i % own.length] : weighted(rest.length ? rest : vowels, (g) => need(ctx.states.get(gpc(g)), now), ctx.rng));
+  return spread(nonNull(targets.map((g) => pickLetterItem(g, ctx, 3, vowels))), ctx, own[0]);
 }
 
 /**

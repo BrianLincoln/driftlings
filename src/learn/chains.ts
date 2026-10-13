@@ -1,7 +1,7 @@
 import { askableGraphemes, decodableWords, key, oddAt, type GenContext } from './generator';
 import type { ChainItem, ChainStep, Word } from './items';
 import { shuffle, weighted } from './rng';
-import { blend, gpc, shapeOf, soundsLike } from './skills';
+import { blend, gpc, isVowel, shapeOf, soundsLike } from './skills';
 
 // Word chains: a word, then another one letter away, then another. Spelling and reading take turns,
 // spelling first. The rules it never breaks:
@@ -20,9 +20,6 @@ export const CHAIN_PROMPTS = {
   /** "Tap one to hear it. Tap it again to choose it." */
   how: 'tap-to-hear-tap-again-to-choose',
 } as const;
-
-const VOWELS = new Set(['a', 'e', 'i', 'o', 'u']);
-const isVowel = (g: string) => VOWELS.has(g[0]);
 
 /** Where two words differ, if they are the same length and differ in exactly one tile; -1 otherwise. */
 export function changedAt(a: readonly string[], b: readonly string[]): number {
@@ -47,6 +44,8 @@ export interface ChainOptions {
   min?: number;
   /** Letters the chain should bring in, best of all as the letter a spelling step asks for. */
   favour?: readonly string[];
+  /** Change the vowel wherever the words allow (sat, sit, set), and set only vowels beside a vowel that is asked for. */
+  vowels?: boolean;
   /** Keep the chain to some of the words. */
   only?: (w: Word) => boolean;
   /** How much each word is wanted (by need, say). 1 if not given. */
@@ -64,8 +63,12 @@ function walk(pool: Word[], steps: number, o: ChainOptions, ctx: GenContext): Wo
     const here = path[path.length - 1];
     let next = pool.filter((w) => !path.includes(w) && changedAt(here.graphemes, w.graphemes) >= 0);
     while (next.length) {
-      // A chain that changes a different tile each time asks for the whole word to be looked at.
-      const pick = weighted(next, (w) => want(w) * (changedAt(here.graphemes, w.graphemes) !== last ? 3 : 1), ctx.rng);
+      // A chain that changes a different tile each time asks for the whole word to be looked at; one about vowels stays on the vowel.
+      const turn = (w: Word) => {
+        const at = changedAt(here.graphemes, w.graphemes);
+        return o.vowels && isVowel(w.graphemes[at]) ? 9 : at !== last ? 3 : 1;
+      };
+      const pick = weighted(next, (w) => want(w) * turn(w), ctx.rng);
       next = next.filter((w) => w !== pick);
       const found = extend([...path, pick], changedAt(here.graphemes, pick.graphemes));
       if (found) return found;
@@ -91,6 +94,7 @@ function score(path: Word[], o: ChainOptions): number {
     places.add(at);
     const fav = o.favour?.includes(path[i].graphemes[at]);
     n += fav ? (i % 2 === 1 ? 6 : 2) : path[i].graphemes.some((g) => o.favour?.includes(g)) ? 1 : 0;
+    if (o.vowels && isVowel(path[i].graphemes[at])) n += 5;
   }
   return n + places.size * 2;
 }
@@ -112,12 +116,12 @@ function draw<T>(pool: T[], n: number, weight: (t: T) => number, ctx: GenContext
  * never one that sounds like the right one. One of its own kind (a vowel for a vowel), one that makes a real word,
  * and one the child has put there before are the most use.
  */
-function spellStep(from: Word, to: Word, at: number, pool: Word[], taught: string[], ctx: GenContext): ChainStep | null {
+function spellStep(from: Word, to: Word, at: number, pool: Word[], taught: string[], ctx: GenContext, vowels = false): ChainStep | null {
   const target = to.graphemes[at];
   const made = (g: string) => pool.find((w) => w.graphemes.length === to.graphemes.length && w.graphemes.every((x, i) => (i === at ? g : to.graphemes[i]) === x));
   const confused = ctx.confusions.get(target);
   const wrong = draw(
-    taught.filter((g) => !soundsLike(g, target) && !soundsLike(g, from.graphemes[at])),
+    taught.filter((g) => !soundsLike(g, target) && !soundsLike(g, from.graphemes[at]) && (!vowels || !isVowel(target) || isVowel(g))),
     2,
     (g) => 1 + (isVowel(g) === isVowel(target) ? 2 : 0) + (made(g) ? 2 : 0) + 3 * (confused?.get(g) ?? 0),
     ctx,
@@ -170,7 +174,7 @@ export function chainItem(ctx: GenContext, o: ChainOptions = {}): ChainItem | nu
     if (!best) continue;
     const made = best.slice(1).map((to, i) => {
       const at = changedAt(best![i].graphemes, to.graphemes);
-      return i % 2 === 0 ? spellStep(best![i], to, at, all, taught, ctx) : readStep(to, at, all, ctx);
+      return i % 2 === 0 ? spellStep(best![i], to, at, all, taught, ctx, o.vowels) : readStep(to, at, all, ctx);
     });
     if (made.some((s) => !s)) continue;
     return { kind: 'chain', key: key('chain', best[0].text), start: best[0].text, graphemes: best[0].graphemes, steps: made as ChainStep[] };

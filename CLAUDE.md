@@ -39,7 +39,7 @@ the dev server; that is the real test. Fix what breaks when it breaks.
   nearest lesson first. What a lesson needs follows from the skill it teaches: a grapheme needs its
   sound, its keyword words (`src/content/keywords.json`: heard in "like in ...", never read) and, for
   a single letter, its name (two letters that make one sound, like qu, have none); a blending lesson needs enough buildable words from the graphemes taught
-  so far, and a lesson on new word shapes needs them of those shapes with its letter in. An irregular word needs its word and the sound of each of its tiles (the letter's name where the tile says that). Word chains need the three lines the exercise says (`CHAIN_PROMPTS` in `src/learn/chains.ts`); no chain is offered until all three are recorded. A new kind of skill gets its own rule in `scripts/audio-wanted.mjs`
+  so far, and a lesson on new word shapes needs them of those shapes with its letter in. A lesson that goes back over a vowel names its words (`{ words }`). An irregular word needs its word and the sound of each of its tiles (the letter's name where the tile says that). Word chains need the three lines the exercise says (`CHAIN_PROMPTS` in `src/learn/chains.ts`); no chain is offered until all three are recorded. A new kind of skill gets its own rule in `scripts/audio-wanted.mjs`
 
 URL switches: `?reset` clears the progress of the child who played last, `?demo` fills the home island, `?scene=map|home|who|sleeper|friends|<node id>`
 (`who` is where children choose who is playing, with `&demo` a full row of six; `sleeper` replays the map scene where the sleeper takes the plank, `friends` the one where it gives it back;
@@ -109,9 +109,9 @@ run the sheet and the critic, and the words still to draw in batches. Read it be
 
 An area is an island: the curriculum (`src/learn/curriculum.ts`) is one flat list of them, `AREAS`, in the
 order the ship finds them. The chart has a sheet for each sea of six of them (`SEA` in `src/scenes/chartSheets.ts`),
-and a crossing shows the sheet of the sea it is in. Six are open, `i1a1` to `i2a2` (UFLI 1 to 34, the whole alphabet): the first sea's
-sheet is full, and the next island starts the second. (The ids are
-left over from when areas were grouped; saved progress uses them, so they stay. The next is `i2a3`.)
+and a crossing shows the sheet of the sea it is in. Seven are open, `i1a1` to `i2a3` (UFLI 1 to 41: the whole alphabet, then the
+short vowels gone back over in longer words): the first sea's sheet is full, and `i2a3` is the first island of the second. (The ids are
+left over from when areas were grouped; saved progress uses them, so they stay. The next is `i2a4`.)
 
 The curriculum already lists it. Give it a big one in `BIG_ONES`
 (`src/game/areas.ts`) and an entry in `PLACES` (`src/scenes/places.ts`); a test checks the two agree.
@@ -119,6 +119,10 @@ Add its nodes to `scripts/play.mjs` and its map to `scripts/shots.mjs`, run `npm
 and look at the chart in both layouts (`npm run shots -- chart@<area>`). The scripted play of it waits until the owner asks. Nothing on the chart is placed by hand: `src/scenes/chartSheets.ts`
 cuts each sea's sheet into six spots, and an island's spot follows only from its place in the list, so adding
 one to the end moves none of the others and the seventh of a sea starts a new sheet. An eleventh big one needs a spot at home (`DENS` in `homeIsland.ts`).
+
+A lesson with no new letter (`review` in the curriculum: UFLI 35 to 41) goes back over the vowels in its `favours`; the scheduler
+gives it vowels to tell apart, words with them, and chains that turn on the vowel. `docs/ufli.md` has what one is made of.
+Words in a group of `words.json` named for such an area are held back until their shape is taught (`late` on a `Word`).
 
 A lesson added to an area children have already played is marked `late` in the curriculum. Saved progress is keyed
 by node id: a beaten checkpoint settles its whole area (`settled`), so nobody is sent back, and a child still there

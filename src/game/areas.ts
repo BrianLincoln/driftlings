@@ -35,6 +35,8 @@ export const BIG_ONES: Record<string, BigOne> = {
   i2a1: big('lop', 'cocoa', 'huffy'),
   // The end of the alphabet: as big as the one who ended the vowels.
   i2a2: big('owlet', 'teal', 'merry', 1.4),
+  // The first of the second sea, and the first with fins.
+  i2a3: big('finlet', 'sky', 'restless'),
 };
 
 export const OPEN_AREAS: AreaDef[] = AREAS.filter((a) => a.id in BIG_ONES);

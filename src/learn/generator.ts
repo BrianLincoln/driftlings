@@ -40,10 +40,10 @@ export function meetItem(grapheme: string, ctx: GenContext): MeetItem | null {
   return { kind: 'meet', key: key('meet', grapheme), grapheme };
 }
 
-/** Up to `n` letters to set beside the target: taught ones and foils, never the target itself or a letter that says the same sound. */
-function wrongLetters(target: string, n: number, ctx: GenContext): string[] {
+/** Up to `n` letters to set beside the target: taught ones and foils (only those in `among`, if given), never the target itself or a letter that says the same sound. */
+function wrongLetters(target: string, n: number, ctx: GenContext, among?: readonly string[]): string[] {
   const taught = [...ctx.known].map(graphemeOf).filter((g): g is string => !!g && !answersFor(target, g));
-  let pool = [...new Set([...taught, ...ctx.foils.filter((g) => !answersFor(target, g))])];
+  let pool = [...new Set([...taught, ...ctx.foils.filter((g) => !answersFor(target, g))])].filter((g) => !among || among.includes(g));
   const confused = ctx.confusions.get(target);
   const wrong: string[] = [];
   while (wrong.length < n && pool.length > 0) {
@@ -55,9 +55,10 @@ function wrongLetters(target: string, n: number, ctx: GenContext): string[] {
   return wrong;
 }
 
-export function pickLetterItem(target: string, ctx: GenContext, nChoices = 3): PickLetterItem | null {
+/** `among` keeps the wrong choices to some letters: the vowels, when it is a vowel that has to be told from the others. */
+export function pickLetterItem(target: string, ctx: GenContext, nChoices = 3, among?: readonly string[]): PickLetterItem | null {
   if (!ctx.known.has(gpc(target)) || !ctx.content.hasSound(target)) return null;
-  const wrong = wrongLetters(target, nChoices - 1, ctx);
+  const wrong = wrongLetters(target, nChoices - 1, ctx, among);
   if (wrong.length === 0) return null;
   return {
     kind: 'pick-letter',
@@ -79,9 +80,12 @@ export function catchItem(target: string, ctx: GenContext, count = 4, nOthers = 
 /** True where a letter of the word says something other than its usual sound. */
 export const oddAt = (w: Word, i: number): boolean => !!w.sounds && w.sounds[i] !== w.graphemes[i];
 
-/** Words the child can sound out letter by letter: every letter taught and heard, and its second sound taught where it makes that. */
+/**
+ * Words the child can sound out letter by letter: every letter taught and heard, and its second sound taught where it makes that.
+ * A `late` word waits for its shape as well, so the early lessons' words stay short.
+ */
 export function readableWords(ctx: GenContext): Word[] {
-  return ctx.content.words.filter((w) => w.graphemes.every((g, i) =>
+  return ctx.content.words.filter((w) => (!w.late || ctx.known.has(blend(shapeOf(w.graphemes)))) && w.graphemes.every((g, i) =>
     ctx.known.has(gpc(g)) && ctx.content.hasSound(w.sounds?.[i] ?? g) && (!oddAt(w, i) || ctx.known.has(second(g)))));
 }
 

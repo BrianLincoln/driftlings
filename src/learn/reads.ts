@@ -1,7 +1,7 @@
 import { behaving, byHeart, decodableWords, heartWords, key, oddAt, onTiles, readableWords, type GenContext } from './generator';
 import type { Picture, ReadItem, Word } from './items';
 import { shuffle, weighted } from './rng';
-import { blend, heart, second, shapeOf, type SkillId } from './skills';
+import { blend, heart, isVowel, second, shapeOf, type SkillId } from './skills';
 
 // Words nobody says: a phrase or a sentence to read in silence, and the pictures to choose between.
 // Like everything the generator makes, only from words the child can read and that have their clips.
@@ -38,8 +38,10 @@ const tiles = (ws: Word[]) => ws.reduce((n, w) => n + w.graphemes.length, 0);
  * no other may stand in what is read.
  * A sentence when one is asked for and its words can all be read, in no more than `most` tiles; if not, a phrase ("the bug").
  * Null without three things to choose between, or with no "the" or "a" to put before one.
+ * `tell` are vowels to be told apart: a thing with one of them whose word is another's but for the vowel (pan, pin)
+ * is the one to read where there is such a thing, and the other is always beside it.
  */
-export function readItem(ctx: GenContext, met: readonly string[], want: ReadWant = 'phrase', most = Infinity): ReadItem | null {
+export function readItem(ctx: GenContext, met: readonly string[], want: ReadWant = 'phrase', most = Infinity, tell: readonly string[] = []): ReadItem | null {
   const things = readableThings(ctx);
   const hearts = heartWords(ctx).filter((w) => met.includes(w.text));
   const arts = hearts.filter((w) => ARTICLES.includes(w.text));
@@ -47,13 +49,16 @@ export function readItem(ctx: GenContext, met: readonly string[], want: ReadWant
   const any = <T>(xs: T[]): T => xs[Math.floor(ctx.rng() * xs.length)];
   /** How easily `b` is taken for `a`: most of all when one letter apart (cat, cap), then when it starts the same way. */
   const apart = (a: string, b: string) => (a.length === b.length ? [...a].filter((c, i) => c !== b[i]).length : 9);
-  const near = (a: string, b: string) => 1 + (apart(a, b) === 1 ? 14 : 0) + (a[0] === b[0] ? 4 : 0) + ([...a].some((c) => b.includes(c)) ? 1 : 0);
+  const twins = (a: string, b: string) => apart(a, b) === 1 && [...a].some((c, i) => c !== b[i] && isVowel(c) && isVowel(b[i]));
+  const near = (a: string, b: string) => 1 + (apart(a, b) === 1 ? 14 : 0) + (a[0] === b[0] ? 4 : 0) + ([...a].some((c) => b.includes(c)) ? 1 : 0) + (tell.length && twins(a, b) ? 60 : 0);
   /** Another thing, for choice beside `than`: a near miss if there is one, so the first letter is not enough. */
   const other = (than: string, not: string[], ok: (t: (typeof things)[number]) => boolean = () => true) => {
     const pool = things.filter((t) => t.name !== than && !not.includes(t.name) && ok(t));
     return pool.length ? weighted(pool, (t) => near(t.name, than), ctx.rng) : null;
   };
-  const subject = any(things);
+  const subject = tell.length
+    ? weighted(things, (t) => (tell.some((v) => t.name.includes(v)) ? 3 : 1) * (things.some((o) => twins(t.name, o.name)) ? 6 : 1), ctx.rng)
+    : any(things);
   const used = (ws: Word[]): SkillId[] => [...new Set(ws.flatMap((w) => [...(byHeart(w, ctx).some(Boolean) ? [heart(w.text)] : []), ...behaving(w, ctx), ...w.graphemes.flatMap((g, i) => (oddAt(w, i) && ctx.known.has(second(g)) ? [second(g)] : []))]))];
   const shapes = (ws: Word[]) => [...new Set(ws.map((w) => blend(shapeOf(w.graphemes))))];
   const little = [...hearts, ...readableWords(ctx)];

@@ -205,8 +205,9 @@ async function boot(): Promise<void> {
       return {
         id: n.id,
         state: done.has(n.id) ? 'done' : n.id === currentId ? 'current' : 'locked',
-        // The word-building lesson shows the word it opens on: the first in the list of a shape it teaches.
-        label: n.kind !== 'lesson' ? '' : letter ?? ending ?? opensOn(n),
+        // The word-building lesson shows the word it opens on: the first in the list of a shape it teaches. A lesson that
+        // goes back over vowels shows them.
+        label: n.kind !== 'lesson' ? '' : letter ?? ending ?? (n.review ? (n.favours ?? []).join('') : opensOn(n)),
         rescue: n.kind === 'lesson' ? rescue(rescueIndex(n.id)) : null,
         boss: n.kind !== 'lesson',
       };

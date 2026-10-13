@@ -80,7 +80,8 @@ describe('the irregular words, each at its lesson', () => {
   it('send nobody back: no lesson was added for them, so every rescue keeps its number and a finished island stays finished', () => {
     const lessons = nodes.filter((n) => n.kind === 'lesson');
     expect(lessons.filter((n) => n.late).map((n) => n.id)).toEqual(['i2a1-r2', 'i2a1-l2']);
-    expect(lessons.length).toBe(31);
+    // The six islands that were out when the words were added; later islands add lessons after these.
+    expect(lessons.findIndex((n) => n.id === 'i2a2-z')).toBe(30);
     expect(rescueIndex('i2a2-z')).toBe(30);
     const done = new Set(nodes.map((n) => n.id));
     expect(settled(done)).toEqual(done);
