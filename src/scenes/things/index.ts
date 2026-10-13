@@ -5,6 +5,7 @@ import { toonMaterial } from '../../gfx/materials';
 import { bug, cat, dog, pig } from './animals';
 import { fan, fin, man, mat, pan, pin, tap, tin } from './batch1';
 import { bat, bed, cup, map, pot } from './objects';
+import { can, cap, cod, cot, dad, dot, mop, top } from './batch2';
 import { part, type Drawing } from './parts';
 
 // Everyday things a word can be about, small enough to stand in a row on the grass. Each is one
@@ -12,7 +13,11 @@ import { part, type Drawing } from './parts';
 // to the clearing's camera. A word can only be shown as a thing if it has a recipe here.
 // docs/things.md has the rules a drawing follows, and how to look at one.
 
-const RECIPES: Record<string, () => Drawing> = { cup, pot, bed, cat, bat, map, dog, pig, bug, mat, man, pan, fan, pin, tin, fin, tap };
+const RECIPES: Record<string, () => Drawing> = {
+  cup, pot, bed, cat, bat, map, dog, pig, bug,
+  mat, man, pan, fan, pin, tin, fin, tap,
+  cap, cot, can, dot, top, mop, cod, dad,
+};
 
 export const THING_NAMES = Object.keys(RECIPES);
 
