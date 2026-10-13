@@ -10,9 +10,10 @@ import { AREAS, closerOf, type AreaDef, type NodeDef } from '../learn/curriculum
  * How a big one carries on until it has had its turn. `sleepy` snores through the little ones
  * being woken and only stirs at the end; `watchful` is wide awake and sees every one of them go;
  * `restless` cannot keep still, and paces up and down its bit of shore; `huffy` has turned its back
- * on the lot of them; `stirring` starts out asleep, then watches, then paces, as the ship fills up.
+ * on the lot of them; `stirring` starts out asleep, then watches, then paces, as the ship fills up;
+ * `merry` bobs about to a tune of its own and bounces each of them off, not seeing that it is being left.
  */
-export type Manner = 'sleepy' | 'watchful' | 'restless' | 'huffy' | 'stirring';
+export type Manner = 'sleepy' | 'watchful' | 'restless' | 'huffy' | 'stirring' | 'merry';
 
 export interface BigOne {
   who: Rescue;
@@ -32,6 +33,8 @@ export const BIG_ONES: Record<string, BigOne> = {
   // The biggest by a head.
   i1a4: big('cub', 'plum', 'stirring', 1.4),
   i2a1: big('lop', 'cocoa', 'huffy'),
+  // The end of the alphabet: as big as the one who ended the vowels.
+  i2a2: big('owlet', 'teal', 'merry', 1.4),
 };
 
 export const OPEN_AREAS: AreaDef[] = AREAS.filter((a) => a.id in BIG_ONES);

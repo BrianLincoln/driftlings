@@ -42,6 +42,10 @@ Complete.
 - [ ] `words/clap` : "clap" (a word to build: l beside another consonant)
 - [ ] `words/help` : "help" (a word to build: l beside another consonant)
 
-## Next: w j y x qu v z
+## Island 6
 
-Complete.
+- [ ] `prompts/together-these-letters-make-the-sound` : "Together, these letters make the sound" (said before the sound of two letters on one tile: qu, and later sh, ch, th)
+- [ ] `words/squid` : "squid" (a word with qu in it: only sounded out and heard, so any shape)
+- [ ] `words/quiz` : "quiz" (a word with z in it)
+- [ ] `words/swim` : "swim" (two consonants together, with one of the last letters of the alphabet)
+- [ ] `words/jump` : "jump" (two consonants together, with one of the last letters of the alphabet)

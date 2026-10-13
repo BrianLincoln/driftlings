@@ -169,7 +169,7 @@ async function boot(): Promise<void> {
     const home = game.home;
     // `?demo` fills the island with a sample crowd, to see where it is heading.
     const demo = params.has('demo');
-    const residents = demo ? Array.from({ length: 24 }, (_, i) => i) : home.residents;
+    const residents = demo ? OPEN_AREAS.flatMap(lessonsOf).map((_, i) => i) : home.residents;
     showBar(['play', 'who'], OPEN_AREAS.some((a) => !isFinished(a, game.done)) ? 'play' : null);
     await stage.show(
       createHomeIsland({

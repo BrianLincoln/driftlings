@@ -117,7 +117,7 @@ export const oneAndMany: ExerciseModule<ManyItem> = {
         // Which of the two comes first is chance, so the place says nothing about the answer.
         const pair = [item().base, plural(item())];
         if (Math.random() < 0.5) pair.reverse();
-        words = pair.map((word) => ({ word, tiles: [...word].map((g) => kit.tile(g, ASK_SCALE)) }));
+        words = pair.map((word) => ({ word, tiles: (word === item().base ? item().graphemes : [...item().graphemes, 's']).map((g) => kit.tile(g, ASK_SCALE)) }));
         tiles = words.flatMap((w) => w.tiles);
         nextAt = t + 0.5;
       } else {

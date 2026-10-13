@@ -22,7 +22,7 @@ anything about UFLI; do not go from memory.
 - `npm run audio:wanted` : write `audio-inbox/WANTED.md`, the clips the lessons ahead are missing,
   nearest lesson first. What a lesson needs follows from the skill it teaches: a grapheme needs its
   sound, its keyword words (`src/content/keywords.json`: heard in "like in ...", never read) and, for
-  a single letter, its name; a blending lesson needs enough buildable words from the graphemes taught
+  a single letter, its name (two letters that make one sound, like qu, have none); a blending lesson needs enough buildable words from the graphemes taught
   so far, and a lesson on new word shapes needs them of those shapes with its letter in. An irregular word needs its word and the sound of each of its tiles. A new kind of skill gets its own rule in `scripts/audio-wanted.mjs`
 
 URL switches: `?reset` clears the progress of the child who played last, `?demo` fills the home island, `?scene=map|home|who|sleeper|friends|<node id>`
@@ -44,6 +44,8 @@ before committing and deploying.
 - Colour only from `src/gfx/palette.ts`. No image textures.
 - Every scene shader lights with `toonLight` and writes through `writeG` (`src/gfx/glsl.ts`).
 - Letters are DOM (`src/stage/glyphs.ts`), never drawn in WebGL.
+- A grapheme is one tile, however many letters it has (qu). Never cut a word with `[...word]`: use its `graphemes`
+  (`cut` in `src/content/content.ts`, `splitGraphemes` in `src/learn/skills.ts`).
 - A scene declares a stage box per layout (`src/stage/framing.ts`); everything a child
   must see or touch stays inside it. Check both `tall` and `wide` in screenshots.
 - Render scale is the device pixel ratio or half of it, nothing in between (`src/stage/quality.ts`).
@@ -81,8 +83,9 @@ before committing and deploying.
 
 An area is an island: the curriculum (`src/learn/curriculum.ts`) is one flat list of them, `AREAS`, in the
 order the ship finds them. The chart has a sheet for each sea of six of them (`SEA` in `src/scenes/chartSheets.ts`),
-and a crossing shows the sheet of the sea it is in. (The ids, `i1a1` to `i2a1`, are
-left over from when areas were grouped; saved progress uses them, so they stay.)
+and a crossing shows the sheet of the sea it is in. Six are open, `i1a1` to `i2a2` (UFLI 1 to 34, the whole alphabet): the first sea's
+sheet is full, and the next island starts the second. (The ids are
+left over from when areas were grouped; saved progress uses them, so they stay. The next is `i2a3`.)
 
 The curriculum already lists it. Give it a big one in `BIG_ONES`
 (`src/game/areas.ts`) and an entry in `PLACES` (`src/scenes/places.ts`); a test checks the two agree.

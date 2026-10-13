@@ -3,7 +3,9 @@ import endings from './endings.json';
 import hearts from './hearts.json';
 import keywordGroups from './keywords.json';
 import wordGroups from './words.json';
+import { multiGraphemes } from '../learn/curriculum';
 import type { Content } from '../learn/items';
+import { splitGraphemes } from '../learn/skills';
 
 // What exists. The learning layer only ever generates from this, so a word
 // becomes playable the moment its clip is built, with no other change.
@@ -36,21 +38,26 @@ export function keywordClip(grapheme: string): ClipId | null {
   return (Array.isArray(listed) ? listed.map(wordClip).find(hasClip) : null) ?? null;
 }
 
+const MULTI = multiGraphemes();
+/** A listed word as the game holds it: its text, and its graphemes, one per sound (qu is one). A dot in the list forces a cut. */
+export const cut = (spelling: string): { text: string; graphemes: string[] } => ({ text: spelling.replaceAll('.', ''), graphemes: splitGraphemes(spelling, MULTI) });
+
 const allWords = Object.entries(wordGroups as Record<string, string[] | string>)
   .filter(([, v]) => Array.isArray(v))
-  .flatMap(([, v]) => v as string[]);
+  .flatMap(([, v]) => v as string[])
+  .map(cut);
 
 export const CONTENT: Content = {
   hasSound: (g) => hasClip(soundClip(g)),
   hasName: (g) => hasClip(nameClip(g)),
   words: [
-    // Regular words: one letter, one sound.
-    ...allWords.map((text) => ({ text, graphemes: [...text] })),
+    // Regular words: one grapheme, one sound.
+    ...allWords,
     // And the few where the s on the end says /z/.
-    ...endings.sSaysZ.map((text) => ({ text, graphemes: [...text], sounds: [...text.slice(0, -1), 'z'] })),
+    ...endings.sSaysZ.map(cut).map((w) => ({ ...w, sounds: [...w.graphemes.slice(0, -1), 'z'] })),
   ].filter((w) => hasClip(wordClip(w.text))),
   many: Object.entries(endings.many)
-    .flatMap(([sound, bases]) => bases.map((base) => ({ base, sound })))
+    .flatMap(([sound, bases]) => bases.map((base) => ({ base, sound, graphemes: cut(base).graphemes })))
     .filter((m) => hasClip(wordClip(m.base)) && hasClip(wordClip(`${m.base}s`))),
   hearts: Object.entries(hearts.words)
     .map(([text, w]) => ({ text, ...w }))

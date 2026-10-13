@@ -23,10 +23,11 @@ const AREAS = [
   ['i1a3-o', 'i1a3-d', 'i1a3-c', 'i1a3-boss'],
   ['i1a4-u', 'i1a4-g', 'i1a4-b', 'i1a4-e', 'i1a4-boss'],
   ['i2a1-add-s', 'i2a1-s-z', 'i2a1-k', 'i2a1-h', 'i2a1-r', 'i2a1-r2', 'i2a1-l', 'i2a1-l2', 'i2a1-boss'],
+  ['i2a2-w', 'i2a2-j', 'i2a2-y', 'i2a2-x', 'i2a2-qu', 'i2a2-v', 'i2a2-z', 'i2a2-boss'],
 ];
-const SHOOT = new Set(['i1a1-a', 'i1a1-blend', 'i1a1-boss', 'i1a2-p', 'i1a2-f', 'i1a2-boss', 'i1a3-c', 'i1a3-boss', 'i1a4-boss', 'i2a1-add-s', 'i2a1-s-z', 'i2a1-k', 'i2a1-r2', 'i2a1-l2', 'i2a1-boss']);
+const SHOOT = new Set(['i1a1-a', 'i1a1-blend', 'i1a1-boss', 'i1a2-p', 'i1a2-f', 'i1a2-boss', 'i1a3-c', 'i1a3-boss', 'i1a4-boss', 'i2a1-add-s', 'i2a1-s-z', 'i2a1-k', 'i2a1-r2', 'i2a1-l2', 'i2a1-boss', 'i2a2-x', 'i2a2-qu', 'i2a2-z', 'i2a2-boss']);
 /** How many little ones are home after each area. */
-const HOME = [5, 9, 12, 16, 24];
+const HOME = [5, 9, 12, 16, 24, 31];
 
 if (!flags.has('--no-build')) execSync('npx vite build', { stdio: 'inherit' });
 mkdirSync('shots', { recursive: true });

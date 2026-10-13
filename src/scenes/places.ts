@@ -175,4 +175,30 @@ export const PLACES: Record<string, Place> = {
     ],
     chart: [[-0.6, -0.3, 'tree', 13], [-0.35, -0.6, 'tree', 25], [0.1, -0.66, 'rock', 52]],
   },
+  // A wood at the end of the day: a star of sand with three long points, tall trees crowding one side of it,
+  // and the stones in one bow through the clearing (seven of them: three across when the view is tall).
+  i2a2: {
+    shape: { radius: 7.6, rise: 0.45, sand: 1.9, seed: 1.2, bays: 3.4 },
+    palette: PALETTES.roseEvening,
+    wideZ: [1.1, 0.35, -0.3, -0.65, -0.3, 0.35, 1.0],
+    tallX: [0.95, 0.0, -0.95, 0.0, 0.95, 0.0, -0.95],
+    bigSide: -1,
+    scenery: () => [
+      tree(19, [-3.7, -5.0], [-2.7, -4.6]),
+      tree(23, [4.0, -4.9], [-2.6, -3.0]),
+      tree(35, [5.0, -3.8], [-2.7, -1.3]),
+      tree(47, [5.9, -2.6], [2.7, -0.4]),
+      tree(59, [6.6, -1.2], [2.6, 1.4]),
+      tree(64, [6.3, 0.5], [2.7, 3.2]),
+      bush(72, [5.0, 2.2], [-2.5, 0.6]),
+      bush(88, [-3.6, 2.9], [-2.4, 2.4]),
+      rock(93, 0.45, [1.2, 3.0], [2.4, -2.2]),
+    ],
+    far: [[-44, -92, 13], [-10, -72, 20], [36, -84, 8]],
+    dressing: [
+      [0.62, -0.5, 'tree'], [0.5, -0.32, 'tree'], [0.44, 0.3, 'tree'], [0.6, 0.46, 'tree'], [0.74, 0.62, 'tree'], [0.84, -0.26, 'bush'],
+      [0.84, 0.06, 'stone'], [0.66, -0.04, 'stone'], [0.5, 0.1, 'stone'], [0.34, 0.0, 'stone'],
+    ],
+    chart: [[-0.58, -0.28, 'tree', 19], [-0.3, -0.58, 'tree', 23], [0.02, -0.68, 'tree', 35], [-0.22, -0.2, 'tree', 47]],
+  },
 };

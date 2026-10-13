@@ -86,7 +86,7 @@ Lessons not listed add none. The review lessons (35 to 41, 49, 53) add none and 
 
 ## Where the game is
 
-Lessons 1 to 27 of 128, on five islands. Island 6 (28 to 34) finishes the alphabet unit.
+Lessons 1 to 34 of 128, on six islands: the whole alphabet unit. Next is the review of short vowels with longer words (35 to 41), then digraphs (42 on).
 
 | Island | UFLI | Notes |
 |---|---|---|
@@ -95,7 +95,8 @@ Lessons 1 to 27 of 128, on five islands. Island 6 (28 to 34) finishes the alphab
 | `i1a3` | 12–14 | 11 skipped: a pronunciation point, not a new correspondence |
 | `i1a4` | 15–19 | 19 is the checkpoint |
 | `i2a1` | 20–27 | 25 (`i2a1-r2`) teaches CCVC with r after another consonant; 27 (`i2a1-l2`) CCVC with l, and CVCC. Both were added after the island was out: see below |
-| next | 28–34 | w j y x qu v z; audio already recorded |
+| `i2a2` | 28–34 | w j y x qu v z, one lesson each. The checkpoint is ours and a boss: the alphabet ends here |
+| next | 35–41 | review of each short vowel, with CCVCC and CCCVC words |
 
 Blends, as the game has them:
 
@@ -111,6 +112,17 @@ Blends, as the game has them:
   shapes (shown how the first time one comes up) and finds two more little ones at home. A child still on the
   island does 25 and 27 before the checkpoint. The two new little ones are numbered after the island's others
   (`late`), so nobody already woken changes.
+
+The last letters, as the game has them:
+
+- **qu is one grapheme**: one tile, one sound (/kw/), one skill (`gpc:qu`), and never a q or its u alone. A word is cut
+  into graphemes by `splitGraphemes` (`src/learn/skills.ts`), which takes the longest grapheme of more than one letter
+  that some lesson teaches (`multiGraphemes` in the curriculum), so the digraphs of 42 on need only their lessons; a dot
+  in `words.json` forces a cut where that would be wrong. Two letters have no name, so qu is met with "Together, these
+  letters make the sound" in place of "This is the letter", and is never the letter to catch (that one is asked by name).
+- **x says /ks/ and ends words**: its keywords end with it ("like in fox"), and no word in the list begins with it (a test checks).
+- **z, and s saying /z/**: asked for /z/, s is never one of the wrong choices, since from lesson 21 it says that too.
+  Asked for /s/, z may be.
 
 Our exercises against the eight steps:
 
