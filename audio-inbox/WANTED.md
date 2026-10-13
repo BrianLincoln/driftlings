@@ -15,7 +15,7 @@ Complete.
 
 ## Island 3
 
-- [ ] `words/said` : "said" (learned by heart)
+Complete.
 
 ## Island 4
 
