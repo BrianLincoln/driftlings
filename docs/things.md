@@ -70,6 +70,10 @@ under about 300 lines: animals in `animals.ts`, the rest in `objects.ts`, and st
 
 ## The approved nine
 
+![The nine, close up](things-approved.png)
+
+In order: cup, pot, bed, cat, bat, map, dog, pig, bug. Run the sheet to see them at play size.
+
 | Word | What makes it read | Worth copying |
 |---|---|---|
 | cup | Mug with a fat handle, a cream stripe, a dark drink | Stripe painted on, not a separate piece |

@@ -40,7 +40,7 @@ function build(name: string) {
   const [ox, oy, oz] = drawing.face.origin;
   const material = toonMaterial({ ...LOOK, face: { ...drawing.face, origin: [ox * k - mid.x, oy * k, oz * k - mid.z] } });
   // Its head is turned away with the rest of it: the eyes come back round to whoever is looking, and up a little.
-  material.uniforms.uLook!.value.set(THREE.MathUtils.clamp(-(drawing.turn?.[1] ?? 0) / 0.4, -1, 1), 0.3, 1, 0);
+  material.uniforms.uLook!.value.set(THREE.MathUtils.clamp(-(drawing.turn?.[1] ?? 0) / 0.8, -1, 1), 0.3, 1, 0);
   return { drawing, material, reach };
 }
 

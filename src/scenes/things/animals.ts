@@ -81,7 +81,7 @@ export function pig(): Drawing {
 /** A ladybird's shell, as half-widths, and where its spots are, as directions out from its middle. */
 const SHELL = [0.25, 0.19, 0.27] as const;
 // Well in from the rim: a spot on the edge runs into the outline.
-const SPOTS = [[0.55, 0.62, 0.3], [-0.55, 0.62, 0.3], [0.4, 0.85, -0.25], [-0.4, 0.85, -0.25]].map(([x, y, z]) => new THREE.Vector3(x, y, z).normalize());
+const SPOTS = [[0.62, 0.62, 0.12], [-0.62, 0.62, 0.12], [0.38, 0.85, -0.3], [-0.38, 0.85, -0.3]].map(([x, y, z]) => new THREE.Vector3(x, y, z).normalize());
 /** A round black spot lying flat on the shell, out along `d`. */
 function spot(d: THREE.Vector3, r: number): THREE.BufferGeometry {
   const [a, b, c] = SHELL;
@@ -110,7 +110,7 @@ export function bug(): Drawing {
         place(ball(0.026, C.ink, 12), [k * 0.082, 0.315, 0.292]),
       ])),
     ),
-    face: eyes(head, [0.45, 0.32], 1.6),
+    face: eyes(head, [0.47, 0.3], 1.85),
     turn: [0.14, -0.2],
   };
 }
