@@ -1,5 +1,5 @@
 {
-  "comment": "Every thing that has a drawing (a recipe in src/scenes/things; a test checks the two agree). A word here can be shown as a picture to choose between once its clip exists.",
+  "comment": "Every thing that has a drawing (a recipe in src/scenes/things; a test checks the two agree). `things` are offered as pictures to choose between once their clip exists: only ones a five-year-old would call by exactly that word at a glance. `held` are drawn but not offered: the drawing is fine, but the word is not the child's word for it (a cot is a crib, a tin is a can, a cod is a fish) or the thing itself is not well known (a spinning top).",
   "things": [
     "cup",
     "pot",
@@ -10,10 +10,24 @@
     "dog",
     "pig",
     "bug",
-    "mat",
     "man",
     "pan",
     "fan",
+    "mop",
+    "bus",
+    "sun",
+    "net",
+    "nut",
+    "tub",
+    "mud",
+    "hat",
+    "hen",
+    "rat",
+    "log",
+    "lip"
+  ],
+  "held": [
+    "mat",
     "pin",
     "tin",
     "fin",
@@ -23,10 +37,12 @@
     "can",
     "dot",
     "top",
-    "mop",
     "cod",
     "dad",
-    "bud", "bus", "cab", "cob", "sun", "net", "nut", "peg",
-    "tub", "gum", "mud", "hat", "hen", "rat", "log", "lip"
+    "bud",
+    "cab",
+    "cob",
+    "peg",
+    "gum"
   ]
 }

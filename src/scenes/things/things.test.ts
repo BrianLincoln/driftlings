@@ -8,6 +8,6 @@ describe('things', () => {
     for (const base of Object.values(endings.many).flat()) expect(THING_NAMES, base).toContain(base);
   });
   it('lists exactly the things that are drawn', () => {
-    expect([...drawn.things].sort()).toEqual([...THING_NAMES].sort());
+    expect([...drawn.things, ...drawn.held].sort()).toEqual([...THING_NAMES].sort());
   });
 });

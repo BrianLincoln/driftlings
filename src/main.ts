@@ -1,6 +1,6 @@
 import './core/colorSetup';
 import './ui/style.css';
-import { unlockAudio } from './audio/sound';
+import { audioLocked, unlockAudio } from './audio/sound';
 import { preloadClips } from './audio/narrate';
 import { CONTENT, soundClip } from './content/content';
 import { installHooks } from './debug/hooks';
@@ -288,7 +288,14 @@ async function boot(): Promise<void> {
   }, () => game);
 
   const start = params.get('scene');
-  if (start) await hooks.goto(start);
+  if (start) {
+    // A lesson opened straight from the address bar starts talking at once, and a browser plays nothing before a
+    // first touch: wait for one, so its opening lines are heard. (Not for the scripts, which never touch first.)
+    if (findNode(start) && audioLocked() && !navigator.webdriver) {
+      await new Promise<void>((go) => addEventListener('pointerdown', () => { unlockAudio(); go(); }, { once: true }));
+    }
+    await hooks.goto(start);
+  }
   else if (kids.length > 1) await who(true);
   else await begin(true);
   hooks.ready = true;

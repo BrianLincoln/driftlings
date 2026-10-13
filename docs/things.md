@@ -10,6 +10,15 @@ A toy of the thing, not the thing and not a character. A child reads a word and 
 near misses (cat, cap, cot), so the one job of a drawing is to be named correctly at a glance, at the
 size of a thumbnail, by a five-year-old. Everything below serves that.
 
+## Which words get a drawing
+
+Only a word that is bullet-proof: shown the picture cold, an American five-year-old says exactly that word, first.
+That rules out a good drawing of the wrong word (a cot is a "crib", a tin is a "can", a cod is a "fish", a cab is a
+"taxi", a tap is a "faucet") and things a child may not know at all (a spinning top). If in doubt, leave it out: a
+smaller set that never misleads beats a bigger one that sometimes does. `src/content/drawn.json` has two lists:
+`things` are offered to children, `held` are drawn but not offered. The owner threw out top and cot on sight; the rest
+of `held` failed the same test.
+
 ## The rules
 
 1. **Silhouette first.** Fill the drawing in black in your head. If it cannot be named, no detail will

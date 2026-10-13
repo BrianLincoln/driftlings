@@ -45,6 +45,9 @@ function ensure(): AudioContext | null {
   return ctx;
 }
 
+/** True until the browser has let sound play: it waits for a first touch on the page. */
+export const audioLocked = (): boolean => ensure()?.state === 'suspended';
+
 export function unlockAudio(): void {
   const c = ensure();
   if (c && c.state === 'suspended') void c.resume();
