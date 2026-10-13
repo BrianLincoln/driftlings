@@ -88,6 +88,7 @@ void main() {
   vec3 n = nd.xyz * 2.0 - 1.0;
   float ne = 0.0;
   float te = 0.0;
+  float tLo = 0.0, tHi = 0.0;
   if (nd.a > 0.0) {
     vec4 a = texture(tND, vUv - vec2(off.x, 0.0)), b = texture(tND, vUv + vec2(off.x, 0.0));
     vec4 c = texture(tND, vUv + vec2(0.0, off.y)), e = texture(tND, vUv - vec2(0.0, off.y));
@@ -95,9 +96,21 @@ void main() {
              max(1.0 - dot(n, c.xyz * 2.0 - 1.0), 1.0 - dot(n, e.xyz * 2.0 - 1.0)));
     // A change of category is always a line (a tile standing on the ground).
     te = max(max(abs(nd.a - a.a), abs(nd.a - b.a)), max(abs(nd.a - c.a), abs(nd.a - e.a)));
+    tLo = min(min(a.a, b.a), min(c.a, e.a));
+    tHi = max(max(a.a, b.a), max(c.a, e.a));
     ne = max(ne, step(0.05, te) * step(min(min(a.a, b.a), min(c.a, e.a)), nd.a + 0.01) * 2.0);
   }
+  float inside = 0.0;
   float normalEdge = smoothstep(uNormalThr, uNormalThr + 0.15, ne) * step(-0.002, min(ex, ey)); // only on the nearer side
+  // Inside a thing (tags under 0.45, one per part) there is a line where two parts meet and nowhere else:
+  // creases come and go with the angle, and a line that does that is a dotted one. Where the parts lie
+  // flush the line is on the later part; where one stands in front it is on that one.
+  if (nd.a > 0.05 && nd.a < 0.45 && tLo > 0.05 && tHi < 0.45) {
+    float flush = step(0.01, nd.a - tLo) * step(-0.003, min(ex, ey));
+    float infront = step(0.01, te) * step(0.003, de);
+    normalEdge = max(flush, infront);
+    inside = 1.0;
+  }
   // Far layers are flat tones without ink.
   float fade = 1.0 - smoothstep(35.0, 55.0, d);
   float edge = max(depthEdge, normalEdge) * fade;
@@ -108,6 +121,8 @@ void main() {
     edge *= 0.5;
     lineCol = mix(col * 0.62, uOutlineCol, 0.2);
   }
+  // The lines inside a thing are a dark of its own colour, and ink is kept for its silhouette.
+  if (inside > 0.5) lineCol = mix(col * 0.5, uOutlineCol, 0.45);
   col = mix(col, lineCol, edge);
 
   col += texture(tBloom, vUv).rgb * uBloom;

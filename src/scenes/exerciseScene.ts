@@ -303,7 +303,7 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
         if (th.gone) {
           scene.remove(th.root);
           things.splice(i, 1);
-        } else if (th.root.scale.x > 0.5) pushBlob(th.root.position.x, th.root.position.z, 0.34, 1.1);
+        } else if (th.root.scale.x > 0.5) pushBlob(th.root.position.x, th.root.position.z, th.reach, 1.1);
       }
       companion.viewer.copy(camera.position);
       guest.lookTarget = companion.want.face ?? camera.position;

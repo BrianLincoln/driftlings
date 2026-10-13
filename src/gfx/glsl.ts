@@ -2,7 +2,13 @@
 // the G-buffer through writeG, so the post chain can treat all surfaces alike.
 
 /** Category tags stored in the normal target's alpha. 0 is sky. */
-export const TAG = { sky: 0, ground: 1.0, prop: 0.5, creature: 0.62, tile: 0.8 } as const;
+export const TAG = { sky: 0, ground: 1.0, prop: 0.5, creature: 0.62, tile: 0.8, thing: 0.1 } as const;
+/**
+ * A thing (scenes/things) is drawn in numbered parts, and each part has a tag of its own, this far above
+ * the last: the outline pass inks a thing where one part meets another and nowhere else inside it, so its
+ * lines are whole and placed by whoever drew it. Up to 16 parts fit under the next category.
+ */
+export const PART_STEP = 0.02;
 
 export const TOON = /* glsl */ `
 uniform vec3 uLightDir, uLightCol, uMidCol, uShadeCol;
@@ -28,7 +34,9 @@ void writeG(vec3 col, float flag, vec3 nWorld, float tag) {
 }
 `;
 
-export const COMMON_VERT = /* glsl */ `
+/** `parts`: the mesh carries a `part` number on every vertex. */
+export const COMMON_VERT = (parts = false) => /* glsl */ `
+${parts ? 'in float part;\nout float vPart;' : ''}
 out vec3 vN;
 out vec3 vObj;
 out vec3 vCol;
@@ -36,6 +44,7 @@ out vec3 vWorld;
 
 void main() {
   vObj = position;
+  ${parts ? 'vPart = part;' : ''}
   vCol = color;
   vec4 wp = modelMatrix * vec4(position, 1.0);
   vWorld = wp.xyz;

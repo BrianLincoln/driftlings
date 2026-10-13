@@ -19,8 +19,6 @@ export interface SheetPlan {
   /** One thing, seen three times closer. Otherwise a page of them at play size. */
   only: string | null;
   page: number;
-  /** Just these, in a row. */
-  row?: string[];
 }
 
 /** How many stand on one page at play size. */
@@ -51,7 +49,7 @@ export function createThingsSheet(plan: SheetPlan): Diorama {
   ].map((s) => ({ ...s, mesh: new THREE.Mesh(s.geo, prop) }));
   for (const s of scenery) scene.add(s.mesh);
 
-  const names = plan.row ?? (plan.only ? [plan.only] : THING_NAMES.slice(plan.page * SHEET_PAGE, (plan.page + 1) * SHEET_PAGE));
+  const names = plan.only ? [plan.only] : THING_NAMES.slice(plan.page * SHEET_PAGE, (plan.page + 1) * SHEET_PAGE);
   const things = names.map((name) => new Thing(name));
   for (const t of things) scene.add(t.root);
   // Someone who lives here, to judge the things against. Not in the close view: there it is the thing alone.
@@ -81,7 +79,8 @@ export function createThingsSheet(plan: SheetPlan): Diorama {
         const row = Math.floor(i / across);
         const inRow = Math.min(across, things.length - row * across);
         const x = ((i % across) - (inRow - 1) / 2) * gap;
-        const z = FRONT - row * (m === 'tall' ? 1.7 : 1.4);
+        // On a page the rows are spread out so that one does not stand in front of another.
+        const z = plan.only ? FRONT : m === 'tall' ? 3.3 - row * 2 : FRONT - row * 1.5;
         t.root.position.set(x, y(x, z), z);
       });
       if (neighbour) {
@@ -96,7 +95,7 @@ export function createThingsSheet(plan: SheetPlan): Diorama {
       for (const s of scenery) pushBlob(s.mesh.position.x, s.mesh.position.z, s.r, 1.4);
       for (const t of things) {
         t.update(dt);
-        pushBlob(t.root.position.x, t.root.position.z, 0.34, 1.1);
+        pushBlob(t.root.position.x, t.root.position.z, t.reach, 1.1);
       }
       if (neighbour) {
         neighbour.lookTarget = camera.position;

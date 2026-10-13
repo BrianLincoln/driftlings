@@ -15,35 +15,50 @@ export interface Drawing {
   geo: THREE.BufferGeometry;
   face?: FaceLook;
   turn?: [tilt: number, yaw: number];
+  /** Its size beside the others, if the recipe came out too big or too small. */
+  scale?: number;
+}
+
+/** A tail curling up and over: most of a ring, with a round end. It stands in the plane across x. */
+export function curlTail(radius: number, thick: number, colour: string): THREE.BufferGeometry {
+  const arc = 4.6;
+  return place(merge(
+    paint(new THREE.TorusGeometry(radius, thick, 10, 24, arc), colour),
+    place(ball(thick * 1.15, colour, 10), [radius * Math.cos(arc), radius * Math.sin(arc), 0]),
+  ), [0, 0, 0], [0, Math.PI / 2, 0]);
 }
 
 export const [RED, BLUE, GREEN, PURPLE, PINK] = C.cards;
 export const CREAM = C.flower;
 
-export type Eyes = 'rig' | 'dots' | 'none';
+/**
+ * Number a piece of a drawing. Ink is drawn where two parts with different numbers meet, on the side of the
+ * higher number, and nowhere else inside a thing: pieces that share a number run into each other with no
+ * line (a pale muzzle on a head, spots on a shell), and a dark piece given the higher number swallows
+ * its own line. Every piece of a drawing needs a number, from 0 to 15.
+ */
+export function part(n: number, ...pieces: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  const g = pieces.length === 1 ? pieces[0] : merge(...pieces);
+  g.setAttribute('part', new THREE.BufferAttribute(new Float32Array(g.getAttribute('position').count).fill(n), 1));
+  return g;
+}
 
 /**
- * An animal's eyes, painted on by the face shader the creatures use (gfx/face.ts) so that the
- * outline pass cannot ring them. `at` is where one eye sits from the middle of the head, as yaw
- * and pitch in radians.
+ * An animal's eyes: the creatures' own (white, pupil, glint, an ink ring), painted on by the shader they
+ * use (gfx/face.ts) and nothing else of a face with them. `at` is where one eye sits from the middle of
+ * the head, `origin`, as yaw and pitch in radians; the other mirrors it. `mouth` is a small smile that far
+ * down the face: without one an animal looks blank. The eyes turn to the camera by themselves (index.ts).
  */
-export function eyes(kind: Eyes, origin: [number, number, number], at: [number, number], size = 1): FaceLook | undefined {
-  const [yaw, pitch] = at;
+export function eyes(origin: [number, number, number], at: [yaw: number, pitch: number], size = 1, mouth: [pitch: number, halfWidth: number] | null = null): FaceLook {
   const nowhere = -9;
-  if (kind === 'rig') {
-    return {
-      origin,
-      eye: [yaw, pitch, 0.215 * size, 0.28 * size],
-      pupil: [0.13 * size, 0.17 * size, 0.07, 0.07],
-      mouth: [nowhere, 0.1],
-      blush: [yaw + 0.28, nowhere, 0.13],
-    };
-  }
-  if (kind === 'dots') {
-    // An eye that is all pupil: the pupil is so much bigger than the eye that its glint falls outside.
-    return { origin, eye: [yaw, pitch, 0.085 * size, 0.1 * size], pupil: [1, 1, 0, 0], mouth: [nowhere, 0.1], blush: [0, nowhere, 0.01] };
-  }
-  return undefined;
+  return {
+    origin,
+    eye: [at[0], at[1], 0.215 * size, 0.28 * size],
+    // A bigger pupil than a creature's: a toy's eye, with less white to stare with.
+    pupil: [0.155 * size, 0.2 * size, 0.06 * size, 0.06 * size],
+    mouth: mouth ?? [nowhere, 0.1],
+    blush: [0, nowhere, 0.01],
+  };
 }
 
 export const ball = (r: number, colour: string, seg = 16) => ellipsoid(r, r, r, colour, seg);

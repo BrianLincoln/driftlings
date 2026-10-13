@@ -18,6 +18,7 @@ anything about UFLI; do not go from memory.
 - `npm run shots` : screenshot each area's map and the home island (from the landing, and with the companion sent
   to three other parts of it) at four sizes into `shots/`.
   `npm run shots -- chart@i1a2` takes any `?scene=` at one area; `-- crews` is home with every crew
+  `npm run shots -- things` is the sheet the drawings of things are judged on (`docs/things.md`)
 - `npm run audio` : take in clips from `audio-inbox/`, rebuild `public/audio/` and the manifest
 - `npm run audio:wanted` : write `audio-inbox/WANTED.md`, the clips the lessons ahead are missing,
   nearest lesson first. What a lesson needs follows from the skill it teaches: a grapheme needs its
@@ -27,6 +28,7 @@ anything about UFLI; do not go from memory.
 
 URL switches: `?reset` clears the progress of the child who played last, `?demo` fills the home island, `?scene=map|home|who|sleeper|friends|<node id>`
 (`who` is where children choose who is playing, with `&demo` a full row of six; `sleeper` replays the map scene where the sleeper takes the plank, `friends` the one where it gives it back;
+`things` is the sheet of drawings, `&thing=cat` one of them close up;
 `leave` holds the ship pulling away, `chart` the same with the chart unrolled over it, `arrive` the landing
 at home with everyone getting off; `sail` plays the whole crossing home),
 `?area=i1a2` goes to that area whatever the progress (alone, or with any of the scenes above),
@@ -55,7 +57,7 @@ before committing and deploying.
 - `src/learn` : skills, event log, skill model, generator, scheduler. Pure logic: no three.js,
   no DOM, no imports from the rest of the app (a test enforces this). It has to be right.
 - `src/content` : word list, audio manifest (generated), and the adapter the generator reads; `endings.json` lists the things shown as one and
-  several (each needs a drawing in `scenes/things.ts`; a test checks) and the short words where s says /z/
+  several (each needs a drawing in `scenes/things/`; a test checks) and the short words where s says /z/
 - `src/exercises` : one module per exercise, all satisfying `contract.ts`; `index.ts` is the catalogue
 - `src/game` : one child's game (event log + everything derived), the children on this device (`children.ts`),
   the device store (one log per child; ids are uuids so an account can take them over later), and `areas.ts`:
@@ -63,7 +65,8 @@ before committing and deploying.
 - `src/scenes` : dioramas (home island, where the child goes about as the companion (`steer.ts`) among creatures spending
   their day (`residents.ts`) at things to do (`pastime.ts` is the contract, `pastimes.ts` the list of places), area map, exercise host, the crossing: `voyage.ts` at sea
   with `chart.ts` unrolling over it, then `landfall.ts` only when an island's crew come home to stay), `who.ts` where a child taps their own creature to play, the ship and the raft it tows, letter tile, scenery recipes,
-  and `places.ts`: what makes each area's island its own (outline, palette, scenery, stone path, chart drawing)
+  `places.ts`: what makes each area's island its own (outline, palette, scenery, stone path, chart drawing),
+  and `things/`: the drawings of everyday things a word can be about, with `thingsSheet.ts` to look at them on
 - `src/gfx` : palette, shared uniforms, shader chunks, materials, post chain, ground, sky
 - `src/stage` : renderer loop, framing rule, quality tiers, tap picking, DOM glyph layer
 - `src/cast` : creature rig, species and coats, companion (want + queued acts), springs
@@ -71,6 +74,12 @@ before committing and deploying.
 - `src/ui` : the buttons over a scene (`bar.ts`: the way back top left, who is playing top right, play bottom middle; never a button for where you already are) and progress pips, icons only, and the grown-ups' corner (add, name, remove children)
 - `src/debug` : `window.__dl` hooks used by the scripts
 - `audio-src/` : narration masters. `audio-inbox/` : where the owner drops new clips
+
+## Drawing a thing
+
+The small drawings of everyday things (cat, cup, bed) are recipes in `src/scenes/things/`. `docs/things.md`
+is the brief: the rules, the approved nine to copy from, how the lines are placed by numbering parts, how to
+run the sheet and the critic, and the words still to draw in batches. Read it before drawing one.
 
 ## Opening an area
 

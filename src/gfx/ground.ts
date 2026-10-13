@@ -53,7 +53,7 @@ export function buildIsland(s: IslandShape): THREE.Mesh {
       uSand: { value: new THREE.Color(C.sand) },
       uShape: { value: new THREE.Vector4(s.radius, s.seed, 1 - s.sand / s.radius, s.bays ?? 1) },
     },
-    vertexShader: COMMON_VERT,
+    vertexShader: COMMON_VERT(),
     fragmentShader: /* glsl */ `
 in vec3 vN;
 in vec3 vCol;
