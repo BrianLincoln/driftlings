@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { C, PALETTES } from '../gfx/palette';
+import { PALETTES } from '../gfx/palette';
 import { buildIsland, buildWater, islandHeight, type IslandShape } from '../gfx/ground';
 import { buildSky } from '../gfx/sky';
 import { pushBlob } from '../gfx/uniforms';
@@ -7,19 +7,18 @@ import { Creature } from '../cast/creature';
 import { Companion } from '../cast/companion';
 import { Spring } from '../cast/spring';
 import type { Rescue } from '../cast/species';
-import { hush, say, sayLine, preloadClips } from '../audio/narrate';
+import { say, preloadClips } from '../audio/narrate';
 import { sfx } from '../audio/sound';
 import { EXERCISES } from '../exercises';
-import type { ExerciseKit, ExerciseRun } from '../exercises/contract';
+import type { ExerciseRun } from '../exercises/contract';
 import type { AttemptDraft } from '../learn/events';
 import type { Round } from '../learn/items';
 import type { Framing, LayoutMode } from '../stage/framing';
 import type { Diorama, StageContext } from './diorama';
 import { Dust } from './dust';
-import { LetterTile } from './letterTile';
+import { buildKit } from './exerciseKit';
 import { Pips } from '../ui/pips';
-import { PROP_MAT, TILE, buildCard, buildTile, bushGeo, rockGeo, treeGeo } from './props';
-import { Thing } from './things';
+import { PROP_MAT, bushGeo, rockGeo, treeGeo } from './props';
 
 // The host for exercises: a small clearing, the companion, and whoever is
 // watching. It plays a list of rounds, one exercise after another, and lends
@@ -82,8 +81,6 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
 
   let mode: LayoutMode = 'wide';
   let ctx: StageContext | null = null;
-  const tiles: LetterTile[] = [];
-  const things: Thing[] = [];
   let run: ExerciseRun | null = null;
   let roundIndex = -1;
   let pause = 0;
@@ -93,81 +90,18 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
   let doneItems = 0;
   const pips = new Pips(total);
   const v = new THREE.Vector3();
+  /** Where a spot on the ground, `x` across at depth `z`, falls on screen: -1 at the left edge, 1 at the right. */
+  const across = (x: number, z: number) => v.set(x, y(x, z), z).project(ctx!.camera).x;
   // How far the camera has closed in on the guest: 0 is the whole clearing, 1 is just the guest.
   const zoom = new Spring(0);
   let zoomGoal = 0;
 
-  const stand = (t: LetterTile) => {
-    t.lean_back(mode === 'tall' ? -0.2 : -0.1);
-    scene.add(t.root);
-    tiles.push(t);
-    return t;
-  };
-  /** Where a spot on the ground, `x` across at depth `z`, falls on screen: -1 at the left edge, 1 at the right. */
-  const across = (x: number, z: number) => v.set(x, y(x, z), z).project(ctx!.camera).x;
-
-  const kit: ExerciseKit = {
-    get mode() { return mode; },
-    companion,
-    tile: (text, scale = 1, icon = false, heart = false) => stand(new LetterTile(text, ctx!.glyphs, scale, icon, buildTile(heart))),
-    card: (text, hue, scale = 1) => stand(new LetterTile(text, ctx!.glyphs, scale, false, buildCard(C.cards[Math.abs(hue) % C.cards.length]))),
-    thing(name) {
-      const thing = new Thing(name, prop);
-      scene.add(thing.root);
-      things.push(thing);
-      return thing;
-    },
-    spot(row, index, count) {
-      const z = row === 'tiles' ? 1.2 : 2.75;
-      const gap = row === 'tiles' ? Math.min(1.14, (mode === 'tall' ? 3.5 : 6) / count) : (mode === 'tall' ? 1.05 : 1.2);
-      const x = (index - (count - 1) / 2) * gap;
-      return new THREE.Vector3(x, y(x, z), z);
-    },
-    fit(count) {
-      // A tile is 1.14 from the next at full size; the row may be as wide as the stage box less a margin.
-      const room = mode === 'tall' ? 3.6 : 6.4;
-      return Math.min(1, room / (TILE.width + (count - 1) * 1.14));
-    },
-    sideSpot: () => (mode === 'tall' ? new THREE.Vector3(-1.35, 0, 3.75) : new THREE.Vector3(-2.9, 0, 2.0)),
-    besideSpot(tile) {
-      const x = tile.goal.x;
-      // Low and to the left of the tile, clear of its letter.
-      const reach = 0.5 * tile.scale;
-      return new THREE.Vector3(mode === 'tall' ? x * 0.72 - reach * 0.9 : x - reach - 0.1, 0, mode === 'tall' ? 2.3 : 1.95);
-    },
-    screenX(tile) {
-      tile.anchor.getWorldPosition(v).project(ctx!.camera);
-      return (v.x * 0.5 + 0.5) * ctx!.size().width;
-    },
-    aim(xPx, z) {
-      // The camera looks straight down the clearing, so across the screen is across the ground.
-      const [a, b] = [across(-1, z), across(1, z)];
-      return -1 + (2 * ((xPx / ctx!.size().width) * 2 - 1 - a)) / (b - a);
-    },
-    ceiling(z) {
-      const o = ctx!.camera.position;
-      v.set(0, 1, 0.5).unproject(ctx!.camera).sub(o);
-      return o.y + (v.y * (z - o.z)) / v.z;
-    },
-    say,
-    line: sayLine,
-    hush,
-    cheer() {
-      guest.react();
-      companion.act('celebrate');
-    },
-    nod: () => guest.nod(),
-    trouble() {
-      // Down off the rock, over the letters, round and round on top of them in a cloud of dust, and back up.
-      const z = 2.0;
-      let landed = false;
-      const { lands, clear } = guest.whirl(new THREE.Vector3(0, y(0, z), z), () => {
-        dust.burst(guest.root.position, landed ? 6 : 12, 0.3 * guest.root.scale.x);
-        landed = true;
-      });
-      return { lands: lands + 0.15, clear };
-    },
-  };
+  const lent = buildKit({
+    scene, prop, palette, companion, guest, dust, ground: y,
+    mode: () => mode,
+    ctx: () => ctx!,
+  });
+  const kit = lent.kit;
 
   const startRound = () => {
     roundIndex++;
@@ -262,7 +196,7 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
         return THREE.MathUtils.lerp(perchTop, y(gx, gz), k * k); // falling: slowly at first, then fast
       };
       if (!finished) guest.place(0, -1.0);
-      for (const t of tiles) t.lean_back(m === 'tall' ? -0.2 : -0.1);
+      lent.layout(m);
       scene.updateMatrixWorld(true);
       run?.layout();
     },
@@ -294,22 +228,7 @@ export function createExerciseScene(plan: ExercisePlan): Diorama {
         }
       }
       run?.update(dt);
-      for (let i = tiles.length - 1; i >= 0; i--) {
-        const t = tiles[i];
-        t.update(dt);
-        if (t.gone) {
-          t.dispose();
-          tiles.splice(i, 1);
-        } else if (t.root.scale.x > 0.5) pushBlob(t.root.position.x, t.root.position.z, 0.5 * t.scale, 1.15);
-      }
-      for (let i = things.length - 1; i >= 0; i--) {
-        const th = things[i];
-        th.update(dt);
-        if (th.gone) {
-          scene.remove(th.root);
-          things.splice(i, 1);
-        } else if (th.root.scale.x > 0.5) pushBlob(th.root.position.x, th.root.position.z, 0.34, 1.1);
-      }
+      lent.update(dt);
       companion.viewer.copy(camera.position);
       guest.lookTarget = companion.want.face ?? camera.position;
       guest.update(dt);

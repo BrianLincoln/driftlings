@@ -8,6 +8,7 @@
 //                    "milk"): the lesson's words are shared evenly between its shapes, as the scheduler shares them
 //   an irregular word its word, the sound of each of its tiles (src/content/hearts.json), and the lines that introduce it
 //   reading alone     the lines that say what to do; the words themselves are the drawn things' and already wanted elsewhere
+//   word chains      the lines that say what to do; its words are ones the lessons build, already wanted elsewhere
 //   an ending        the lines that explain it, and for each thing shown as one and several
 //                    (src/content/endings.json) its word with the s; for s saying /z/, two short words where it does too
 
@@ -25,9 +26,10 @@ const has = (id) => id in manifest;
 // A string is a grapheme; { blend: n } is a lesson that needs n buildable words, of `shapes` (vc and cvc unless given)
 // and with the letter `having` in them if given; { ending: 's' | 'z' } is an s on the end, saying that;
 // { heart: word } is an irregular word; { read: true } is where words are first read with nobody saying them.
+// { chain: true } is where word chains begin: the lesson after the first on blending, when there are words enough to link.
 const STEPS = [
   ['Island 1', ['a', 'm', 's', 't', { blend: 4 }]],
-  ['Island 2', ['p', { heart: 'the' }, 'f', { heart: 'a' }, 'i', 'n']],
+  ['Island 2', ['p', { chain: true }, { heart: 'the' }, 'f', { heart: 'a' }, 'i', 'n']],
   ['Island 3', ['o', 'd', 'c', { read: true }]],
   ['Island 4', ['u', 'g', 'b', 'e']],
   ['Island 5', [{ ending: 's' }, { ending: 'z' }, 'k', 'h', 'r', { blend: 4, shapes: ['ccvc'], having: 'r' }, 'l', { blend: 4, shapes: ['ccvc', 'cvcc'], having: 'l' }]],
@@ -63,6 +65,13 @@ for (const [title, steps] of STEPS) {
       if (!has(`words/${w}`)) want.push(`\`words/${w}\` : "${w}"${said ? `, said ${said}` : ''} (learned by heart)`);
       for (const snd of hearts.words[w].sounds) if (!has(`letters/${snd}-sound`)) want.push(`\`letters/${snd}-sound\` : the sound "${snd}" makes in "${w}", alone, no trailing "uh"`);
       for (const [name, text] of [['this-word-is', 'This word is'], ['learn-this-part-by-heart', 'This part, we learn by heart.']]) if (!has(`prompts/${name}`)) want.push(`\`prompts/${name}\` : "${text}"`);
+    } else if (step.chain) {
+      // The names are CHAIN_PROMPTS in src/learn/chains.ts: no chain is offered until all three exist.
+      for (const [name, text] of [
+        ['change-one-letter-to-make', 'Change one letter to make ... (the word follows: leave it hanging)'],
+        ['what-word-is-it-now', 'What word is it now?'],
+        ['tap-to-hear-tap-again-to-choose', 'Tap one to hear it. Tap it again to choose it.'],
+      ]) if (!has(`prompts/${name}`)) want.push(`\`prompts/${name}\` : "${text}" (word chains)`);
     } else if (step.read) {
       for (const [name, text] of [['your-turn-read-it', 'Your turn. Read it.'], ['tap-what-it-says', 'Tap what it says.']]) if (!has(`prompts/${name}`)) want.push(`\`prompts/${name}\` : "${text}"`);
     } else if (step.ending) {

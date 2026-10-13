@@ -11,6 +11,9 @@ Complete.
 
 ## Island 2
 
+- [ ] `prompts/change-one-letter-to-make` : "Change one letter to make ... (the word follows: leave it hanging)" (word chains)
+- [ ] `prompts/what-word-is-it-now` : "What word is it now?" (word chains)
+- [ ] `prompts/tap-to-hear-tap-again-to-choose` : "Tap one to hear it. Tap it again to choose it." (word chains)
 - [ ] `words/the` : "the", said as "thuh", not "thee" (learned by heart)
 - [ ] `letters/th-sound` : the sound "th" makes in "the", alone, no trailing "uh"
 - [ ] `prompts/this-word-is` : "This word is"
