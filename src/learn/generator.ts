@@ -211,8 +211,10 @@ export function readItem(ctx: GenContext, articles: readonly string[], sentence 
   const arts = heartWords(ctx).filter((w) => articles.includes(w.text));
   if (things.length < 3 || arts.length === 0) return null;
   const art = () => arts[Math.floor(ctx.rng() * arts.length)];
-  const near = (a: string, b: string) => 1 + (a[0] === b[0] ? 4 : 0) + ([...a].some((c) => b.includes(c)) ? 1 : 0);
-  /** Another thing, for choice beside `than`: one that starts the same way if there is one, so the first letter is not enough. */
+  /** How easily `b` is taken for `a`: most of all when one letter apart (cat, cap), then when it starts the same way. */
+  const apart = (a: string, b: string) => (a.length === b.length ? [...a].filter((c, i) => c !== b[i]).length : 9);
+  const near = (a: string, b: string) => 1 + (apart(a, b) === 1 ? 14 : 0) + (a[0] === b[0] ? 4 : 0) + ([...a].some((c) => b.includes(c)) ? 1 : 0);
+  /** Another thing, for choice beside `than`: a near miss if there is one, so the first letter is not enough. */
   const other = (than: string, not: string[], ok: (t: (typeof things)[number]) => boolean = () => true) => {
     const pool = things.filter((t) => t.name !== than && !not.includes(t.name) && ok(t));
     return pool.length ? weighted(pool, (t) => near(t.name, than), ctx.rng) : null;

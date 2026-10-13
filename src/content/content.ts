@@ -1,5 +1,6 @@
 import manifest from './audio-manifest.json';
 import endings from './endings.json';
+import drawn from './drawn.json';
 import hearts from './hearts.json';
 import keywordGroups from './keywords.json';
 import wordGroups from './words.json';
@@ -63,9 +64,8 @@ export const CONTENT: Content = {
   hearts: Object.entries(hearts.words)
     .map(([text, w]) => ({ text, ...w }))
     .filter((w) => hasClip(wordClip(w.text)) && w.sounds.every((s) => hasClip(soundClip(s)))),
-  // Every thing with a drawing is listed in endings.json (a test in scenes checks the two agree).
-  drawable: Object.values(endings.many)
-    .flat()
+  // Every thing with a drawing is listed in drawn.json (a test in scenes checks the two agree).
+  drawable: drawn.things
     .filter((name) => hasClip(wordClip(name)))
     .map((name) => ({ name, on: hearts.on.includes(name), in: hearts.in.includes(name) })),
 };

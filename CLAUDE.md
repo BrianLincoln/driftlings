@@ -79,7 +79,7 @@ before committing and deploying.
 
 - `src/learn` : skills, event log, skill model, generator (`chains.ts` makes the word chains), scheduler (`rounds.ts` has its sizes and the runs of items it builds from). Pure logic: no three.js,
   no DOM, no imports from the rest of the app (a test enforces this). It has to be right.
-- `src/content` : word list, audio manifest (generated), and the adapter the generator reads; `endings.json` lists the things shown as one and
+- `src/content` : word list, audio manifest (generated), and the adapter the generator reads; `drawn.json` lists every thing that has a drawing (the `read` exercise chooses its pictures from it, near misses first), `endings.json` lists the things shown as one and
   several (each needs a drawing in `scenes/things/`; a test checks) and the short words where s says /z/; `hearts.json` lists the
   irregular words, a tile to a sound (`docs/heart-words.md` has the design and what is built)
 - `src/exercises` : one module per exercise, all satisfying `contract.ts`; `index.ts` is the catalogue

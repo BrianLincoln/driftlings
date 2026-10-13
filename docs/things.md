@@ -135,17 +135,21 @@ are fine, because the child is choosing between three pictures, not naming one.
 
 ## Words still to draw
 
+A finished drawing is registered in two places: `RECIPES` in `src/scenes/things/index.ts`, and the list in
+`src/content/drawn.json`, which is what lets the `read` exercise offer it (a test checks the two agree).
+Each batch has a file of its own (`batch1.ts`, `batch2.ts`).
+
 From the picturable nouns in `src/content/words.json` as it stood when this was written; if the list has
 changed, redo this from it. Grouped so that each batch completes sets of near misses that differ by one
 letter, nearest island first. Draw a batch, run the critic on it, get the owner's eye on the page.
 
-**Batch 1** (letters of the first two islands): mat, man, pan, fan, pin, tin, fin, tap
+**Batch 1** (letters of the first two islands), DRAWN: mat, man, pan, fan, pin, tin, fin, tap
 - map · mat · man
 - pan · fan · man
 - pin · tin · fin
 - pan · pin, map · tap
 
-**Batch 2** (third island): cap, cot, can, dot, top, mop, cod, dad
+**Batch 2** (third island), DRAWN: cap, cot, can, dot, top, mop, cod, dad
 - cat · cap · cot
 - cat · cap · can
 - pot · cot · dot

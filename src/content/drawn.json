@@ -1,0 +1,30 @@
+{
+  "comment": "Every thing that has a drawing (a recipe in src/scenes/things; a test checks the two agree). A word here can be shown as a picture to choose between once its clip exists.",
+  "things": [
+    "cup",
+    "pot",
+    "bed",
+    "cat",
+    "bat",
+    "map",
+    "dog",
+    "pig",
+    "bug",
+    "mat",
+    "man",
+    "pan",
+    "fan",
+    "pin",
+    "tin",
+    "fin",
+    "tap",
+    "cap",
+    "cot",
+    "can",
+    "dot",
+    "top",
+    "mop",
+    "cod",
+    "dad"
+  ]
+}
