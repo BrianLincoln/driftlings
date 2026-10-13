@@ -17,14 +17,14 @@ anything about UFLI; do not go from memory.
   prints ok/FAIL and saves screenshots to `shots/play-*`
 - `npm run shots` : screenshot each area's map and the home island (from the landing, and with the companion sent
   to three other parts of it) at four sizes into `shots/`.
-  `npm run shots -- chart@i1a2` takes any `?scene=` at one area; `-- crews` is home with every crew
+  `npm run shots -- chart@i1a2` takes any `?scene=` at one area, `-- chart@sea3` the chart of a later sea; `-- crews` is home with every crew
   `npm run shots -- things` is the sheet the drawings of things are judged on (`docs/things.md`)
 - `npm run audio` : take in clips from `audio-inbox/`, rebuild `public/audio/` and the manifest
 - `npm run audio:wanted` : write `audio-inbox/WANTED.md`, the clips the lessons ahead are missing,
   nearest lesson first. What a lesson needs follows from the skill it teaches: a grapheme needs its
   sound, its keyword words (`src/content/keywords.json`: heard in "like in ...", never read) and, for
   a single letter, its name; a blending lesson needs enough buildable words from the graphemes taught
-  so far. A new kind of skill gets its own rule in `scripts/audio-wanted.mjs`
+  so far, and a lesson on new word shapes needs them of those shapes with its letter in. An irregular word needs its word and the sound of each of its tiles. A new kind of skill gets its own rule in `scripts/audio-wanted.mjs`
 
 URL switches: `?reset` clears the progress of the child who played last, `?demo` fills the home island, `?scene=map|home|who|sleeper|friends|<node id>`
 (`who` is where children choose who is playing, with `&demo` a full row of six; `sleeper` replays the map scene where the sleeper takes the plank, `friends` the one where it gives it back;
@@ -32,7 +32,10 @@ URL switches: `?reset` clears the progress of the child who played last, `?demo`
 `leave` holds the ship pulling away, `chart` the same with the chart unrolled over it, `arrive` the landing
 at home with everyone getting off; `sail` plays the whole crossing home),
 `?area=i1a2` goes to that area whatever the progress (alone, or with any of the scenes above),
-`?isles=43` draws the chart as it will be with that many islands, `?q=low`.
+`?isles=43` draws the chart as it will be with that many islands (more sheets, not smaller islands), `?sea=3` with
+`?scene=chart` the sheet of the third sea as on the crossing to its last island, `?q=low`,
+`?unrecorded` plays as if every clip had been recorded (the missing ones are silent): for looking at a lesson
+before its narration exists. `npm run play -- --unrecorded` does the same for the scripted play.
 
 Pushing to `main` deploys `dist/` to GitHub Pages. Tell the owner a change is ready locally
 before committing and deploying.
@@ -47,6 +50,7 @@ before committing and deploying.
   must see or touch stays inside it. Check both `tall` and `wide` in screenshots.
 - Render scale is the device pixel ratio or half of it, nothing in between (`src/stage/quality.ts`).
 - The glow colour means "touch this now" and the companion. Do not spend it elsewhere.
+- The heart colour (`C.heart`) means "this part of the word is learned by heart": the heart on a tile and its letter. Nothing else.
 - No text instructions in the game UI. Players cannot read. The one exception is the grown-ups' corner
   (`src/ui/grownups.ts`), behind a button that has to be held down.
 - Visual work is not done until `npm run shots` output has been looked at.
@@ -57,7 +61,8 @@ before committing and deploying.
 - `src/learn` : skills, event log, skill model, generator, scheduler. Pure logic: no three.js,
   no DOM, no imports from the rest of the app (a test enforces this). It has to be right.
 - `src/content` : word list, audio manifest (generated), and the adapter the generator reads; `endings.json` lists the things shown as one and
-  several (each needs a drawing in `scenes/things/`; a test checks) and the short words where s says /z/
+  several (each needs a drawing in `scenes/things/`; a test checks) and the short words where s says /z/; `hearts.json` lists the
+  irregular words, a tile to a sound (`docs/heart-words.md` has the design and what is built)
 - `src/exercises` : one module per exercise, all satisfying `contract.ts`; `index.ts` is the catalogue
 - `src/game` : one child's game (event log + everything derived), the children on this device (`children.ts`),
   the device store (one log per child; ids are uuids so an account can take them over later), and `areas.ts`:
@@ -84,15 +89,20 @@ run the sheet and the critic, and the words still to draw in batches. Read it be
 ## Opening an area
 
 An area is an island: the curriculum (`src/learn/curriculum.ts`) is one flat list of them, `AREAS`, in the
-order the ship finds them, and there is one chart with all of them on it. (The ids, `i1a1` to `i2a1`, are
+order the ship finds them. The chart has a sheet for each sea of six of them (`SEA` in `src/scenes/chartSheets.ts`),
+and a crossing shows the sheet of the sea it is in. (The ids, `i1a1` to `i2a1`, are
 left over from when areas were grouped; saved progress uses them, so they stay.)
 
 The curriculum already lists it. Give it a big one in `BIG_ONES`
 (`src/game/areas.ts`) and an entry in `PLACES` (`src/scenes/places.ts`); a test checks the two agree.
 Add its nodes to `scripts/play.mjs` and its map to `scripts/shots.mjs`, run `npm run audio:wanted`,
 and look at the chart in both layouts. Nothing on the chart is placed by hand: `src/scenes/chartSheets.ts`
-cuts the sheet into a spot for every area the curriculum lists, so adding one to the list makes the rest a
-little smaller. An eleventh big one needs a spot at home (`DENS` in `homeIsland.ts`).
+cuts each sea's sheet into six spots, and an island's spot follows only from its place in the list, so adding
+one to the end moves none of the others and the seventh of a sea starts a new sheet. An eleventh big one needs a spot at home (`DENS` in `homeIsland.ts`).
+
+A lesson added to an area children have already played is marked `late` in the curriculum. Saved progress is keyed
+by node id: a beaten checkpoint settles its whole area (`settled`), so nobody is sent back, and a child still there
+finds the new lesson next on the path.
 
 ## Adding an exercise
 

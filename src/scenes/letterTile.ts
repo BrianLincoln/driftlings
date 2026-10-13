@@ -20,6 +20,7 @@ export class LetterTile {
   private sq = new Spring(1);
   private lean = new Spring(0);
   private pop = new Spring(0);
+  private throb = new Spring(1);
   private popTarget = 1;
   private pulse = Math.random() * 6;
   /** Seconds since `vanish`, or -1 while the tile is staying. */
@@ -40,7 +41,9 @@ export class LetterTile {
     this.tile = tile;
     this.root = this.tile.root;
     this.anchor = this.tile.anchor;
-    this.glyph = glyphs.add(text, this.anchor, 0.74 * scale, icon);
+    // Two letters on one tile (th) are a little smaller, so they clear its edges.
+    this.glyph = glyphs.add(text, this.anchor, (!icon && text.length > 1 ? 0.6 : 0.74) * scale, icon);
+    if (tile.heart) this.glyph.el.classList.add('heart');
     this.root.scale.setScalar(0.001);
   }
 
@@ -57,6 +60,16 @@ export class LetterTile {
 
   hop(): void {
     this.sq.kick(5);
+  }
+
+  /** True if the letter is learned by heart. */
+  get byHeart(): boolean {
+    return !!this.tile.heart;
+  }
+
+  /** The heart gives one beat: its letter has just said the thing that has to be learned. */
+  beat(): void {
+    this.throb.kick(7);
   }
 
   /** A gentle "not that one". */
@@ -105,6 +118,7 @@ export class LetterTile {
     this.tile.halo.scale.setScalar(1 + 0.012 * Math.sin(this.pulse * 3.2));
     this.tile.mat.uniforms.uGlint.value = this.active && !this.dim ? 0.6 : 0;
     this.tile.mat.uniforms.uTint.value.setScalar(ease(this.tile.mat.uniforms.uTint.value.r, this.dim ? 0.72 : 1, 10, dt));
+    this.tile.heart?.scale.setScalar(Math.max(0.2, this.throb.step(1, 260, 12, dt)));
     const g = this.glyph;
     g.scaleY = sy * pop;
     g.scaleX = pop / Math.sqrt(Math.max(0.4, sy));

@@ -11,11 +11,15 @@ Complete.
 
 ## Island 2
 
-Complete.
+- [ ] `words/the` : "the", said as "thuh", not "thee" (learned by heart)
+- [ ] `letters/th-sound` : the sound "th" makes in "the", alone, no trailing "uh"
+- [ ] `prompts/this-word-is` : "This word is"
+- [ ] `prompts/learn-this-part-by-heart` : "This part, we learn by heart."
+- [ ] `words/a` : "a", said as "uh", not "ay" (learned by heart)
 
 ## Island 3
 
-Complete.
+- [ ] `prompts/tap-what-it-says` : "Tap what it says."
 
 ## Island 4
 
@@ -30,6 +34,13 @@ Complete.
 - [ ] `words/pigs` : "pigs" (one pig, lots of pigs)
 - [ ] `words/bug` : "bug" (one bug, lots of bugs)
 - [ ] `words/bugs` : "bugs" (one bug, lots of bugs)
+- [ ] `words/trip` : "trip" (a word to build: r beside another consonant)
+- [ ] `words/drum` : "drum" (a word to build: r beside another consonant)
+- [ ] `words/crab` : "crab" (a word to build: r beside another consonant)
+- [ ] `words/frog` : "frog" (a word to build: r beside another consonant)
+- [ ] `words/flag` : "flag" (a word to build: l beside another consonant)
+- [ ] `words/clap` : "clap" (a word to build: l beside another consonant)
+- [ ] `words/help` : "help" (a word to build: l beside another consonant)
 
 ## Next: w j y x qu v z
 

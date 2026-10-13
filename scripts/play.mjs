@@ -5,6 +5,7 @@
 //
 //   npm run play                 phone portrait and desktop
 //   npm run play -- --no-build
+//   npm run play -- --unrecorded   as if every clip had been recorded (the missing ones are silent): lessons whose narration is still to come
 
 import { execSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
@@ -21,11 +22,11 @@ const AREAS = [
   ['i1a2-p', 'i1a2-f', 'i1a2-i', 'i1a2-n', 'i1a2-boss'],
   ['i1a3-o', 'i1a3-d', 'i1a3-c', 'i1a3-boss'],
   ['i1a4-u', 'i1a4-g', 'i1a4-b', 'i1a4-e', 'i1a4-boss'],
-  ['i2a1-add-s', 'i2a1-s-z', 'i2a1-k', 'i2a1-h', 'i2a1-r', 'i2a1-l', 'i2a1-boss'],
+  ['i2a1-add-s', 'i2a1-s-z', 'i2a1-k', 'i2a1-h', 'i2a1-r', 'i2a1-r2', 'i2a1-l', 'i2a1-l2', 'i2a1-boss'],
 ];
-const SHOOT = new Set(['i1a1-a', 'i1a1-blend', 'i1a1-boss', 'i1a2-p', 'i1a2-boss', 'i1a3-c', 'i1a3-boss', 'i1a4-boss', 'i2a1-add-s', 'i2a1-s-z', 'i2a1-k', 'i2a1-boss']);
+const SHOOT = new Set(['i1a1-a', 'i1a1-blend', 'i1a1-boss', 'i1a2-p', 'i1a2-f', 'i1a2-boss', 'i1a3-c', 'i1a3-boss', 'i1a4-boss', 'i2a1-add-s', 'i2a1-s-z', 'i2a1-k', 'i2a1-r2', 'i2a1-l2', 'i2a1-boss']);
 /** How many little ones are home after each area. */
-const HOME = [5, 9, 12, 16, 22];
+const HOME = [5, 9, 12, 16, 24];
 
 if (!flags.has('--no-build')) execSync('npx vite build', { stdio: 'inherit' });
 mkdirSync('shots', { recursive: true });
@@ -44,7 +45,7 @@ for (const size of SIZES) {
   const step = (n = 12) => page.evaluate((k) => window.__dl.step(1 / 60, k), n);
   const scene = () => page.evaluate(() => window.__dl.info().scene);
 
-  await page.goto(`${base}?reset`);
+  await page.goto(`${base}?reset${flags.has('--unrecorded') ? '&unrecorded' : ''}`);
   await page.waitForFunction(() => window.__dl?.ready === true, null, { timeout: 15000 });
   await step(90);
   await shot('00-map-start');
@@ -84,7 +85,7 @@ for (const size of SIZES) {
       for (let i = 0; i < 1500 && !done; i++) {
         const s = await page.evaluate(() => window.__dl.exercise());
         const kind = !s ? 'none' : s.finished ? 'finished' : s.steer ? 'steer' : s.tap ? `tap:${s.tap[0].split(':')[0]}` : 'waiting';
-        if (kind !== last && kind !== 'waiting' && SHOOT.has(node) && shots < 7) {
+        if (kind !== last && kind !== 'waiting' && SHOOT.has(node) && shots < 12) {
           await step(18);
           await shot(`${node}-${String(shots++).padStart(2, '0')}-${kind.replace(':', '-')}`);
         }

@@ -36,6 +36,8 @@ export interface BlendItem {
   /** What each letter says here, as the letter that usually says it: i, z for "is". */
   sounds: string[];
   stage: BlendStage;
+  /** For an irregular word: which tiles are learned by heart. */
+  byHeart?: boolean[];
   skills: SkillId[];
   supports: SkillId[];
 }
@@ -77,7 +79,59 @@ export interface ManyItem {
   supports: SkillId[];
 }
 
-export type Item = MeetItem | PickLetterItem | BlendItem | CatchItem | ManyItem;
+/**
+ * An irregular word. Each tile is one sound, and the ones that do not say what the child has been taught carry a heart.
+ * meet: the child taps through its sounds and hears it; nothing is asked.
+ * find: it stands among other words, it is said, and the child picks it.
+ */
+export interface HeartItem {
+  kind: 'heart';
+  key: string;
+  word: string;
+  /** One per tile: th, e. */
+  graphemes: string[];
+  /** What each tile says here, as the letter that usually says it: th, u. */
+  sounds: string[];
+  byHeart: boolean[];
+  stage: 'meet' | 'find';
+  /** meet: this is the first irregular word the child has ever met, so the heart itself is explained. */
+  first: boolean;
+  /** find: the words to choose between, this one among them, in the order they stand. */
+  choices: ReadWord[];
+  skills: SkillId[];
+  supports: SkillId[];
+}
+
+/** A word as it stands on tiles. */
+export interface ReadWord {
+  text: string;
+  graphemes: string[];
+  sounds: string[];
+  byHeart: boolean[];
+}
+
+/** What a phrase or a sentence describes, as something that can be stood on the grass: a bug, or a bug on a bed. */
+export interface Picture {
+  thing: string;
+  where?: { rel: 'on' | 'in'; thing: string };
+}
+
+/**
+ * Words nobody says: the child reads them and taps what they describe.
+ * Every other choice differs from the right one in exactly one word.
+ */
+export interface ReadItem {
+  kind: 'read';
+  key: string;
+  words: ReadWord[];
+  target: Picture;
+  /** Includes the target. Already in display order. */
+  choices: Picture[];
+  skills: SkillId[];
+  supports: SkillId[];
+}
+
+export type Item = MeetItem | PickLetterItem | BlendItem | CatchItem | ManyItem | HeartItem | ReadItem;
 export type ItemKind = Item['kind'];
 
 /** One exercise's worth of items, played in order. */
@@ -102,4 +156,8 @@ export interface Content {
   words: ReadonlyArray<Word>;
   /** Words for a thing that can be shown, one and several, with what the s says on the end. Both words have clips. */
   many: ReadonlyArray<{ base: string; sound: string }>;
+  /** Irregular words, one grapheme per tile and what each says. The word and every sound have clips. */
+  hearts: ReadonlyArray<Word>;
+  /** Things that have a drawing and a spoken word: what a phrase can be about. `on` and `in`: something else can be put there. */
+  drawable: ReadonlyArray<{ name: string; on: boolean; in: boolean }>;
 }

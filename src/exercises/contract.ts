@@ -22,14 +22,19 @@ import type { Touchable } from '../stage/touch';
 export interface ExerciseKit {
   readonly mode: LayoutMode;
   readonly companion: Companion;
-  /** Make a letter tile (or an icon tile). The kit animates and disposes of it. */
-  tile(text: string, scale?: number, icon?: boolean): LetterTile;
+  /** Make a letter tile (or an icon tile). `heart`: its letter is learned by heart, and it carries the mark. The kit animates and disposes of it. */
+  tile(text: string, scale?: number, icon?: boolean, heart?: boolean): LetterTile;
   /** A letter on a coloured card instead of a stone tile. `hue` picks the colour; any whole number will do. */
   card(text: string, hue: number, scale?: number): LetterTile;
   /** An everyday thing to stand on the grass, by its word ("cup"). The exercise places it; the kit animates and disposes of it. */
   thing(name: string): Thing;
   /** A place in the front row of tiles, or in the nearer row of options. */
   spot(row: 'tiles' | 'options', index: number, count: number): THREE.Vector3;
+  /**
+   * How big a tile can be for `count` of them to stand in the front row with air between them and stay in view:
+   * 1 where there is room. A row that uses it spaces its tiles by the same amount (see the blend exercise).
+   */
+  fit(count: number): number;
   /** Where the companion stands when it is not at a tile. */
   sideSpot(): THREE.Vector3;
   /** Where the companion stands to point at a tile. */

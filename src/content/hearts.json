@@ -1,0 +1,9 @@
+{
+  "comment": "Irregular words. Each is cut into one tile per sound (`graphemes`), with what each tile says here given as the letter that usually says it (`sounds`). Which tiles carry a heart is not listed: it is every tile that does not say what the child has been taught so far. `on` and `in`: drawn things something else can be stood on, or put in, for the sentences a child reads. The game uses each word once its clip and its sounds' clips exist.",
+  "words": {
+    "the": { "graphemes": ["th", "e"], "sounds": ["th", "u"] },
+    "a": { "graphemes": ["a"], "sounds": ["u"] }
+  },
+  "on": ["bed", "dog", "pig", "pot", "cup"],
+  "in": ["cup", "pot"]
+}

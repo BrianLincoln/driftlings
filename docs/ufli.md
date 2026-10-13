@@ -94,8 +94,23 @@ Lessons 1 to 27 of 128, on five islands. Island 6 (28 to 34) finishes the alphab
 | `i1a2` | 6–10 | 10 is the checkpoint |
 | `i1a3` | 12–14 | 11 skipped: a pronunciation point, not a new correspondence |
 | `i1a4` | 15–19 | 19 is the checkpoint |
-| `i2a1` | 20–24, 26 | 25 and 27 folded into 24 and 26 |
+| `i2a1` | 20–27 | 25 (`i2a1-r2`) teaches CCVC with r after another consonant; 27 (`i2a1-l2`) CCVC with l, and CVCC. Both were added after the island was out: see below |
 | next | 28–34 | w j y x qu v z; audio already recorded |
+
+Blends, as the game has them:
+
+- Lesson 25 teaches `blend:ccvc` and lesson 27 teaches it again with l, and `blend:cvcc`. UFLI's lesson 22 already
+  shows CVCC words; here a word of a shape not yet taught is sounded out and heard but never rebuilt, so from 22 on
+  a child meets "desk" that way and is first asked to build one at 27. We put CVCC at 27 because that is where l
+  stands before a last consonant (milk, help); r cannot (it changes the vowel: UFLI 77 on).
+- The words with two consonants together all have k, h, r or l in them, so none can turn up before island 5.
+- A lesson's words are shared between its shapes, and the first of each shape is shown how. With no clip for any
+  word of its shape yet, a blend lesson is letter review only: it plays, and teaches nothing. Record before release.
+- Saved games from before the two lessons existed: beating an area's checkpoint settles every node in it
+  (`settled` in `src/learn/curriculum.ts`), so a child who had finished the island keeps it finished, knows both
+  shapes (shown how the first time one comes up) and finds two more little ones at home. A child still on the
+  island does 25 and 27 before the checkpoint. The two new little ones are numbered after the island's others
+  (`late`), so nobody already woken changes.
 
 Our exercises against the eight steps:
 
@@ -106,17 +121,19 @@ Our exercises against the eight steps:
 | `catch` | none directly: letter by *name*, at speed | light credit |
 | `blend` | 4 for the sounding out, 6 for the rebuilding | the unaided stage only |
 | `many` | 5 for lessons 20 and 21 | the ask stage |
+| `heart` | 7: meet an irregular word, then pick it out by ear; `blend` spells it | picking it out, and spelling it unaided |
+| `read` | 8, a first step: a phrase nobody says, tap the thing it names | yes |
 
 What UFLI does that the game does not yet:
 
-1. **Read a word nobody says** (steps 4, 6, 8). `blend` always speaks the word, so nothing shows a child decoding alone.
+1. **Read a word nobody says** (steps 4, 6, 8). Only in `read`, and only the words for the nine drawn things.
 2. **Letter to sound** (step 2). Everything we have runs sound to letter.
 3. **Word chains** (step 6, and in every lesson from 5).
 4. **Sounds with no letters** (step 1): blending and segmenting by ear.
-5. **Blends** (22, 25, 27, then 35 to 41). `blend:ccvc` and `blend:cvcc` exist as skills but no node teaches
-   them, and the word list has no CCVC word. Folding 25 and 27 away dropped exactly this.
-6. **Heart words** (step 7). By lesson 27 UFLI has taught about twenty; the `heart:` skill type is unused.
-7. **Sentences** (step 8). Not possible without heart words: almost every sentence needs "the", "a" or "is".
+5. **Longer blends** (35 to 41). CCVC and CVCC are taught (25, 27); CCVCC and CCCVC are not, and `shapeOf` calls
+   them `other`. The blend exercise already holds five tiles in both layouts.
+6. **Heart words** (step 7). By lesson 27 UFLI has taught about twenty; the game has two, "the" and "a" (`docs/heart-words.md`).
+7. **Sentences** (step 8). Phrases ("the cat") are read; whole sentences are made but not shown yet, for want of room.
 8. **Letter formation** (step 5) and capital letters (Getting Ready). A decision to make, not an oversight to fix.
 
 ## Sources

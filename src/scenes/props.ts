@@ -66,6 +66,8 @@ export interface Tile {
   slab: THREE.Group;
   anchor: THREE.Object3D;
   mat: ToonMaterial;
+  /** Perched on the top edge of a tile whose letter is learned by heart. Only there if asked for. */
+  heart?: THREE.Mesh;
 }
 
 let tileGeo: THREE.BufferGeometry | null = null;
@@ -73,7 +75,30 @@ let footGeo: THREE.BufferGeometry | null = null;
 let haloGeo: THREE.BufferGeometry | null = null;
 let cardHaloGeo: THREE.BufferGeometry | null = null;
 
-export function buildTile(): Tile {
+let heartGeo: THREE.BufferGeometry | null = null;
+let heartMat: ToonMaterial | null = null;
+const HEART = 0.3;
+
+/** A plump little heart standing on its point, facing forward, `HEART` across. Its origin is the point. */
+function heartMesh(): THREE.Mesh {
+  if (!heartGeo) {
+    const s = new THREE.Shape();
+    s.moveTo(0, 0);
+    s.bezierCurveTo(-0.62, 0.42, -0.6, 0.98, -0.26, 0.98);
+    s.bezierCurveTo(-0.1, 0.98, 0, 0.88, 0, 0.74);
+    s.bezierCurveTo(0, 0.88, 0.1, 0.98, 0.26, 0.98);
+    s.bezierCurveTo(0.6, 0.98, 0.62, 0.42, 0, 0);
+    const g = new THREE.ExtrudeGeometry(s, { depth: 0.22, bevelEnabled: true, bevelThickness: 0.09, bevelSize: 0.07, bevelSegments: 3, curveSegments: 10 });
+    g.translate(0, 0, -0.11);
+    g.scale(HEART, HEART, HEART);
+    heartGeo = paint(g, C.heart);
+  }
+  heartMat ??= toonMaterial({ tag: TAG.tile, flag: -0.92 });
+  return new THREE.Mesh(heartGeo, heartMat);
+}
+
+/** `heart`: the tile's letter is learned by heart, and a heart sits on its top edge to say so. */
+export function buildTile(heart = false): Tile {
   tileGeo ??= place(
     paint(new RoundedBoxGeometry(TILE.width, TILE.height, TILE.depth, 5, 0.075), (_p, n) =>
       n.z > 0.5 ? C.parchment : C.parchmentEdge),
@@ -100,6 +125,13 @@ export function buildTile(): Tile {
   anchor.position.set(0, TILE.height * 0.5, TILE.depth / 2);
   slab.add(anchor);
   root.add(foot, slab);
+  if (heart) {
+    const mesh = heartMesh();
+    mesh.position.set(TILE.width * 0.3, TILE.height - 0.07, TILE.depth * 0.3);
+    mesh.rotation.z = -0.22;
+    slab.add(mesh);
+    return { root, slab, halo, anchor, mat, heart: mesh };
+  }
   return { root, slab, halo, anchor, mat };
 }
 

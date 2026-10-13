@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AREAS, allNodes, currentNode, findNode, knownSkills, rescueIndex, rescuesHome } from './curriculum';
+import { AREAS, allNodes, currentNode, findNode, knownSkills, rescueIndex, rescuesHome, settled, type NodeDef } from './curriculum';
 import type { Attempt } from './events';
 import { askableGraphemes, blendItem, catchItem, decodableWords, manyItem, pickLetterItem, readableWords, type GenContext } from './generator';
 import type { Content, Item, Round } from './items';
@@ -14,7 +14,7 @@ const T0 = 1_700_000_000_000;
 
 const WORDS = ['am', 'at', 'mat', 'sat', 'map', 'pin', 'ant'];
 function content(sounds: string, words = WORDS): Content {
-  return { hasSound: (g) => sounds.includes(g), hasName: (g) => sounds.includes(g) && g !== 'n', words: words.map((text) => ({ text, graphemes: [...text] })), many: [] };
+  return { hasSound: (g) => sounds.includes(g), hasName: (g) => sounds.includes(g) && g !== 'n', words: words.map((text) => ({ text, graphemes: [...text] })), many: [], hearts: [], drawable: [] };
 }
 
 function ctxFor(done: string[], opts: Partial<GenContext> & { seed?: number } = {}): GenContext {
@@ -242,6 +242,7 @@ describe('scheduler', () => {
         item.others.length > 0 && !item.others.includes(item.target) && item.skills.length === 0;
     }
     if (item.kind === 'many') return false; // nothing here can be shown as one and several
+    if (item.kind !== 'blend') return false; // nor is there an irregular word, or a thing to read about
     return item.graphemes.every((g) => ctx.known.has(gpc(g)) && sounds.includes(g)) &&
       (item.stage === 'read' || ctx.known.has(blend(shapeOf(item.graphemes)))) && WORDS.includes(item.word);
   };
@@ -399,51 +400,144 @@ describe('the k h r l area', () => {
   // As the game has it: one word to build with k, two with l, and a long list of older words.
   const older = ['am', 'at', 'mat', 'sat', 'map', 'pin', 'dog', 'cat', 'cot', 'bed', 'sun', 'pig', 'net', 'cup', 'bus', 'top'];
   const words = [...older, 'kid', 'hat', 'hen', 'rat', 'red', 'lip', 'log', 'elk', 'milk'];
+  // And once the words with two consonants together are recorded.
+  const two = ['trip', 'drum', 'crab', 'frog', 'skip', 'flag', 'clap', 'plum', 'help', 'belt', 'desk', 'nest'];
+  const node = (id: string) => A.nodes.find((x) => x.id === `i2a1-${id}`)!;
   // The area opens with the two lessons on an s at the end; its letters come after.
-  const letters = A.nodes.slice(2, 6);
-  const ctxAt = (n: number, seed: number) =>
-    ctxFor([...before, ...A.nodes.slice(0, n + 3).map((x) => x.id)], { seed, content: { ...content('amstpfinodcugbekhrl', words), hasName: () => true } });
+  const letters = ['k', 'h', 'r', 'l'].map(node);
+  /** Everything up to and including the node, as a child who has just reached it has it. */
+  const ctxAt = (at: NodeDef, seed: number, list = words) =>
+    ctxFor([...before, ...A.nodes.slice(0, A.nodes.indexOf(at) + 1).map((x) => x.id)], { seed, content: { ...content('amstpfinodcugbekhrl', list), hasName: () => true } });
   const blendsOf = (rounds: Round[]) => itemsOf(rounds).flatMap((i) => (i.kind === 'blend' ? [i] : []));
+  const shape = (word: string) => shapeOf([...word]);
 
   it('follows the island 1 boss, with the lessons on an s at the end first', () => {
-    expect(A.nodes.map((x) => x.ufli)).toEqual([20, 21, 22, 23, 24, 26, null]);
+    expect(A.nodes.map((x) => x.ufli)).toEqual([20, 21, 22, 23, 24, 25, 26, 27, null]);
     expect(rescueIndex(A.nodes[0].id)).toBe(16);
   });
 
   it('always uses the new letter in a word, however few words it has', () => {
     for (let seed = 1; seed <= 60; seed++) {
-      letters.forEach((node, n) => {
-        const rounds = planLesson(node, ctxAt(n, seed), T0);
+      for (const at of letters) {
+        const rounds = planLesson(at, ctxAt(at, seed), T0);
         expect(rounds.map((r) => r.exercise)).toEqual(['meet', 'pick-letter', 'catch', 'blend']);
         const built = blendsOf(rounds);
         expect(built.length).toBe(SIZES.lessonBlends);
-        expect(built[0].graphemes).toContain(graphemeOf(node.teaches[0]));
-      });
+        expect(built[0].graphemes).toContain(graphemeOf(at.teaches[0]));
+      }
     }
   });
 
-  it('only sounds out a word whose shape is not taught, and keeps it out of the checkpoint', () => {
+  it('only sounds out a word whose shape is not taught', () => {
     for (let seed = 1; seed <= 60; seed++) {
-      for (const i of blendsOf(planLesson(letters[3], ctxAt(3, seed), T0))) expect(i.stage === 'read').toBe(i.word === 'elk' || i.word === 'milk');
-      const check = blendsOf(planCheckpoint(A, ctxAt(4, seed), T0));
+      // At l the shape of "milk" is still to come, and "elk" is a shape no lesson teaches.
+      for (const i of blendsOf(planLesson(node('l'), ctxAt(node('l'), seed), T0))) expect(i.stage === 'read').toBe(i.word === 'elk' || i.word === 'milk');
+      for (const i of blendsOf(planLesson(node('k'), ctxAt(node('k'), seed, [...words, ...two]), T0))) expect(i.stage === 'read').toBe(i.word === 'desk' || i.word === 'skip');
+    }
+  });
+
+  it('goes round the area\'s letters in the checkpoint, and never asks for a word of a shape no lesson teaches', () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      const check = blendsOf(planCheckpoint(A, ctxAt(node('boss'), seed), T0));
       expect(check.length).toBe(SIZES.checkpointBlends);
       // Three words, each bringing one of the area's letters the others have not.
-      expect(new Set(check.flatMap((i) => i.graphemes.filter((g) => 'khrl'.includes(g)))).size).toBe(3);
-      expect(check.every((i) => older.concat(words).includes(i.word) && i.word !== 'elk' && i.word !== 'milk')).toBe(true);
+      expect(new Set(check.flatMap((i) => i.graphemes.filter((g) => 'khrl'.includes(g)))).size).toBeGreaterThanOrEqual(3);
+      expect(check.every((i) => words.includes(i.word) && i.word !== 'elk' && i.stage !== 'read')).toBe(true);
     }
+  });
+
+  it('teaches two consonants together: r after one at the start, then l there and before one at the end', () => {
+    expect(node('r2').teaches).toEqual([blend('ccvc')]);
+    expect(node('l2').teaches).toEqual([blend('ccvc'), blend('cvcc')]);
+    expect(A.nodes.map((x) => x.id.slice(5))).toEqual(['add-s', 's-z', 'k', 'h', 'r', 'r2', 'l', 'l2', 'boss']);
+    expect(shape('trip')).toBe('ccvc');
+    expect(shape('milk')).toBe('cvcc');
+  });
+
+  it('builds words of the new shape with the letter in, showing how on the first of each shape', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const list = [...words, ...two];
+      const r2 = planLesson(node('r2'), ctxAt(node('r2'), seed, list), T0);
+      expect(r2.map((r) => r.exercise)).toEqual(['blend', 'pick-letter']);
+      expect(blendsOf(r2).map((i) => [i.word, i.stage])).toEqual([['trip', 'guided'], ['drum', 'free'], ['crab', 'free'], ['frog', 'free']]);
+      // Two of each shape, in list order: l in each, and nothing with a letter not yet taught.
+      const l2 = blendsOf(planLesson(node('l2'), ctxAt(node('l2'), seed, list), T0));
+      expect(l2.map((i) => [i.word, i.stage])).toEqual([['milk', 'guided'], ['flag', 'guided'], ['clap', 'free'], ['help', 'free']]);
+    }
+    // Before r2, "flag" has an l nobody has met, and at r2 itself nothing is built that is not the new shape.
+    expect(readableWords(ctxAt(node('r2'), 1, [...words, ...two])).map((w) => w.text)).not.toContain('flag');
+  });
+
+  it('makes do with the words there are: another shape\'s share, a word without the letter, or just the letters', () => {
+    const l2 = (list: string[]) => blendsOf(planLesson(node('l2'), ctxAt(node('l2'), 1, list), T0)).map((i) => i.word);
+    // As recorded today: only "milk" and (as a keyword) "nest".
+    expect(l2([...words, 'nest'])).toEqual(['milk', 'nest']);
+    expect(l2([...words, 'nest', 'flag'])).toEqual(['milk', 'flag', 'nest']);
+    const r2 = planLesson(node('r2'), ctxAt(node('r2'), 1), T0);
+    expect(r2.map((r) => r.exercise)).toEqual(['pick-letter']);
+    expect(itemsOf(r2).length).toBe(SIZES.blendLessonPicks);
+  });
+
+  it('builds the new shapes in the lessons after', () => {
+    const ctx = ctxAt(node('boss'), 1, [...words, ...two]);
+    expect(decodableWords(ctx).map((w) => w.text)).toEqual(expect.arrayContaining(['trip', 'flag', 'milk', 'help', 'nest']));
+    expect(decodableWords(ctx).map((w) => w.text)).not.toContain('elk');
+    expect(blendItem('trip', ctxAt(node('r'), 1, [...words, ...two]))).toBeNull();
+    expect(blendItem('trip', ctxAt(node('r'), 1, [...words, ...two]), 'read')).not.toBeNull();
   });
 
   it('never sets c beside k: the sound cannot tell them apart', () => {
     expect(soundsLike('c', 'k')).toBe(true);
     expect(soundsLike('c', 'd')).toBe(false);
     for (let seed = 1; seed <= 80; seed++) {
-      const ctx = ctxAt(4, seed);
-      for (const i of itemsOf([...planLesson(letters[0], ctxAt(0, seed), T0), ...planCheckpoint(A, ctx, T0)])) {
+      const ctx = ctxAt(node('boss'), seed);
+      for (const i of itemsOf([...planLesson(node('k'), ctxAt(node('k'), seed), T0), ...planCheckpoint(A, ctx, T0)])) {
         if (i.kind === 'pick-letter' && 'ck'.includes(i.target)) expect(i.choices.filter((g) => 'ck'.includes(g))).toEqual([i.target]);
       }
       expect(pickLetterItem('c', ctx)!.choices).not.toContain('k');
       expect(catchItem('k', ctx)!.others).not.toContain('c');
     }
+  });
+});
+
+describe('a lesson added to an area already out', () => {
+  const A = AREAS[4];
+  const ids = A.nodes.map((x) => x.id);
+  const was = ids.filter((id) => id !== 'i2a1-r2' && id !== 'i2a1-l2');
+  const earlier = AREAS.slice(0, 4).flatMap((a) => a.nodes.map((x) => x.id));
+
+  it('is done for a child who had beaten the area: finished, known, and its little one home', () => {
+    const done = settled(new Set([...earlier, ...was]));
+    expect(ids.every((id) => done.has(id))).toBe(true);
+    expect(currentNode(A, done)).toBeNull();
+    expect(knownSkills(done)).toEqual(new Set(allNodes().flatMap((x) => x.teaches)));
+    expect(rescuesHome(done)).toEqual(Array.from({ length: 24 }, (_, i) => i));
+  });
+
+  it('is the next thing to do for a child still there, who keeps everything already done', () => {
+    // All six old lessons done and the checkpoint not: the two new ones come before it.
+    let done = settled(new Set([...earlier, ...was.slice(0, -1)]));
+    expect(done.size).toBe(earlier.length + 6);
+    expect(currentNode(A, done)!.id).toBe('i2a1-r2');
+    done = new Set([...done, 'i2a1-r2']);
+    expect(currentNode(A, done)!.id).toBe('i2a1-l2');
+    expect(currentNode(A, new Set([...done, 'i2a1-l2']))!.id).toBe('i2a1-boss');
+    // Partway: nothing skipped, nothing undone.
+    expect(currentNode(A, settled(new Set([...earlier, ...was.slice(0, 5)])))!.id).toBe('i2a1-r2');
+    expect(currentNode(A, settled(new Set([...earlier, ...was.slice(0, 3)])))!.id).toBe('i2a1-h');
+    expect(rescuesHome(settled(new Set([...earlier, ...was.slice(0, -1)])))).toEqual(Array.from({ length: 16 }, (_, i) => i));
+  });
+
+  it('leaves everyone already woken who they were', () => {
+    // As numbered before the two lessons were added: every lesson in order.
+    expect(was.slice(0, -1).map(rescueIndex)).toEqual([16, 17, 18, 19, 20, 21]);
+    expect(['i2a1-r2', 'i2a1-l2'].map(rescueIndex)).toEqual([22, 23]);
+    expect(new Set(allNodes().filter((x) => x.kind === 'lesson').map((x) => rescueIndex(x.id))).size).toBe(24);
+  });
+
+  it('settles nothing in an area whose checkpoint is not beaten', () => {
+    expect(settled(new Set(['i1a1-a', 'i1a1-m']))).toEqual(new Set(['i1a1-a', 'i1a1-m']));
+    expect(settled(new Set(['i1a1-boss'])).size).toBe(AREAS[0].nodes.length);
   });
 });
 
@@ -457,7 +551,7 @@ describe('an s on the end', () => {
     ...['is', 'as', 'his'].map((text) => ({ text, graphemes: [...text], sounds: [...text.slice(0, -1), 'z'] })),
   ];
   const ctxAt = (done: string[], seed = 1, sounds = 'amstpfinodcugbez') =>
-    ctxFor([...before, ...done], { seed, content: { hasSound: (g) => sounds.includes(g), hasName: () => true, words, many } });
+    ctxFor([...before, ...done], { seed, content: { hasSound: (g) => sounds.includes(g), hasName: () => true, words, many, hearts: [], drawable: [] } });
   const manys = (rounds: Round[]) => itemsOf(rounds).flatMap((i) => (i.kind === 'many' ? [i] : []));
 
   it('teaches the ending and the second sound as skills of their own', () => {

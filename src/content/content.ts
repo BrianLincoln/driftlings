@@ -1,5 +1,6 @@
 import manifest from './audio-manifest.json';
 import endings from './endings.json';
+import hearts from './hearts.json';
 import keywordGroups from './keywords.json';
 import wordGroups from './words.json';
 import type { Content } from '../learn/items';
@@ -11,7 +12,16 @@ const clips = manifest as Record<string, number>;
 
 export type ClipId = string;
 
-export const hasClip = (id: ClipId): boolean => id in clips;
+/**
+ * `?unrecorded`: play as if every clip had been recorded. The missing ones are silent and take no time.
+ * For looking at a lesson before its narration exists; never for players.
+ */
+const PRETEND = typeof location !== 'undefined' && new URLSearchParams(location.search).has('unrecorded');
+
+/** True if the clip can be asked for. */
+export const hasClip = (id: ClipId): boolean => PRETEND || id in clips;
+/** True if there is really something to hear. */
+export const recorded = (id: ClipId): boolean => id in clips;
 export const clipSeconds = (id: ClipId): number => clips[id] ?? 0;
 export const clipUrl = (id: ClipId): string => `${import.meta.env.BASE_URL}audio/${id}.mp3`;
 
@@ -42,4 +52,12 @@ export const CONTENT: Content = {
   many: Object.entries(endings.many)
     .flatMap(([sound, bases]) => bases.map((base) => ({ base, sound })))
     .filter((m) => hasClip(wordClip(m.base)) && hasClip(wordClip(`${m.base}s`))),
+  hearts: Object.entries(hearts.words)
+    .map(([text, w]) => ({ text, ...w }))
+    .filter((w) => hasClip(wordClip(w.text)) && w.sounds.every((s) => hasClip(soundClip(s)))),
+  // Every thing with a drawing is listed in endings.json (a test in scenes checks the two agree).
+  drawable: Object.values(endings.many)
+    .flat()
+    .filter((name) => hasClip(wordClip(name)))
+    .map((name) => ({ name, on: hearts.on.includes(name), in: hearts.in.includes(name) })),
 };
