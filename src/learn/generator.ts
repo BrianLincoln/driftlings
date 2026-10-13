@@ -1,7 +1,7 @@
 import type { BlendItem, BlendStage, CatchItem, Content, HeartItem, ManyItem, MeetItem, Picture, PickLetterItem, ReadItem, ReadWord, Word } from './items';
 import { confusionKey, type SkillState } from './model';
 import { shuffle, weighted, type Rng } from './rng';
-import { answersFor, blend, gpc, graphemeOf, heart, second, shapeOf, suffix, type SkillId } from './skills';
+import { answersFor, blend, gpc, graphemeOf, heart, isVowel, second, shapeOf, suffix, type SkillId } from './skills';
 
 // Builds items from what the child knows and what audio exists. Two rules it
 // never breaks: an item only asks about taught skills, and an item is only
@@ -40,10 +40,10 @@ export function meetItem(grapheme: string, ctx: GenContext): MeetItem | null {
   return { kind: 'meet', key: key('meet', grapheme), grapheme };
 }
 
-/** Up to `n` letters to set beside the target: taught ones and foils, never the target itself or a letter that says the same sound. */
-function wrongLetters(target: string, n: number, ctx: GenContext): string[] {
+/** Up to `n` letters to set beside the target: taught ones and foils (only those in `among`, if given), never the target itself or a letter that says the same sound. */
+function wrongLetters(target: string, n: number, ctx: GenContext, among?: readonly string[]): string[] {
   const taught = [...ctx.known].map(graphemeOf).filter((g): g is string => !!g && !answersFor(target, g));
-  let pool = [...new Set([...taught, ...ctx.foils.filter((g) => !answersFor(target, g))])];
+  let pool = [...new Set([...taught, ...ctx.foils.filter((g) => !answersFor(target, g))])].filter((g) => !among || among.includes(g));
   const confused = ctx.confusions.get(target);
   const wrong: string[] = [];
   while (wrong.length < n && pool.length > 0) {
@@ -55,9 +55,10 @@ function wrongLetters(target: string, n: number, ctx: GenContext): string[] {
   return wrong;
 }
 
-export function pickLetterItem(target: string, ctx: GenContext, nChoices = 3): PickLetterItem | null {
+/** `among` keeps the wrong choices to some letters: the vowels, when it is a vowel that has to be told from the others. */
+export function pickLetterItem(target: string, ctx: GenContext, nChoices = 3, among?: readonly string[]): PickLetterItem | null {
   if (!ctx.known.has(gpc(target)) || !ctx.content.hasSound(target)) return null;
-  const wrong = wrongLetters(target, nChoices - 1, ctx);
+  const wrong = wrongLetters(target, nChoices - 1, ctx, among);
   if (wrong.length === 0) return null;
   return {
     kind: 'pick-letter',
@@ -79,9 +80,12 @@ export function catchItem(target: string, ctx: GenContext, count = 4, nOthers = 
 /** True where a letter of the word says something other than its usual sound. */
 export const oddAt = (w: Word, i: number): boolean => !!w.sounds && w.sounds[i] !== w.graphemes[i];
 
-/** Words the child can sound out letter by letter: every letter taught and heard, and its second sound taught where it makes that. */
+/**
+ * Words the child can sound out letter by letter: every letter taught and heard, and its second sound taught where it makes that.
+ * A `late` word waits for its shape as well, so the early lessons' words stay short.
+ */
 export function readableWords(ctx: GenContext): Word[] {
-  return ctx.content.words.filter((w) => w.graphemes.every((g, i) =>
+  return ctx.content.words.filter((w) => (!w.late || ctx.known.has(blend(shapeOf(w.graphemes)))) && w.graphemes.every((g, i) =>
     ctx.known.has(gpc(g)) && ctx.content.hasSound(w.sounds?.[i] ?? g) && (!oddAt(w, i) || ctx.known.has(second(g)))));
 }
 
@@ -205,21 +209,26 @@ export const pictureLabel = (p: Picture): string => (p.where ? `${p.thing} ${p.w
  * stand in front of a thing ("the", "a"): only ones the child has met.
  * A sentence ("the bug is on the bed") when `sentence` is asked for and its words can all be read; if not, a phrase ("the bug").
  * Null without three things to choose between.
+ * `tell` are vowels to be told apart: a thing with one of them whose word is another's but for the vowel (pan, pin)
+ * is the one to read where there is such a thing, and the other is always beside it.
  */
-export function readItem(ctx: GenContext, articles: readonly string[], sentence = false): ReadItem | null {
+export function readItem(ctx: GenContext, articles: readonly string[], sentence = false, tell: readonly string[] = []): ReadItem | null {
   const things = readableThings(ctx);
   const arts = heartWords(ctx).filter((w) => articles.includes(w.text));
   if (things.length < 3 || arts.length === 0) return null;
   const art = () => arts[Math.floor(ctx.rng() * arts.length)];
   /** How easily `b` is taken for `a`: most of all when one letter apart (cat, cap), then when it starts the same way. */
   const apart = (a: string, b: string) => (a.length === b.length ? [...a].filter((c, i) => c !== b[i]).length : 9);
-  const near = (a: string, b: string) => 1 + (apart(a, b) === 1 ? 14 : 0) + (a[0] === b[0] ? 4 : 0) + ([...a].some((c) => b.includes(c)) ? 1 : 0);
+  const twins = (a: string, b: string) => apart(a, b) === 1 && [...a].some((c, i) => c !== b[i] && isVowel(c) && isVowel(b[i]));
+  const near = (a: string, b: string) => 1 + (apart(a, b) === 1 ? 14 : 0) + (a[0] === b[0] ? 4 : 0) + ([...a].some((c) => b.includes(c)) ? 1 : 0) + (tell.length && twins(a, b) ? 60 : 0);
   /** Another thing, for choice beside `than`: a near miss if there is one, so the first letter is not enough. */
   const other = (than: string, not: string[], ok: (t: (typeof things)[number]) => boolean = () => true) => {
     const pool = things.filter((t) => t.name !== than && !not.includes(t.name) && ok(t));
     return pool.length ? weighted(pool, (t) => near(t.name, than), ctx.rng) : null;
   };
-  const subject = things[Math.floor(ctx.rng() * things.length)];
+  const subject = tell.length
+    ? weighted(things, (t) => (tell.some((v) => t.name.includes(v)) ? 3 : 1) * (things.some((o) => twins(t.name, o.name)) ? 6 : 1), ctx.rng)
+    : things[Math.floor(ctx.rng() * things.length)];
   const used = (ws: Word[]) => [...new Set(ws.flatMap((w) => [...(byHeart(w, ctx).some(Boolean) ? [heart(w.text)] : []), ...behaving(w, ctx), ...w.graphemes.flatMap((g, i) => (oddAt(w, i) && ctx.known.has(second(g)) ? [second(g)] : []))]))];
   const shapes = (ws: Word[]) => [...new Set(ws.map((w) => blend(shapeOf(w.graphemes))))];
 

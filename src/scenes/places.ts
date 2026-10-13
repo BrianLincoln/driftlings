@@ -201,4 +201,30 @@ export const PLACES: Record<string, Place> = {
     ],
     chart: [[-0.58, -0.28, 'tree', 19], [-0.3, -0.58, 'tree', 23], [0.02, -0.68, 'tree', 35], [-0.22, -0.2, 'tree', 47]],
   },
+  // The first island of the second sea, at first light and all in blue: a flat round meadow with hardly a bay, a broad ring
+  // of sand, cairns of boulders in a row along the back, a tree at either end, and the stones in one long wave.
+  i2a3: {
+    shape: { radius: 7.5, rise: 0.3, sand: 2.3, seed: 2.1, bays: 0.15 },
+    palette: PALETTES.blueDawn,
+    wideZ: [0.9, 0.2, -0.6, -0.9, -0.3, 0.5, 1.0],
+    tallX: [-0.95, 0.0, 0.95, 0.0, -0.95, 0.0, 0.95],
+    bigSide: 1,
+    scenery: () => [
+      tree(16, [6.3, -2.2], [-2.7, -4.6]),
+      rock(24, 0.45, [5.4, -3.6], [-2.6, -2.9]),
+      rock(28, 0.8, [4.1, -4.7], [2.7, 3.2]),
+      rock(36, 0.95, [-4.6, -3.9], [-2.6, -1.2]),
+      rock(42, 0.5, [-3.2, -4.9], [2.5, 0.2]),
+      tree(54, [-5.7, -2.2], [2.5, 1.6]),
+      bush(66, [-3.2, 2.9], [-2.5, 0.6]),
+      rock(78, 0.35, [0.6, 3.1], [-2.4, 2.2]),
+      bush(89, [3.6, 2.7], [-2.5, 3.4]),
+    ],
+    far: [[-34, -78, 14], [6, -98, 3], [40, -86, 11]],
+    dressing: [
+      [0.62, -0.5, 'rock'], [0.5, -0.36, 'rock'], [0.56, 0.4, 'rock'], [0.44, 0.24, 'rock'], [0.72, 0.6, 'tree'], [0.8, -0.62, 'tree'], [0.86, -0.22, 'bush'],
+      [0.84, 0.06, 'stone'], [0.66, -0.04, 'stone'], [0.5, 0.1, 'stone'], [0.34, 0.0, 'stone'],
+    ],
+    chart: [[-0.6, -0.3, 'rock', 36], [-0.36, -0.56, 'rock', 42], [-0.08, -0.66, 'rock', 28], [0.3, -0.5, 'tree', 16]],
+  },
 };

@@ -4,7 +4,7 @@ import drawn from './drawn.json';
 import hearts from './hearts.json';
 import keywordGroups from './keywords.json';
 import wordGroups from './words.json';
-import { multiGraphemes } from '../learn/curriculum';
+import { AREAS, areaVowels, multiGraphemes } from '../learn/curriculum';
 import type { Content } from '../learn/items';
 import { splitGraphemes } from '../learn/skills';
 
@@ -43,10 +43,11 @@ const MULTI = multiGraphemes();
 /** A listed word as the game holds it: its text, and its graphemes, one per sound (qu is one). A dot in the list forces a cut. */
 export const cut = (spelling: string): { text: string; graphemes: string[] } => ({ text: spelling.replaceAll('.', ''), graphemes: splitGraphemes(spelling, MULTI) });
 
+/** The areas that go back over the vowels. Their groups of words are spelled with early letters (stop, stamp) and wait for their shapes. */
+const REVIEWS = AREAS.filter((a) => areaVowels(a).length).map((a) => a.id);
 const allWords = Object.entries(wordGroups as Record<string, string[] | string>)
-  .filter(([, v]) => Array.isArray(v))
-  .flatMap(([, v]) => v as string[])
-  .map(cut);
+  .filter((e): e is [string, string[]] => Array.isArray(e[1]))
+  .flatMap(([group, list]) => list.map((w) => (REVIEWS.includes(group.split(' ')[0]) ? { ...cut(w), late: true } : cut(w))));
 
 export const CONTENT: Content = {
   hasSound: (g) => hasClip(soundClip(g)),

@@ -12,6 +12,9 @@
 //   an irregular word its word, the sound of each of its tiles (src/content/hearts.json), and the lines that introduce it
 //   reading alone     the lines that say what to do; the words themselves are the drawn things' and already wanted elsewhere
 //   word chains      the lines that say what to do; its words are ones the lessons build, already wanted elsewhere
+//   a vowel gone back over  no letter and no line of its own: the words named for it, chosen so that they differ only in
+//                    the vowel from each other and from the words of the lessons beside it (slap, slip, slop), which is
+//                    what its chains turn on; and for a lesson that brings a new shape (stamp, strap), words of that shape
 //   an ending        the lines that explain it, and for each thing shown as one and several
 //                    (src/content/endings.json) its word with the s; for s saying /z/, two short words where it does too
 
@@ -30,6 +33,7 @@ const has = (id) => id in manifest;
 // (each its share, or any mix of them with `mix`) and with the letter `having` (or one of them) in them if given; { ending: 's' | 'z' } is an s on the end, saying that;
 // { heart: word } is an irregular word; { read: true } is where words are first read with nobody saying them.
 // { chain: true } is where word chains begin: the lesson after the first on blending, when there are words enough to link.
+// { words: [...], why } is a lesson that needs just these words (all in src/content/words.json).
 const STEPS = [
   ['Island 1', ['a', 'm', 's', 't', { blend: 4 }]],
   ['Island 2', ['p', { chain: true }, { heart: 'the' }, 'f', { heart: 'a' }, 'i', 'n']],
@@ -42,6 +46,15 @@ const STEPS = [
     'v',
     'z', { blend: 2, having: 'z', why: 'a word with z in it' },
     { blend: 2, shapes: ['ccvc', 'cvcc'], having: ['w', 'j', 'y', 'x', 'qu', 'v', 'z'], why: 'two consonants together, with one of the last letters of the alphabet' },
+  ]],
+  // The short vowels gone back over (UFLI 35 to 41). The three-letter words its chains turn on are recorded already (pan, pin, pun).
+  ['Island 7', [
+    { words: ['slap', 'flap', 'trap', 'clap', 'lamp', 'fast', 'last', 'band', 'hand'], why: 'short a in a longer word' },
+    { words: ['slip', 'flip', 'trip', 'clip', 'limp', 'fist', 'list', 'lift'], why: 'short i in a longer word' },
+    { words: ['slop', 'flop', 'stop', 'drop', 'lost', 'loft', 'bond', 'pond'], why: 'short o in a longer word' },
+    { words: ['stamp', 'stomp', 'cramp', 'crimp', 'bland', 'blond', 'draft', 'drift', 'frost'], why: 'a, i or o with two consonants at each end' },
+    { words: ['strap', 'strip', 'scrap', 'strum', 'strut', 'scrub', 'stump', 'crust', 'lump', 'plug'], why: 'three consonants first, and short u' },
+    { words: ['step', 'sled', 'left', 'best', 'bend', 'tent', 'blend', 'crest', 'spend', 'slept'], why: 'short e in a longer word' },
   ]],
 ];
 
@@ -78,6 +91,11 @@ for (const [title, steps] of STEPS) {
       if (step.length > 1 && !has('prompts/together-these-letters-make-the-sound')) want.push('`prompts/together-these-letters-make-the-sound` : "Together, these letters make the sound" (said before the sound of two letters on one tile: qu, and later sh, ch, th)');
       if (step.length === 1 && !has(`letters/${step}-name`)) want.push(`\`letters/${step}-name\` : the name of the letter "${step}"`);
       for (const w of keywords[step] ?? []) if (!has(`words/${w}`)) want.push(`\`words/${w}\` : "${w}" (keyword for ${step})`);
+    } else if (step.words) {
+      for (const w of step.words) {
+        if (!words.some((x) => x.text === w)) throw new Error(`${w} is wanted for ${title} but is not in words.json`);
+        if (!has(`words/${w}`)) want.push(`\`words/${w}\` : "${w}" (${step.why})`);
+      }
     } else if (step.heart) {
       const w = step.heart;
       const said = { the: 'as "thuh", not "thee"', a: 'as "uh", not "ay"' }[w];
@@ -120,8 +138,9 @@ for (const [title, steps] of STEPS) {
       }
     }
   }
-  // A line two lessons share is asked for once, at the first.
-  const fresh = want.filter((l) => !asked.has(l) && asked.add(l));
+  // A clip two lessons share is asked for once, at the first.
+  const clip = (l) => l.split(' : ')[0];
+  const fresh = want.filter((l) => !asked.has(clip(l)) && asked.add(clip(l)));
   lines.push(`## ${title}`, '', ...(fresh.length ? fresh.map((l) => `- [ ] ${l}`) : ['Complete.']), '');
   total += fresh.length;
 }

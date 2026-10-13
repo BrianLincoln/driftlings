@@ -44,6 +44,14 @@ export const PALETTES = {
     tint: '#c1977f', tintAmt: 0.36, lift: 0.05, wash: '#edd8c8',
     outline: '#3e2a2e', water: '#9aa2c2', foam: '#f8efe6', sun: '#ffe7bd',
   },
+  // First light: a pale blue sky over a lemon horizon, blue shade, the sea a deeper blue than anywhere before.
+  blueDawn: {
+    skyTop: '#9bb6dc', skyMid: '#c8d8ea', skyHorizon: '#fbf0c9',
+    cloud: '#fbfbff', cloudShade: '#d2dbec',
+    light: '#fbfaf0', mid: '#d6dee6', shade: '#98a5c3',
+    tint: '#8ea2c4', tintAmt: 0.36, lift: 0.06, wash: '#dee4ec',
+    outline: '#33303f', water: '#7ba4cd', foam: '#f3f6f8', sun: '#fff9df',
+  },
 } satisfies Record<string, ScenePalette>;
 
 /** Base surface colours, before lighting and grade. */

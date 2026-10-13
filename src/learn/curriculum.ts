@@ -15,6 +15,11 @@ export interface NodeDef {
   /** For a lesson on word shapes: the letters its words should have in them, where there are such words. */
   favours?: string[];
   /**
+   * A lesson with no new letter: it goes back over the short vowels in `favours`, told apart in the middle of a
+   * word, in every shape of word taught so far (and the new ones in `teaches`, if it brings any).
+   */
+  review?: boolean;
+  /**
    * Added to its area after children had already played it. Its rescue is numbered after the area's others,
    * so nobody a child has already woken turns into somebody else.
    */
@@ -29,6 +34,8 @@ export interface AreaDef {
 const lesson = (id: string, ufli: number, ...teaches: SkillId[]): NodeDef => ({ id, kind: 'lesson', ufli, teaches });
 /** A lesson on building words of new shapes, added to an area already out (see `late`). */
 const shapes = (id: string, ufli: number, favours: string[], ...teaches: SkillId[]): NodeDef => ({ ...lesson(id, ufli, ...teaches), favours, late: true });
+/** A lesson that goes back over short vowels (see `review`), bringing in longer words where it teaches a shape. */
+const review = (id: string, ufli: number, vowels: string[], ...teaches: SkillId[]): NodeDef => ({ ...lesson(id, ufli, ...teaches), favours: vowels, review: true });
 const check = (id: string, kind: 'miniboss' | 'boss', ufli: number | null): NodeDef => ({ id, kind, ufli, teaches: [] });
 
 /** Every island there is, in the order the ship finds them. Each is one area: a few lessons and the checkpoint that ends it. */
@@ -108,6 +115,23 @@ export const AREAS: AreaDef[] = [
       check('i2a2-boss', 'boss', null),
     ],
   },
+  {
+    // UFLI's review of the alphabet: no new letter, one short vowel at a time, and the words getting longer.
+    // The vowels are skills already (gpc:a); what is new is two shapes of five sounds, brought in once a, i and o
+    // have been gone over in the shapes the child knows: two consonants at each end (stamp) with those three, three
+    // at the start (strap) with u, whose words have the most of them (scrub, strum, strut). Short e has none of
+    // three at the start, so it comes last with every shape to hand, and UFLI's lesson on all five is the checkpoint.
+    id: 'i2a3',
+    nodes: [
+      review('i2a3-a', 35, ['a']),
+      review('i2a3-i', 36, ['i']),
+      review('i2a3-o', 37, ['o']),
+      review('i2a3-aio', 38, ['a', 'i', 'o'], blend('ccvcc')),
+      review('i2a3-u', 39, ['u'], blend('cccvc')),
+      review('i2a3-e', 40, ['e']),
+      check('i2a3-boss', 'miniboss', 41),
+    ],
+  },
 ];
 
 /** Every grapheme of more than one letter that some lesson teaches: what a word is cut by (`splitGraphemes`). */
@@ -146,6 +170,9 @@ export function knownSkills(done: ReadonlySet<string>): Set<SkillId> {
 }
 
 export const areaSkills = (area: AreaDef): SkillId[] => area.nodes.flatMap((n) => n.teaches);
+
+/** The short vowels an area's lessons go back over, each once. None for an area that teaches letters. */
+export const areaVowels = (area: AreaDef): string[] => [...new Set(area.nodes.flatMap((n) => (n.review ? n.favours ?? [] : [])))];
 
 /** Nodes open one at a time, in order. The first node not yet done is the current one. */
 export function currentNode(area: AreaDef, done: ReadonlySet<string>): NodeDef | null {
