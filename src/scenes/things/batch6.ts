@@ -17,7 +17,11 @@ export function frog(): Drawing {
       part(3, ...[-1, 1].flatMap((k) => [
         place(ellipsoid(0.07, 0.15, 0.17, skin, 22), [k * 0.22, 0.17, -0.12], [0, 0, k * 0.2]),
         place(ellipsoid(0.07, 0.04, 0.14, skin, 18), [k * 0.25, 0.04, 0.05], [0, k * 0.2, 0]),
-        place(ellipsoid(0.04, 0.035, 0.09, skin, 14), [k * 0.12, 0.03, 0.27], [0, k * -0.25, 0]),
+      ])),
+      // Short arms from the chest down to splayed feet lying flat on the ground (their undersides at y = 0).
+      part(3, ...[-1, 1].flatMap((k) => [
+        limb([k * 0.13, 0.2, 0.06], [k * 0.15, 0.06, 0.22], 0.05, skin),
+        place(ellipsoid(0.085, 0.03, 0.075, skin, 18), [k * 0.17, 0.03, 0.26], [0, k * -0.35, 0]),
       ])),
       part(4, place(ellipsoid(0.21, 0.15, 0.17, skin, 40), head)),
       part(4, ...[-1, 1].map((k) => place(ball(0.075, skin, 22), bump(k)))),
@@ -32,17 +36,25 @@ export function frog(): Drawing {
 export function crab(): Drawing {
   const shell = RED;
   const dark = C.heart;
-  // A claw is a fat palm and two fingers with a V gap between: a fixed one outside and a thinner, movable one inside.
+  // A claw is a thick arm and one chunky C-shaped claw: a big fixed finger outside and a slimmer, curved, movable one
+  // inside that closes against its tip, with a curved gap between them.
+  const D = Math.PI / 180;
+  // A curved finger: part of a ring from angle a0 to a1 (degrees), centred at (cx, cy), with round ends. For the
+  // other claw (k = -1) the angles are mirrored.
+  const finger = (k: number, cx: number, cy: number, R: number, tube: number, a0: number, a1: number) => {
+    const [s0, s1] = k > 0 ? [a0, a1] : [180 - a1, 180 - a0];
+    const ring = place(paint(new THREE.TorusGeometry(R, tube, 12, 28, (s1 - s0) * D), shell), [k * cx, cy, 0.33], [0, 0, s0 * D]);
+    const cap = (a: number) => place(ball(tube, shell, 12), [k * cx + R * Math.cos(a * D * (k > 0 ? 1 : 1)), cy + R * Math.sin(a * D), 0.33]);
+    return merge(ring, cap(s0), cap(s1));
+  };
   const claw = (k: number) => merge(
     part(3,
-      limb([k * 0.22, 0.16, 0.12], [k * 0.34, 0.22, 0.2], 0.04, shell),
-      limb([k * 0.34, 0.22, 0.2], [k * 0.36, 0.38, 0.3], 0.04, shell),
-      place(ellipsoid(0.11, 0.1, 0.075, shell, 22), [k * 0.37, 0.47, 0.33]),
+      limb([k * 0.22, 0.16, 0.12], [k * 0.34, 0.22, 0.2], 0.055, shell),
+      limb([k * 0.34, 0.22, 0.2], [k * 0.37, 0.42, 0.3], 0.055, shell),
+      place(ellipsoid(0.12, 0.1, 0.09, shell, 22), [k * 0.37, 0.48, 0.33]),
     ),
-    part(4,
-      place(ellipsoid(0.05, 0.13, 0.055, shell, 18), [k * 0.43, 0.62, 0.33], [0, 0, k * -0.3]),
-      place(ellipsoid(0.038, 0.12, 0.045, shell, 18), [k * 0.3, 0.61, 0.33], [0, 0, k * 0.4]),
-    ),
+    part(4, finger(k, 0.37 - 0.075, 0.64, 0.15, 0.048, -40, 55)),
+    part(5, finger(k, 0.37 + 0.075, 0.64, 0.15, 0.032, 125, 220)),
   );
   const legs = [-1, 1].flatMap((k) => [-0.1, 0.0, 0.1].map((z, i) => merge(
     limb([k * 0.2, 0.14, z - 0.02], [k * 0.34, 0.16, z + (i - 1) * 0.03], 0.024, dark),
