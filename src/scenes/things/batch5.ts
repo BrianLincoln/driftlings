@@ -79,29 +79,39 @@ export function milk(): Drawing {
   };
 }
 
-/** An ant from above and a little to the side: black, three round segments, six legs splayed out from the middle one, two feelers. */
+/**
+ * An ant: a round head looking round at us with the creatures' eyes, then a small middle and a big back end, each
+ * pinched off from the next by a narrow waist; six short legs bent at the knee with their feet on the ground, two
+ * elbowed feelers with no knob. A dark brown, not black: black that big has no lines or light on it.
+ */
 export function ant(): Drawing {
-  const body = C.faceInk;
-  const head: [number, number, number] = [0, 0.24, 0.3];
-  // Short black legs bent at the knee, three a side: front ones reach forward, middle ones out, back ones trail.
-  const reach: Array<[number, number, number, number]> = [[0.06, 0.1, 0.17, 0.2], [-0.02, 0.0, 0.0, -0.01], [-0.1, -0.1, -0.2, -0.22]];
+  const body = C.shipHull;
+  const head: [number, number, number] = [0, 0.27, 0.02];
+  // Built along -z behind the head, then swung round under it: the middle, its legs, the waist and the back end.
+  const mid: [number, number, number] = [0, 0.2, -0.26];
+  const reach: Array<[number, number, number]> = [[0.05, 0.11, 0.17], [0, 0, 0], [-0.05, -0.12, -0.17]];
   const legs = [-1, 1].flatMap((k) => reach.map(([z0, zk, zf]) => merge(
-    limb([k * 0.07, 0.19, z0], [k * 0.17, 0.27, zk], 0.022, body),
-    limb([k * 0.17, 0.27, zk], [k * 0.24, 0.02, zf], 0.022, body),
+    limb([k * 0.06, 0.18, mid[2] + z0], [k * 0.15, 0.22, mid[2] + zk], 0.026, body),
+    limb([k * 0.15, 0.22, mid[2] + zk], [k * 0.2, 0.022, mid[2] + zf], 0.024, body),
   )));
+  const feeler = (k: number) => merge(
+    limb([k * 0.06, 0.38, 0.06], [k * 0.1, 0.5, 0.02], 0.018, body),
+    limb([k * 0.1, 0.5, 0.02], [k * 0.2, 0.55, 0.1], 0.016, body),
+  );
   return {
     geo: merge(
-      part(1, ...legs),
-      part(2, place(ellipsoid(0.14, 0.13, 0.18, body, 32), [0, 0.2, -0.28])),
-      part(3, place(ellipsoid(0.1, 0.095, 0.11, body, 28), [0, 0.2, -0.04])),
-      part(4, place(ellipsoid(0.18, 0.16, 0.15, body, 32), head)),
-      part(5, ...[-1, 1].flatMap((k) => [
-        limb([k * 0.05, 0.3, 0.38], [k * 0.12, 0.44, 0.46], 0.022, body),
-        limb([k * 0.12, 0.44, 0.46], [k * 0.2, 0.52, 0.4], 0.022, body),
-        place(ball(0.034, body, 10), [k * 0.2, 0.52, 0.4]),
-      ])),
+      swing(merge(
+        part(1, ...legs),
+        part(2, place(ellipsoid(0.105, 0.095, 0.13, body, 28), [0, 0.22, mid[2]])),
+        part(3, place(ball(0.04, body, 14), [0, 0.19, -0.405])),
+        part(4, place(ellipsoid(0.15, 0.14, 0.2, body, 32), [0, 0.23, -0.6], [-0.25, 0, 0])),
+      ), 1.45),
+      part(5, place(ellipsoid(0.15, 0.14, 0.14, body, 36), head)),
+      part(6, feeler(-1), feeler(1)),
     ),
-    turn: [0.12, -1.15],
+    face: eyes(head, [0.45, 0.15], 1.4),
+    turn: [0.15, -0.35],
+    scale: 0.8,
   };
 }
 

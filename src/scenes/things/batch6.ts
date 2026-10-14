@@ -5,7 +5,39 @@ import { CREAM, GREEN, PURPLE, RED, ball, eyes, limb, part, type Drawing } from 
 
 // The sixth batch, the first half: frog, crab, drum, flag, plum. Words with two consonants together.
 
-/** A frog crouching: green, a wide pale-bellied head with two small bumps and calm eyes, great folded back legs. */
+/**
+ * A frog's foot lying flat on the ground: `n` thin toes fanned out over `spread` radians, pointing down +z,
+ * each ending in a round pad, with webbing between them scalloped back between the toes.
+ */
+function webFoot(len: number, n: number, spread: number, pad: number, skin: string): THREE.BufferGeometry {
+  const angle = (i: number) => -spread / 2 + (i * spread) / (n - 1);
+  const along = (a: number, d: number) => new THREE.Vector2(Math.sin(a) * d, Math.cos(a) * d);
+  const web = new THREE.Shape();
+  web.moveTo(0, 0);
+  for (let i = 0; i < n; i++) {
+    const tip = along(angle(i), len * 0.72);
+    if (i === 0) web.lineTo(tip.x, tip.y);
+    else {
+      const dip = along((angle(i - 1) + angle(i)) / 2, len * 0.38);
+      web.quadraticCurveTo(dip.x, dip.y, tip.x, tip.y);
+    }
+  }
+  web.lineTo(0, 0);
+  const flat = place(paint(new THREE.ExtrudeGeometry(web, { depth: 0.01, bevelEnabled: false, curveSegments: 8 }), skin), [0, 0.022, 0], [Math.PI / 2, 0, 0]);
+  return merge(
+    flat,
+    ...Array.from({ length: n }, (_, i) => {
+      const end = along(angle(i), len);
+      return merge(
+        limb([0, 0.016, 0], [end.x, 0.016, end.y], 0.016, skin),
+        place(ellipsoid(pad, 0.018, pad, skin, 14), [end.x, 0.018, end.y]),
+      );
+    }),
+    ellipsoid(0.035, 0.022, 0.035, skin, 14).translate(0, 0.02, 0),
+  );
+}
+
+/** A frog crouching: green, a wide pale-bellied head with two small bumps and calm eyes, great folded back legs, webbed feet with toe pads. */
 export function frog(): Drawing {
   const skin = GREEN;
   const head: [number, number, number] = [0, 0.3, 0.13];
@@ -14,14 +46,16 @@ export function frog(): Drawing {
     geo: merge(
       part(1, place(ellipsoid(0.24, 0.2, 0.28, skin), [0, 0.2, -0.1])),
       part(2, place(ellipsoid(0.15, 0.12, 0.1, C.flower, 20), [0, 0.12, 0.1])),
+      // The back legs folded: a big thigh, a shin lying low along the ground, and a long webbed foot pointing forward and out.
       part(3, ...[-1, 1].flatMap((k) => [
         place(ellipsoid(0.07, 0.15, 0.17, skin, 22), [k * 0.22, 0.17, -0.12], [0, 0, k * 0.2]),
-        place(ellipsoid(0.07, 0.04, 0.14, skin, 18), [k * 0.25, 0.04, 0.05], [0, k * 0.2, 0]),
+        limb([k * 0.25, 0.06, -0.17], [k * 0.29, 0.035, 0.03], 0.04, skin),
+        place(webFoot(0.13, 4, 1.0, 0.026, skin), [k * 0.3, 0, 0.04], [0, k * 0.55, 0]),
       ])),
-      // Short arms from the chest down to splayed feet lying flat on the ground (their undersides at y = 0).
+      // Short arms from the chest down to small splayed feet.
       part(3, ...[-1, 1].flatMap((k) => [
-        limb([k * 0.13, 0.2, 0.06], [k * 0.15, 0.06, 0.22], 0.05, skin),
-        place(ellipsoid(0.085, 0.03, 0.075, skin, 18), [k * 0.17, 0.03, 0.26], [0, k * -0.35, 0]),
+        limb([k * 0.13, 0.2, 0.06], [k * 0.15, 0.04, 0.21], 0.045, skin),
+        place(webFoot(0.075, 4, 1.4, 0.02, skin), [k * 0.155, 0, 0.22], [0, k * 0.35, 0]),
       ])),
       part(4, place(ellipsoid(0.21, 0.15, 0.17, skin, 40), head)),
       part(4, ...[-1, 1].map((k) => place(ball(0.075, skin, 22), bump(k)))),
@@ -32,33 +66,45 @@ export function frog(): Drawing {
   };
 }
 
-/** A crab: red, wide, two big claws held up, legs out to each side. */
+/**
+ * One finger of a crab's claw: a cone standing on its base, flattened front to back, its tip darker and bent over
+ * sideways by `bend`, so that it tapers sharply to a point.
+ */
+function pincer(r: number, h: number, bend: number, shell: string, tip: string): THREE.BufferGeometry {
+  const g = new THREE.ConeGeometry(r, h, 16, 10).translate(0, h / 2, 0);
+  const pos = g.getAttribute('position');
+  for (let i = 0; i < pos.count; i++) {
+    const t = pos.getY(i) / h;
+    pos.setX(i, pos.getX(i) + bend * t * t);
+    pos.setZ(i, pos.getZ(i) * 0.7);
+  }
+  g.computeVertexNormals();
+  return paint(g, (p) => (p.y > h * 0.55 ? tip : shell));
+}
+
+/** A crab: red, wide, two big claws held up (each a broad swollen palm and two short pointed fingers), legs out to each side. */
 export function crab(): Drawing {
   const shell = RED;
-  const dark = C.heart;
-  // A claw is a thick arm and one chunky C-shaped claw: a big fixed finger outside and a slimmer, curved, movable one
-  // inside that closes against its tip, with a curved gap between them.
-  const D = Math.PI / 180;
-  // A curved finger: part of a ring from angle a0 to a1 (degrees), centred at (cx, cy), with round ends. For the
-  // other claw (k = -1) the angles are mirrored.
-  const finger = (k: number, cx: number, cy: number, R: number, tube: number, a0: number, a1: number) => {
-    const [s0, s1] = k > 0 ? [a0, a1] : [180 - a1, 180 - a0];
-    const ring = place(paint(new THREE.TorusGeometry(R, tube, 12, 28, (s1 - s0) * D), shell), [k * cx, cy, 0.33], [0, 0, s0 * D]);
-    const cap = (a: number) => place(ball(tube, shell, 12), [k * cx + R * Math.cos(a * D * (k > 0 ? 1 : 1)), cy + R * Math.sin(a * D), 0.33]);
-    return merge(ring, cap(s0), cap(s1));
-  };
+  const tip = C.shipHull;
   const claw = (k: number) => merge(
     part(3,
-      limb([k * 0.22, 0.16, 0.12], [k * 0.34, 0.22, 0.2], 0.055, shell),
-      limb([k * 0.34, 0.22, 0.2], [k * 0.37, 0.42, 0.3], 0.055, shell),
-      place(ellipsoid(0.12, 0.1, 0.09, shell, 22), [k * 0.37, 0.48, 0.33]),
+      limb([k * 0.22, 0.16, 0.12], [k * 0.34, 0.22, 0.2], 0.05, shell),
+      limb([k * 0.34, 0.22, 0.2], [k * 0.37, 0.4, 0.3], 0.05, shell),
     ),
-    part(4, finger(k, 0.37 - 0.075, 0.64, 0.15, 0.048, -40, 55)),
-    part(5, finger(k, 0.37 + 0.075, 0.64, 0.15, 0.032, 125, 220)),
+    // The palm and the fixed finger, outside, are one piece; the movable finger, inside, is hinged on. Built round the
+    // middle of the palm, then tipped forward and in, so the fingers reach toward us and each other and not up like horns.
+    place(merge(
+      part(4,
+        place(ellipsoid(0.14, 0.14, 0.075, shell, 28), [0, 0, 0], [0, 0, k * -0.15]),
+        place(pincer(0.068, 0.21, k * -0.08, shell, tip), [k * 0.07, 0.08, 0], [0, 0, k * -0.12]),
+      ),
+      part(5, place(pincer(0.052, 0.18, k * 0.08, shell, tip), [k * -0.06, 0.1, 0], [0, 0, k * 0.35])),
+    ), [k * 0.38, 0.5, 0.32], [0.2, 0, k * 0.2]),
   );
-  const legs = [-1, 1].flatMap((k) => [-0.1, 0.0, 0.1].map((z, i) => merge(
-    limb([k * 0.2, 0.14, z - 0.02], [k * 0.34, 0.16, z + (i - 1) * 0.03], 0.024, dark),
-    limb([k * 0.34, 0.16, z + (i - 1) * 0.03], [k * 0.4, 0.015, z + (i - 1) * 0.08], 0.024, dark),
+  // Four bent legs a side, splayed wide, each tapering to a point on the ground.
+  const legs = [-1, 1].flatMap((k) => [-0.15, -0.05, 0.05, 0.15].map((z) => merge(
+    limb([k * 0.2, 0.15, z * 0.8], [k * 0.38, 0.2, z * 1.3], 0.03, shell),
+    limb([k * 0.38, 0.2, z * 1.3], [k * 0.47, 0.015, z * 1.8], 0.022, shell),
   )));
   const head: [number, number, number] = [0, 0.2, 0.0];
   return {
