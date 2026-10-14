@@ -24,7 +24,16 @@
     "hen",
     "rat",
     "log",
-    "lip"
+    "lip",
+    "milk",
+    "nest",
+    "frog",
+    "crab",
+    "drum",
+    "flag",
+    "desk",
+    "hand",
+    "sled"
   ],
   "held": [
     "mat",
@@ -43,6 +52,11 @@
     "cab",
     "cob",
     "peg",
-    "gum"
+    "gum",
+    "elk",
+    "plum",
+    "belt",
+    "mask",
+    "ant"
   ]
 }
