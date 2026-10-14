@@ -10,7 +10,7 @@ import { bud, bus, cab, cob, net, nut, peg, sun } from './batch3';
 import { gum, hat, hen, lip, log, mud, rat, tub } from './batch4';
 import { ant, elk, milk, nest } from './batch5';
 import { crab, drum, flag, frog, plum } from './batch6';
-import { belt, desk, hand, mask, sled } from './batch7';
+import { belt, desk, mask, sled } from './batch7';
 import { part, type Drawing } from './parts';
 
 // Everyday things a word can be about, small enough to stand in a row on the grass. Each is one
@@ -25,7 +25,7 @@ const RECIPES: Record<string, () => Drawing> = {
   bud, bus, cab, cob, sun, net, nut, peg,
   tub, gum, mud, hat, hen, rat, log, lip,
   elk, milk, ant, nest,
-  frog, crab, drum, flag, plum, sled, belt, desk, mask, hand,
+  frog, crab, drum, flag, plum, sled, belt, desk, mask,
 };
 
 export const THING_NAMES = Object.keys(RECIPES);

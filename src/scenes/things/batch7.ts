@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { C } from '../../gfx/palette';
-import { capsule, ellipsoid, merge, paint, place } from '../../gfx/geo';
+import { ellipsoid, merge, paint, place } from '../../gfx/geo';
 import { BLUE, RED, ball, box, ground, part, tube, type Drawing } from './parts';
 
-// The sixth batch, the second half: sled, belt, desk, mask, hand.
+// The sixth batch, the second half: sled, belt, desk, mask.
 
 /** A sled: a low deck of wooden planks on two red runners that curl right up and over at the front, a short rope to pull it by. */
 export function sled(): Drawing {
@@ -123,25 +123,5 @@ export function mask(): Drawing {
     )),
     turn: [-0.3, 0.3],
     scale: 1.25,
-  };
-}
-
-/** A hand laid back on the grass, palm up toward us: a round palm, four fingers fanned apart, a thumb out to one side, a wrist that simply ends. */
-export function hand(): Drawing {
-  const skin = C.blush;
-  const finger = (x: number, len: number, lean: number) =>
-    place(capsule(0.047, len, skin), [x + (Math.sin(lean) * len) / 2, 0.08 + (Math.cos(lean) * len) / 2, 0], [0, 0, -lean]);
-  const flat = merge(
-    ellipsoid(0.16, 0.165, 0.06, skin, 32),
-    place(ellipsoid(0.1, 0.1, 0.05, skin, 24), [0, -0.15, 0]),
-    finger(-0.11, 0.17, -0.5),
-    finger(-0.04, 0.22, -0.17),
-    finger(0.04, 0.23, 0.15),
-    finger(0.11, 0.19, 0.48),
-    place(capsule(0.05, 0.12, skin), [-0.18, 0.0, 0], [0, 0, 0.95]),
-  );
-  return {
-    geo: ground(part(1, place(flat, [0, 0, 0], [-1.2, 0, 0.35]))),
-    turn: [0, 0.3],
   };
 }

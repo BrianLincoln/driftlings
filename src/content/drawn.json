@@ -32,7 +32,11 @@
     "drum",
     "flag",
     "desk",
-    "sled"
+    "sled",
+    "plum",
+    "belt",
+    "mask",
+    "elk"
   ],
   "held": [
     "mat",
@@ -52,11 +56,6 @@
     "cob",
     "peg",
     "gum",
-    "elk",
-    "plum",
-    "belt",
-    "mask",
-    "ant",
-    "hand"
+    "ant"
   ]
 }
