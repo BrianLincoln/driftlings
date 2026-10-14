@@ -71,27 +71,27 @@ export function milk(): Drawing {
   };
 }
 
-/** An ant seen from above and a little to the side: three round parts, six legs, two feelers. */
+/** An ant from above and a little to the side: black, three round segments, six legs splayed out from the middle one, two feelers. */
 export function ant(): Drawing {
-  const body = C.shipHull;
+  const body = C.faceInk;
+  const leg = C.trunk;
   const head: [number, number, number] = [0, 0.24, 0.3];
-  const legs = [-1, 1].flatMap((k) => [0.06, 0.0, -0.08].map((z, i) => {
-    const out = 0.2 + (i === 1 ? 0.03 : 0);
-    return merge(
-      limb([k * 0.08, 0.17, z], [k * out, 0.25 - i * 0.0, z + (i - 1) * 0.07], 0.028, C.basketDark),
-      limb([k * out, 0.25, z + (i - 1) * 0.07], [k * (out + 0.06), 0.015, z + (i - 1) * 0.12], 0.028, C.basketDark),
-    );
-  }));
+  // Front legs reach forward, middle ones straight out, back ones trail behind: three a side, well apart.
+  const reach: Array<[number, number, number, number]> = [[0.06, 0.2, 0.3, 0.36], [-0.02, 0.0, 0.0, -0.01], [-0.1, -0.2, -0.3, -0.38]];
+  const legs = [-1, 1].flatMap((k) => reach.map(([z0, zk, , zf]) => merge(
+    limb([k * 0.07, 0.19, z0], [k * 0.26, 0.3, zk], 0.028, leg),
+    limb([k * 0.26, 0.3, zk], [k * 0.4, 0.02, zf], 0.028, leg),
+  )));
   return {
     geo: merge(
       part(1, ...legs),
-      part(2, place(ellipsoid(0.14, 0.13, 0.18, body, 32), [0, 0.2, -0.26])),
-      part(3, place(ellipsoid(0.1, 0.095, 0.11, body, 28), [0, 0.2, -0.02])),
+      part(2, place(ellipsoid(0.14, 0.13, 0.18, body, 32), [0, 0.2, -0.28])),
+      part(3, place(ellipsoid(0.1, 0.095, 0.11, body, 28), [0, 0.2, -0.04])),
       part(4, place(ellipsoid(0.18, 0.16, 0.15, body, 32), head)),
       part(5, ...[-1, 1].flatMap((k) => [
-        limb([k * 0.05, 0.3, 0.38], [k * 0.12, 0.44, 0.46], 0.022, C.basketDark),
-        limb([k * 0.12, 0.44, 0.46], [k * 0.2, 0.52, 0.4], 0.022, C.basketDark),
-        place(ball(0.034, C.basketDark, 10), [k * 0.2, 0.52, 0.4]),
+        limb([k * 0.05, 0.3, 0.38], [k * 0.12, 0.44, 0.46], 0.022, leg),
+        limb([k * 0.12, 0.44, 0.46], [k * 0.2, 0.52, 0.4], 0.022, leg),
+        place(ball(0.034, leg, 10), [k * 0.2, 0.52, 0.4]),
       ])),
     ),
     face: eyes(head, [0.5, 0.2], 1.4, [-0.5, 0.06]),
@@ -99,24 +99,33 @@ export function ant(): Drawing {
   };
 }
 
-/** A bird's nest: a bowl woven of twigs with three pale blue eggs in it. */
+/** A bird's nest: a solid bowl sitting on the ground, wound round with many small crossing twigs, three pale blue eggs in it. */
 export function nest(): Drawing {
-  const twig = C.basket;
-  const dark = C.basketDark;
-  const rings = Array.from({ length: 9 }, (_, i) => {
-    const y = 0.07 + (i % 3) * 0.06;
-    const r = 0.23 + (i % 3) * 0.025 - (i % 2) * 0.02;
-    const ring = place(paint(new THREE.TorusGeometry(r, 0.03, 8, 36), i % 2 ? twig : dark), [0, y, 0], [Math.PI / 2 + (i % 3 - 1) * 0.12, 0, i * 0.7]);
-    return ring;
+  const radius = (y: number) => 0.12 + 0.18 * Math.sin(Math.min(1, y / 0.2) * Math.PI / 2);
+  const tones = [C.basket, C.basketDark, C.cutWood];
+  const at = (a: number, y: number, out = 0.012): [number, number, number] => {
+    const r = radius(y) + out;
+    return [Math.cos(a) * r, y, Math.sin(a) * r];
+  };
+  // A pseudo-random but fixed scatter, so the twigs crisscross the same way every time.
+  const rnd = (i: number, j: number) => { const v = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453; return v - Math.floor(v); };
+  const twigs = Array.from({ length: 46 }, (_, i) => {
+    const a = rnd(i, 1) * Math.PI * 2;
+    const dir = i % 2 ? 1 : -1;
+    const y0 = 0.04 + rnd(i, 2) * 0.18;
+    const y1 = Math.min(0.23, Math.max(0.04, y0 + (rnd(i, 3) - 0.5) * 0.14));
+    const span = 0.7 + rnd(i, 4) * 0.5;
+    const c = tones[i % 3];
+    const pts = [0, 0.5, 1].map((t) => at(a + dir * span * t, y0 + (y1 - y0) * t, 0.012 + (i % 3) * 0.006));
+    return merge(limb(pts[0], pts[1], 0.017, c), limb(pts[1], pts[2], 0.017, c));
   });
-  const sticks = [0.5, 2.0, 3.4, 4.7].map((a) => limb([Math.cos(a) * 0.2, 0.16, Math.sin(a) * 0.2], [Math.cos(a) * 0.37, 0.24, Math.sin(a) * 0.37], 0.025, dark));
+  // A few ends poking out past the rim.
+  const poking = [0.4, 1.7, 2.9, 4.1, 5.3].map((a, i) => limb(at(a, 0.2, 0.0), at(a + 0.25, 0.27 + (i % 2) * 0.03, 0.1), 0.017, tones[i % 3]));
+  const bowl = lathe([[0, 0], [0.12, 0.004], [0.22, 0.04], [0.28, 0.11], [0.3, 0.2], [0.29, 0.245], [0.25, 0.245], [0.22, 0.17], [0.14, 0.095], [0, 0.085]], C.basketDark, 36, 40);
   return {
     geo: merge(
-      part(1,
-        place(lathe([[0, 0.02], [0.16, 0.02], [0.24, 0.08], [0.27, 0.18], [0.25, 0.22]], dark, 32), [0, 0, 0]),
-        ...rings, ...sticks,
-      ),
-      part(2, ...[[-0.1, -0.04], [0.1, 0.0], [-0.0, 0.1]].map(([x, z], i) => place(ellipsoid(0.08, 0.1, 0.08, C.harebell, 20), [x, 0.2 + (i === 2 ? 0.0 : 0.02), z], [0.2, 0, i - 1 ? 0.2 : -0.2]))),
+      part(1, bowl, ...twigs, ...poking),
+      part(2, ...[[-0.09, -0.04], [0.1, 0.0], [0.0, 0.1]].map(([x, z], i) => place(ellipsoid(0.08, 0.1, 0.08, C.harebell, 20), [x, 0.19 + (i === 2 ? 0.0 : 0.02), z], [0.2, 0, i - 1 ? 0.2 : -0.2]))),
     ),
     turn: [0.45, 0.3],
   };
