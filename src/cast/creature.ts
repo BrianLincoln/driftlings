@@ -1,55 +1,47 @@
 import * as THREE from 'three';
-import { TAG } from '../gfx/glsl';
-import { toonMaterial, type ToonMaterial } from '../gfx/materials';
+import type { ToonMaterial } from '../gfx/materials';
 import { pushBlob } from '../gfx/uniforms';
 import { Blinker, Spring, ease, squash } from './spring';
 import { angleDelta, gazeAt } from './gaze';
 import { sfx } from '../audio/sound';
-import { creatureGeo } from './creatureParts';
+import { Colour, WAKE_DIP } from './creatureColour';
+import { buildRig } from './creatureRig';
+import { WHIRL, stepWhirl, type Whirling } from './creatureWhirl';
 import type { Rescue } from './species';
 
 // The creature rig and behaviour. What it looks like comes from cast/species.ts.
 
 type Mood = 'idle' | 'happy' | 'sit';
 
-/** Seconds for each part of the whirlwind, and how many times round it goes. */
-const WHIRL = { down: 0.26, spin: 1.5, back: 0.3, turns: 8 };
 /** Creatures are little ones beside the companion, everywhere. */
 const LITTLE = 0.62;
-/** Waking: how long the colour sinks back before it bursts out, unless told to hold it longer. */
-const WAKE_DIP = 0.5;
 /** How fast a sleeper breathes, in radians a second. */
 export const BREATH = 1.6;
 
 export class Creature {
   readonly root = new THREE.Group();
-  readonly head = new THREE.Group();
-  private body = new THREE.Group();
-  private ears: THREE.Group[] = [];
+  readonly head: THREE.Group;
+  private body: THREE.Group;
+  private ears: THREE.Group[];
   private headMat: ToonMaterial;
   private mats: ToonMaterial[];
   /** Standing height, before the root's scale. */
   readonly height: number;
-  private colourNow = new Spring(1);
-  private dip = 0;
-  private flash = 0;
-  private waking = -1;
-  private wakeFor = WAKE_DIP;
-  private woke: (() => void) | null = null;
+  private tint = new Colour();
   private sq = new Spring(1);
   private earSpring = new Spring(0);
   private blink = new Blinker();
   private yaw = 0;
-  private headY = 0.56;
+  private headY: number;
   private restYaw: number | null = null;
-  private earLean = 0.55;
+  private earLean: number;
   private goal: THREE.Vector3 | null = null;
   private hopPhase = 0;
   private air = 0;
   private spin = 0;
   private happyFor = 0;
   private pause = 0;
-  private whirling: { t: number; home: THREE.Vector3; to: THREE.Vector3; puffAt: number; kick(): void } | null = null;
+  private whirling: Whirling | null = null;
   private gaze = { x: 0, y: 0 };
   private gazeNow = { x: 0, y: 0 };
   mood: Mood = 'idle';
@@ -65,7 +57,12 @@ export class Creature {
    * How much of it has its colour, from the feet up. 1 is wide awake, as at home;
    * 0 is dormant, as they all are far from it.
    */
-  colour = 1;
+  get colour(): number {
+    return this.tint.colour;
+  }
+  set colour(k: number) {
+    this.tint.colour = k;
+  }
   /** What the eyes follow. Null looks straight ahead. */
   lookTarget: THREE.Vector3 | null = null;
   /** How fast it hops along: 1 is an amble. */
@@ -83,31 +80,15 @@ export class Creature {
   readonly skin: ToonMaterial;
 
   constructor(readonly who: Rescue) {
-    const geo = creatureGeo(who.species, who.coat);
-    // Creatures pop against the graded world: they keep their own colour through
-    // the grade and their shade bands are lifted so a white belly stays white.
-    const look = { tag: TAG.creature, flag: -1, unlit: 0.35 };
-    const bodyMat = toonMaterial(look);
-    this.body.add(new THREE.Mesh(geo.body, bodyMat));
-    this.headMat = toonMaterial({ ...look, face: geo.face });
-    this.head.add(new THREE.Mesh(geo.head, this.headMat));
-    this.headY = geo.headY;
-    this.head.position.set(0, geo.headY, 0.03);
-    this.earLean = geo.earLean;
-    if (geo.ear) {
-      for (const side of [-1, 1]) {
-        const pivot = new THREE.Group();
-        pivot.position.set(side * geo.earPivot.x, geo.earPivot.y, geo.earPivot.z);
-        pivot.rotation.z = -side * geo.earLean;
-        pivot.add(new THREE.Mesh(geo.ear, bodyMat));
-        this.head.add(pivot);
-        this.ears.push(pivot);
-      }
-    }
-    this.body.add(this.head);
-    this.root.add(this.body);
-    this.mats = [bodyMat, this.headMat];
-    this.skin = bodyMat;
+    const rig = buildRig(who, this.root);
+    this.body = rig.body;
+    this.head = rig.head;
+    this.ears = rig.ears;
+    this.headMat = rig.headMat;
+    this.headY = rig.headY;
+    this.earLean = rig.earLean;
+    this.mats = [rig.bodyMat, rig.headMat];
+    this.skin = rig.bodyMat;
     this.height = new THREE.Box3().setFromObject(this.root).max.y;
     this.size = who.species.size * LITTLE;
     this.root.scale.setScalar(this.size);
@@ -168,39 +149,9 @@ export class Creature {
     return { lands: WHIRL.down, clear: WHIRL.down + WHIRL.spin + WHIRL.back * 0.6 };
   }
 
-  private stepWhirl(dt: number): void {
-    const w = this.whirling!;
-    const p = this.root.position;
-    w.t += dt;
-    const leap = (from: THREE.Vector3, to: THREE.Vector3, k: number) => {
-      p.lerpVectors(from, to, k);
-      p.y += Math.sin(k * Math.PI) * 0.5 * this.root.scale.x;
-    };
-    const spinning = w.t - WHIRL.down;
-    if (spinning < 0) leap(w.home, w.to, w.t / WHIRL.down);
-    else if (spinning < WHIRL.spin) {
-      p.copy(w.to);
-      this.root.rotation.y = this.yaw + (spinning / WHIRL.spin) * Math.PI * 2 * WHIRL.turns;
-      if (w.t >= w.puffAt) {
-        if (w.puffAt === WHIRL.down) this.sq.kick(-4); // landing
-        w.puffAt += 0.1;
-        w.kick();
-      }
-    } else {
-      const k = Math.min(1, (spinning - WHIRL.spin) / WHIRL.back);
-      this.root.rotation.y = this.yaw;
-      leap(w.to, w.home, k);
-      if (k >= 1) {
-        this.whirling = null;
-        this.sq.kick(-3);
-      }
-    }
-  }
-
   /** Set how much colour it has at once, with no rise. */
   setColour(k: number): void {
-    this.colour = this.colourNow.x = k;
-    this.colourNow.v = 0;
+    this.tint.set(k);
   }
 
   /**
@@ -208,30 +159,7 @@ export class Creature {
    * seconds, then bursts out with a jump and a spin. `woke` is called at the burst.
    */
   wake(hold = WAKE_DIP, woke?: () => void): void {
-    if (this.waking >= 0) return;
-    this.waking = this.wakeFor = hold;
-    this.woke = woke ?? null;
-  }
-
-  private stepColour(dt: number): void {
-    if (this.waking >= 0) {
-      this.waking -= dt;
-      this.dip = Math.min(1, this.dip + dt / (this.wakeFor * 0.6));
-      if (this.waking < 0) {
-        this.setColour(1);
-        this.dip = 0;
-        this.flash = 1;
-        this.spin = 0;
-        this.react();
-        this.woke?.();
-      }
-    }
-    this.flash = Math.max(0, this.flash - dt * 2.2);
-    const k = this.colourNow.step(this.colour, 120, 14, dt);
-    const p = this.root.position;
-    // The line starts under the feet and ends clear of the ear tips.
-    const line = p.y + (k * 1.1 - 0.05) * this.height * this.root.scale.y;
-    for (const m of this.mats) m.uniforms.uDorm.value.set(line, this.colour >= 1 ? 0 : 1, this.dip, this.flash);
+    this.tint.wake(hold, woke);
   }
 
   /** A small acknowledging bounce. */
@@ -256,7 +184,7 @@ export class Creature {
     const p = this.root.position;
     let lift = 0;
 
-    if (this.whirling) this.stepWhirl(dt);
+    if (this.whirling && stepWhirl(this.whirling, dt, this.root, this.yaw, this.sq)) this.whirling = null;
 
     if (this.wanderRadius > 0 && !this.goal && this.mood === 'idle' && this.spin <= 0 && !this.whirling) {
       this.pause -= dt;
@@ -312,9 +240,12 @@ export class Creature {
 
     const sitting = this.mood === 'sit';
     const breathe = 1 + Math.sin(performance.now() * 0.0022 + p.x) * 0.012;
-    this.stepColour(dt);
+    this.tint.step(dt, this.root, this.height, this.mats, () => {
+      this.spin = 0;
+      this.react();
+    });
     // Bracing to wake: it sinks lower and shivers harder until the burst.
-    const brace = this.waking >= 0 ? 1 - this.waking / this.wakeFor : 0;
+    const brace = this.tint.waking >= 0 ? 1 - this.tint.waking / this.tint.wakeFor : 0;
     const crouch = 1 - 0.24 * brace;
     this.body.position.x = brace * brace * 0.035 * Math.sin(performance.now() * 0.07);
     this.age += dt;

@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { TAG } from '../gfx/glsl';
-import { capsule, ellipsoid, lathe, place } from '../gfx/geo';
-import { C } from '../gfx/palette';
-import { toonMaterial, type ToonMaterial } from '../gfx/materials';
+import type { ToonMaterial } from '../gfx/materials';
 import { pushBlob } from '../gfx/uniforms';
 import { Blinker, Spring, ease, squash } from './spring';
 import { angleDelta, gazeAt } from './gaze';
 import { chirp, sfx } from '../audio/sound';
+import { BASKET, buildCompanion } from './companionRig';
+
+export { BASKET };
 
 // The wordless guide. Same architecture as the reference project: a standing
 // WANT that it acts out continuously, and a queue of one-shot ACTS that
@@ -34,16 +34,14 @@ const JUMP = { time: 0.55, height: 0.95 };
 const POINT_FOR = 1.7;
 const REST_FOR = 2.4;
 const DOWN = new THREE.Vector3(0, -1, 0);
-/** The basket it carries: how high its rim is off the ground, and how far out from the middle it still catches. */
-export const BASKET = { rim: 0.74, reach: 0.4, radius: 0.33 };
 /** How fast it can run with the basket, in world units a second. */
 const CARRY_SPEED = 7;
 
 export class Companion {
   readonly root = new THREE.Group();
   private body = new THREE.Group();
-  private arms: THREE.Group[] = [];
-  private feet: THREE.Mesh[] = [];
+  private arms: THREE.Group[];
+  private feet: THREE.Mesh[];
   /** How far through a pair of steps it is, and how much it is walking (0 stood still, 1 in full stride). */
   private stride = 0;
   private walk = 0;
@@ -74,48 +72,11 @@ export class Companion {
   groundY: (x: number, z: number) => number = () => 0;
 
   constructor() {
-    // The owner's own companion from the reference game: a pebble-round body,
-    // big painted eyes, two stubby arms, two feet and a glowing spot on its chest.
-    const warm = '#f4b650';
-    const geo = place(ellipsoid(0.23, 0.235, 0.22, (p, n) => (n.z > 0.5 && p.y < -0.42 ? '#fff1c4' : warm), 44), [0, 0.22, 0]);
-    // Self-lit and exempt from the grade: it stays warm in any palette.
-    this.mat = toonMaterial({
-      tag: TAG.creature,
-      unlit: 0.5,
-      flag: 0.5,
-      face: {
-        origin: [0, 0.22, 0],
-        eye: [0.36, 0.2, 0.22, 0.27],
-        pupil: [0.085, 0.115, 0.13, 0.11],
-        mouth: [-0.2, 0.07],
-        blush: [0.7, -0.08, 0.12],
-      },
-    });
-    this.body.add(new THREE.Mesh(geo, this.mat));
-    const armMat = toonMaterial({ tag: TAG.creature, unlit: 0.55, flag: 0.5 });
-    for (const side of [-1, 1]) {
-      const pivot = new THREE.Group();
-      pivot.position.set(side * 0.215, 0.17, 0.03);
-      pivot.add(new THREE.Mesh(place(capsule(0.042, 0.07, '#f3b458'), [0, -0.06, 0]), armMat));
-      this.body.add(pivot);
-      this.arms.push(pivot);
-    }
-    // The feet are their own, under the body and not part of it: they step while it rocks along above them.
-    for (const side of [-1, 1]) {
-      const foot = new THREE.Mesh(ellipsoid(0.07, 0.04, 0.09, '#eda653'), armMat);
-      foot.position.set(side * 0.09, 0, 0.06);
-      this.root.add(foot);
-      this.feet.push(foot);
-    }
-    // Wider than it is: there is no missing with a basket this size. Solid, so it needs no inside faces.
-    const r = BASKET.radius;
-    this.basket = new THREE.Mesh(
-      lathe([[0, 0], [r * 0.62, 0], [r * 0.9, 0.13], [r, 0.25], [r * 0.9, 0.25], [r * 0.8, 0.17], [0, 0.15]], (_p, n) => (n.y > 0.35 ? C.basketDark : C.basket), 28, 30),
-      toonMaterial({ tag: TAG.prop }),
-    );
-    this.basket.position.y = BASKET.rim - 0.25 - 0.04;
-    this.basket.visible = false;
-    this.root.add(this.body, this.basket);
+    const rig = buildCompanion(this.root, this.body);
+    this.arms = rig.arms;
+    this.feet = rig.feet;
+    this.basket = rig.basket;
+    this.mat = rig.mat;
   }
 
   /** Something dropped into the basket. */
