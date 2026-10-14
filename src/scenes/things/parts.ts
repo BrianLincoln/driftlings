@@ -108,3 +108,19 @@ export function limb(a: [number, number, number], b: [number, number, number], r
     new THREE.Vector3(1, 1, 1),
   ));
 }
+
+/** A round rope or rod through a smooth curve: a runner, a pull rope. Its ends are capped with balls. */
+export function tube(points: Array<[number, number, number]>, r: number, colour: string, steps = 48): THREE.BufferGeometry {
+  const curve = new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(...p)));
+  return merge(
+    paint(new THREE.TubeGeometry(curve, steps, r, 10, false), colour),
+    place(ball(r, colour, 10), points[0]),
+    place(ball(r, colour, 10), points[points.length - 1]),
+  );
+}
+
+/** Set a drawing built at any height down on the ground: its lowest point at y = 0. */
+export function ground(g: THREE.BufferGeometry): THREE.BufferGeometry {
+  g.computeBoundingBox();
+  return g.translate(0, -g.boundingBox!.min.y, 0);
+}
