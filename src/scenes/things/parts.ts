@@ -94,3 +94,17 @@ export function wheel(r: number, w: number, tyre: string = C.trunk, hub: string 
     ellipsoid(r * 0.48, r * 0.48, h + 0.012, hub, 16),
   ), [0, r, 0]);
 }
+
+/** A round-ended stick from one point to another: a leg, an antenna, a feeler. */
+export function limb(a: [number, number, number], b: [number, number, number], r: number, colour: string): THREE.BufferGeometry {
+  const from = new THREE.Vector3(...a);
+  const to = new THREE.Vector3(...b);
+  const dir = to.clone().sub(from);
+  const len = dir.length();
+  const g = capsule(r, Math.max(0.001, len - 2 * r), colour);
+  return g.applyMatrix4(new THREE.Matrix4().compose(
+    from.clone().add(to).multiplyScalar(0.5),
+    new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize()),
+    new THREE.Vector3(1, 1, 1),
+  ));
+}

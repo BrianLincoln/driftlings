@@ -178,10 +178,10 @@ letter, nearest island first. Draw a batch, run the critic on it, get the owner'
 - mud · bud
 - hen · ten (if ten is ever shown), tub and gum have no near miss drawn yet
 
-**Batch 5** (fifth island and after): kid, elk, milk, ant, nest
+**Batch 5** (fifth island and after), DRAWN: elk (held: a child says deer), milk, ant, nest; kid waits for the owner's eye on the first peg doll
 - net · nest; the rest stand alone and can wait
 
-**Batch 6** (words with two consonants together): frog, crab, drum, flag, plum, sled, belt, desk, mask, hand
+**Batch 6** (words with two consonants together), DRAWN: frog, crab, drum, flag, sled, desk, hand; drawn but held: plum (critic: ball or blueberry), belt (ring or collar), mask (glasses or butterfly)
 - None of these has a near miss that can be drawn; a child tells them apart from words that share an
   end or a start (frog · log, hand · hat, belt · bed, drum · gum, plum · gum).
 
