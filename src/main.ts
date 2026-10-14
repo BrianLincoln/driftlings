@@ -2,21 +2,18 @@ import './core/colorSetup';
 import './ui/style.css';
 import { audioLocked, unlockAudio } from './audio/sound';
 import { preloadClips } from './audio/narrate';
-import { CONTENT, soundClip } from './content/content';
 import { installHooks } from './debug/hooks';
 import { BIG_ONES, OPEN_AREAS, closerOf, isFinished, lessonsOf } from './game/areas';
 import { Game } from './game/game';
 import { newChild, type Child } from './game/children';
 import { lastChild, openDevice, rememberChild } from './game/store';
-import { AREAS, findNode, rescueIndex, type AreaDef, type NodeDef } from './learn/curriculum';
-import { blend, graphemeOf, shapeOf } from './learn/skills';
+import { findNode, rescueIndex, type AreaDef } from './learn/curriculum';
 import { rescue, type Rescue } from './cast/species';
-import { createAreaMap, type MapNode } from './scenes/areaMap';
+import { createAreaMap } from './scenes/areaMap';
 import { createExerciseScene } from './scenes/exerciseScene';
 import { createHomeIsland } from './scenes/homeIsland';
 import { createLandfall } from './scenes/landfall';
 import { createThingsSheet } from './scenes/thingsSheet';
-import { SEA, placeInSea, seaOf } from './scenes/chartSheets';
 import { PLACES } from './scenes/places';
 import { createVoyage, type Port } from './scenes/voyage';
 import { createWho } from './scenes/who';
@@ -24,6 +21,7 @@ import type { Diorama } from './scenes/diorama';
 import { Stage } from './stage/stage';
 import { Bar } from './ui/bar';
 import { Grownups } from './ui/grownups';
+import { charted as chart, mapNodesOf, soundsOf } from './mapView';
 
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 document.addEventListener('dblclick', (e) => e.preventDefault());
@@ -79,36 +77,7 @@ async function boot(): Promise<void> {
   /** The little ones waiting on deck: everyone woken so far on an island that is not finished with. */
   const onDeck = (area: AreaDef): Rescue[] =>
     isFinished(area, game.done) ? [] : lessonsOf(area).filter((n) => game.done.has(n.id)).map((n) => rescue(rescueIndex(n.id)));
-  /** What the chart shows on a crossing to or from `area`: every island of its sea, those up to this one found, and ticked if finished. */
-  const charted = (area: AreaDef, done = game.done) => {
-    // `?sea=3` draws the third sea instead, as on the crossing to its last island, and `?isles=43` the chart as it
-    // will be with that many islands, the extra ones blank. Islands not made yet borrow the look of ones that are.
-    const ahead = Math.max(0, Math.floor(Number(params.get('sea')) || 0));
-    const count = Math.max(AREAS.length, Number(params.get('isles')) || 0, ahead * SEA);
-    const last = ahead ? Math.min(ahead * SEA, count) - 1 : AREAS.indexOf(area);
-    const first = seaOf(last) * SEA;
-    const lent = (i: number) => PLACES[(AREAS[i] ?? OPEN_AREAS[i % OPEN_AREAS.length]).id];
-    return {
-      sea: seaOf(last),
-      isle: placeInSea(last),
-      isles: Array.from({ length: Math.min(SEA, count - first) }, (_, n) => {
-        const i = first + n;
-        return {
-          seed: PLACES[AREAS[i]?.id]?.shape.seed ?? 1.3 + i * 1.7,
-          found: i <= last ? { place: lent(i), finished: AREAS[i] ? isFinished(AREAS[i], done) : i < last } : null,
-        };
-      }),
-    };
-  };
-  /**
-   * What a word-building lesson's stone shows: the word it opens on, the first in the list of a shape it teaches (with its
-   * letter in, where it has one). A stone's tile holds three letters, so of a longer word it shows the two consonants that stand together.
-   */
-  const opensOn = (n: NodeDef): string => {
-    const fits = CONTENT.words.filter((w) => n.teaches.includes(blend(shapeOf(w.graphemes))));
-    const word = (fits.find((w) => n.favours?.some((g) => w.graphemes.includes(g))) ?? fits[0])?.text ?? n.favours?.[0] ?? '';
-    return word.length > 3 ? word.match(/[^aeiou]{2}/)?.[0] ?? word.slice(0, 2) : word;
-  };
+  const charted = (area: AreaDef, done = game.done) => chart(params, area, done);
   const allDone = (area: AreaDef) => new Set([...game.done, ...OPEN_AREAS.slice(0, OPEN_AREAS.indexOf(area) + 1).flatMap((a) => a.nodes.map((n) => n.id))]);
 
   /** The bar of any scene in the game itself, where the grown-ups' button has no place. */
@@ -195,23 +164,8 @@ async function boot(): Promise<void> {
       sailing = false;
     }
     port = 'area';
-    preloadClips(area.nodes.flatMap((n) => n.teaches.map(graphemeOf)).filter((g): g is string => !!g).map(soundClip));
-    const nodes = area.nodes;
-    const currentId = nodes.find((n) => !done.has(n.id))?.id ?? null;
-    const mapNodes: MapNode[] = nodes.map((n) => {
-      const letter = n.teaches.map(graphemeOf).find((g) => g);
-      // A lesson about an s on the end shows the s: a whole word with one is too long for a stone's tile.
-      const ending = n.teaches.some((s) => s.startsWith('suffix:') || s.startsWith('second:')) ? 's' : null;
-      return {
-        id: n.id,
-        state: done.has(n.id) ? 'done' : n.id === currentId ? 'current' : 'locked',
-        // The word-building lesson shows the word it opens on: the first in the list of a shape it teaches. A lesson that
-        // goes back over vowels shows them.
-        label: n.kind !== 'lesson' ? '' : letter ?? ending ?? (n.review ? (n.favours ?? []).join('') : opensOn(n)),
-        rescue: n.kind === 'lesson' ? rescue(rescueIndex(n.id)) : null,
-        boss: n.kind !== 'lesson',
-      };
-    });
+    preloadClips(soundsOf(area));
+    const mapNodes = mapNodesOf(area, done);
     showBar(['home']);
     await stage.show(
       createAreaMap({
