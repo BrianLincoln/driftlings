@@ -5,11 +5,11 @@ import { CREAM, GREEN, PURPLE, RED, ball, eyes, limb, part, type Drawing } from 
 
 // The sixth batch, the first half: frog, crab, drum, flag, plum. Words with two consonants together.
 
-/** A frog crouching: green, a wide pale-bellied head with bulging eyes, great folded back legs. */
+/** A frog crouching: green, a wide pale-bellied head with two small bumps and calm eyes, great folded back legs. */
 export function frog(): Drawing {
   const skin = GREEN;
   const head: [number, number, number] = [0, 0.3, 0.13];
-  const eyeAt = (k: number): [number, number, number] => [k * 0.095, 0.4, 0.2];
+  const bump = (k: number): [number, number, number] => [k * 0.1, 0.4, 0.1];
   return {
     geo: merge(
       part(1, place(ellipsoid(0.24, 0.2, 0.28, skin), [0, 0.2, -0.1])),
@@ -20,9 +20,9 @@ export function frog(): Drawing {
         place(ellipsoid(0.04, 0.035, 0.09, skin, 14), [k * 0.12, 0.03, 0.27], [0, k * -0.25, 0]),
       ])),
       part(4, place(ellipsoid(0.21, 0.15, 0.17, skin, 40), head)),
-      part(5, ...[-1, 1].map((k) => place(ball(0.1, skin, 24), eyeAt(k)))),
+      part(4, ...[-1, 1].map((k) => place(ball(0.075, skin, 22), bump(k)))),
     ),
-    face: eyes(head, [0.4, 0.62], 1.2, [-0.42, 0.12]),
+    face: eyes(head, [0.45, 0.25], 1.05, [-0.42, 0.12]),
     turn: [0.1, -0.4],
     scale: 0.95,
   };
@@ -32,12 +32,17 @@ export function frog(): Drawing {
 export function crab(): Drawing {
   const shell = RED;
   const dark = C.heart;
+  // A claw is a fat palm and two fingers with a V gap between: a fixed one outside and a thinner, movable one inside.
   const claw = (k: number) => merge(
-    limb([k * 0.22, 0.16, 0.12], [k * 0.34, 0.22, 0.2], 0.04, shell),
-    limb([k * 0.34, 0.22, 0.2], [k * 0.36, 0.38, 0.3], 0.04, shell),
-    place(ellipsoid(0.1, 0.12, 0.07, shell, 22), [k * 0.37, 0.5, 0.33], [0.1, 0, k * -0.25]),
-    place(ellipsoid(0.035, 0.07, 0.05, shell, 14), [k * 0.31, 0.63, 0.33], [0, 0, k * 0.25]),
-    place(ellipsoid(0.035, 0.07, 0.05, shell, 14), [k * 0.43, 0.62, 0.33], [0, 0, k * -0.1]),
+    part(3,
+      limb([k * 0.22, 0.16, 0.12], [k * 0.34, 0.22, 0.2], 0.04, shell),
+      limb([k * 0.34, 0.22, 0.2], [k * 0.36, 0.38, 0.3], 0.04, shell),
+      place(ellipsoid(0.11, 0.1, 0.075, shell, 22), [k * 0.37, 0.47, 0.33]),
+    ),
+    part(4,
+      place(ellipsoid(0.05, 0.13, 0.055, shell, 18), [k * 0.43, 0.62, 0.33], [0, 0, k * -0.3]),
+      place(ellipsoid(0.038, 0.12, 0.045, shell, 18), [k * 0.3, 0.61, 0.33], [0, 0, k * 0.4]),
+    ),
   );
   const legs = [-1, 1].flatMap((k) => [-0.1, 0.0, 0.1].map((z, i) => merge(
     limb([k * 0.2, 0.14, z - 0.02], [k * 0.34, 0.16, z + (i - 1) * 0.03], 0.024, dark),
@@ -48,7 +53,7 @@ export function crab(): Drawing {
     geo: merge(
       part(1, ...legs),
       part(2, place(ellipsoid(0.3, 0.14, 0.22, shell, 40), [0, 0.2, -0.02])),
-      part(3, claw(-1), claw(1)),
+      claw(-1), claw(1),
     ),
     face: eyes(head, [0.45, 0.35], 1.0),
     turn: [0.35, 0.3],
