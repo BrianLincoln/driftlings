@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { C } from '../../gfx/palette';
 import { capsule, ellipsoid, lathe, merge, paint, place } from '../../gfx/geo';
-import { BLUE, CREAM, GREEN, PURPLE, RED, ball, eyes, limb, part, type Drawing } from './parts';
+import { CREAM, GREEN, PURPLE, RED, ball, eyes, limb, part, type Drawing } from './parts';
 
 // The sixth batch, the first half: frog, crab, drum, flag, plum. Words with two consonants together.
 
@@ -81,7 +81,7 @@ export function drum(): Drawing {
   };
 }
 
-/** A flag on a pole: red and white stripes, a blue corner with stars, waving. */
+/** A flag on a pole: red with one pale stripe, waving, no country's. */
 export function flag(): Drawing {
   const W = 0.5;
   const H = 0.32;
@@ -93,16 +93,14 @@ export function flag(): Drawing {
     const w = W / n;
     const slope = Math.atan2(wave(x0 + w) - wave(x0), w);
     const rows = Array.from({ length: 5 }, (_, r) => {
-      const blue = x0 < 0.2 && r >= 2;
-      const g = paint(new THREE.BoxGeometry(w * 1.25, H / 5 + 0.002, 0.025), blue ? BLUE : r % 2 ? CREAM : RED);
+      const g = paint(new THREE.BoxGeometry(w * 1.25, H / 5 + 0.002, 0.025), r === 1 ? CREAM : RED);
       return g.translate(w / 2, (r + 0.5) * (H / 5), 0);
     });
     return place(merge(...rows), [x0, 0, wave(x0)], [0, -slope, 0]);
   });
-  const stars = [[0.05, 0.26], [0.14, 0.26], [0.05, 0.19], [0.14, 0.19]].map(([x, y]) => place(ball(0.022, CREAM, 10), [x, y, wave(x) + 0.016]));
   return {
     geo: merge(
-      part(1, place(merge(...slices, ...stars), [0.03, 0.6 - H - 0.02, 0])),
+      part(1, place(merge(...slices), [0.03, 0.6 - H - 0.02, 0])),
       part(2, place(capsule(0.02, 0.66, C.cutWood), [0, 0.35, 0]), place(ball(0.04, C.buttercup, 14), [0, 0.7, 0])),
       part(3, place(ellipsoid(0.1, 0.035, 0.1, C.basketDark, 20), [0, 0.01, 0])),
     ),
