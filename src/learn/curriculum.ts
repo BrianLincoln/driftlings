@@ -134,6 +134,24 @@ export const AREAS: AreaDef[] = [
       check('i2a3-boss', 'miniboss', 41),
     ],
   },
+  {
+    // The first half of UFLI's digraphs (42 to 48; 49 to 53 are the next island). Every new grapheme is one tile, as qu
+    // is: a doubled letter at the end (puff, bell, kiss, buzz), a glued sound (ball, roll, pull), ck, sh, th and ch.
+    // th has two sounds: /th/ as in "this" is the grapheme's own (46), /th/ as in "thin" its second (47), taught
+    // as s saying /z/ is, so a word with the second one waits for it. That lesson takes no irregular word.
+    id: 'i2a4',
+    nodes: [
+      lesson('i2a4-ff', 42, gpc('ff'), gpc('ll'), gpc('ss'), gpc('zz'), heart('want')),
+      lesson('i2a4-all', 43, gpc('all'), gpc('oll'), gpc('ull'), heart('go')),
+      lesson('i2a4-ck', 44, gpc('ck'), heart('says')),
+      lesson('i2a4-sh', 45, gpc('sh'), heart('she')),
+      lesson('i2a4-th', 46, gpc('th'), heart('they')),
+      lesson('i2a4-th2', 47, second('th')),
+      lesson('i2a4-ch', 48, gpc('ch'), heart('were')),
+      // Ours: UFLI's review of these (49) opens the next island, as the owner has split them.
+      check('i2a4-boss', 'miniboss', null),
+    ],
+  },
 ];
 
 /** Every grapheme of more than one letter that some lesson teaches: what a word is cut by (`splitGraphemes`). */

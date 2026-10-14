@@ -8,6 +8,8 @@ export interface MeetItem {
   kind: 'meet';
   key: string;
   grapheme: string;
+  /** Met with its second sound (th as in "thin"), as the token that sound's clip is named by. Its own sound if not given. */
+  sound?: string;
 }
 
 /** Hear a sound, pick its letter. */
@@ -15,6 +17,8 @@ export interface PickLetterItem {
   kind: 'pick-letter';
   key: string;
   target: string;
+  /** The sound asked for, where it is the target's second one (th as in "thin"). Its own sound if not given. */
+  sound?: string;
   /** Includes the target. Already in display order. */
   choices: string[];
   skills: SkillId[];

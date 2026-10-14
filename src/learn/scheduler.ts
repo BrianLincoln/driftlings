@@ -1,12 +1,12 @@
 import { areaSkills, areaVowels, type AreaDef, type NodeDef } from './curriculum';
 import { chainItem } from './chains';
-import { askableGraphemes, catchItem, heartBuild, heartFind, heartMeet, heartWords, manyItem, manyWords, meetItem, oddAt, pickLetterItem, type GenContext } from './generator';
+import { askableGraphemes, catchItem, heartBuild, heartFind, heartMeet, heartWords, manyItem, manyWords, meetItem, oddAt, pickLetterItem, secondMeetItem, secondPickItem, type GenContext } from './generator';
 import { readItem, type ReadWant } from './reads';
 import type { ChainItem, ReadItem, Round, Word } from './items';
 import { isDue, statusOf, type SkillState } from './model';
 import { shuffle, weighted } from './rng';
 import { SIZES, blends, manyAsks, need, nonNull, picks, round, spread, vowelPicks } from './rounds';
-import { blend, gpc, graphemeOf, heart, heartOf, shapeOf, type SkillId } from './skills';
+import { SECOND_SOUND, blend, gpc, graphemeOf, heart, heartOf, shapeOf, type SkillId } from './skills';
 
 export { SIZES, need } from './rounds';
 
@@ -15,7 +15,26 @@ export { SIZES, need } from './rounds';
 //  - a practice round is offered when something is overdue or shaky;
 //  - practice only blocks progress when the next area depends on something weak.
 
-const isEnding = (s: SkillId) => s.startsWith('suffix:') || s.startsWith('second:');
+/** The grapheme whose second sound a skill is, where that sound is taught as a sound (th as in "thin"), not as an ending. */
+const secondOf = (s: SkillId): string | null => (s.startsWith('second:') && s.slice(7) in SECOND_SOUND ? s.slice(7) : null);
+/** An s on the end, and s saying /z/ there. */
+const isEnding = (s: SkillId) => s.startsWith('suffix:') || (s.startsWith('second:') && !secondOf(s));
+
+/**
+ * A lesson on a grapheme's second sound (th as in "thin"): the tile is met again with that sound, picked by it among older
+ * letters (never by its first sound in the same round), then words with that sound in it are built.
+ */
+function planSecond(node: NodeDef, ctx: GenContext, now: number): Round[] {
+  const gs = nonNull(node.teaches.map(secondOf));
+  const older = askableGraphemes(ctx).filter((g) => !gs.includes(g));
+  const fresh = nonNull(Array.from({ length: Math.ceil(SIZES.lessonPicks * SIZES.newShare) }, (_, i) => secondPickItem(gs[i % gs.length], ctx)));
+  const odd = (w: Word) => w.graphemes.some((g, i) => gs.includes(g) && oddAt(w, i));
+  return [
+    ...round(nonNull(gs.map((g) => secondMeetItem(g, ctx)))),
+    ...round(spread([...fresh, ...picks(SIZES.lessonPicks - fresh.length, older, ctx, now)], ctx, fresh.length ? gs[0] : undefined)),
+    ...round(blends(SIZES.lessonBlends, ctx, now, { only: odd, favour: gs })),
+  ];
+}
 
 /**
  * A lesson about an s on the end. Three things go from one to several while the child taps the s on,
@@ -161,6 +180,7 @@ function teaching(node: NodeDef, ctx: GenContext, now: number): Round[] {
   const teachesBlending = node.teaches.some((s) => s.startsWith('blend:'));
 
   if (node.teaches.some(isEnding)) return planEnding(node, older, ctx, now);
+  if (node.teaches.some(secondOf)) return planSecond(node, ctx, now);
 
   if (teachesBlending) {
     // Only words of the shapes this lesson is about: a later one has every earlier shape to hand as well.
@@ -197,7 +217,8 @@ export function planCheckpoint(area: AreaDef, ctx: GenContext, now: number): Rou
     ];
   }
   const letters = nonNull(areaSkills(area).map(graphemeOf)).filter((g) => ctx.known.has(gpc(g)) && ctx.content.hasSound(g));
-  const once = nonNull(letters.map((g) => pickLetterItem(g, ctx)));
+  // A second sound taught here is asked for too (th as in "thin").
+  const once = nonNull([...letters.map((g) => pickLetterItem(g, ctx)), ...areaSkills(area).map(secondOf).map((g) => (g ? secondPickItem(g, ctx) : null))]);
   const extra = picks(Math.max(0, SIZES.checkpointPicks - once.length), letters, ctx, now);
   return [
     ...round(spread([...once, ...extra], ctx)),
@@ -234,8 +255,9 @@ export function planPractice(ctx: GenContext, now: number, force = false): Round
   const needy = nonNull(targets.map(graphemeOf)).filter((g) => ctx.content.hasSound(g));
   const pool = needy.length ? needy : askableGraphemes(ctx);
   const wantBlends = force || targets.some((t) => t.startsWith('blend:'));
+  const seconds = nonNull(targets.map(secondOf).map((g) => (g ? secondPickItem(g, ctx) : null)));
   const rounds = [
-    ...round(spread(picks(SIZES.practicePicks, pool, ctx, now), ctx)),
+    ...round(spread([...seconds, ...picks(SIZES.practicePicks - seconds.length, pool, ctx, now)], ctx)),
     ...(wantBlends ? round(blends(SIZES.practiceBlends, ctx, now)) : []),
     ...(wantBlends ? round(chains(ctx, now)) : []),
     ...(targets.some(isEnding) ? round(manyAsks(SIZES.practiceMany, manyWords(ctx), ctx)) : []),

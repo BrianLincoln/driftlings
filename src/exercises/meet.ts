@@ -7,7 +7,8 @@ import type { ExerciseModule } from './contract';
 // that starts with it (x: ends with it), and after a beat the lesson moves on.
 // Nothing to tap and nothing scored; the questions that follow are where the
 // child answers. Two letters that make one sound (qu) stand on one tile and
-// have no name: "Together, these letters make the sound ...".
+// have no name: "Together, these letters make the sound ...". A tile met again
+// with its second sound (th as in "thin") gets "These letters can also make the sound ...".
 
 /** "Like in [word]", for a letter that has a keyword recorded. */
 const likeIn = (g: string): ClipId[] => {
@@ -16,16 +17,21 @@ const likeIn = (g: string): ClipId[] => {
 };
 const BEFORE_LIKE_IN = 0.45;
 const TOGETHER = promptClip('together-these-letters-make-the-sound');
+const ALSO = promptClip('these-letters-can-also-make-the-sound');
 /** What is said before the sound itself. Until the line for two letters is recorded, they get what a letter with no name gets. */
-const lead = (g: string): ClipId[] =>
-  g.length > 1
-    ? [hasClip(TOGETHER) ? TOGETHER : promptClip('listen')]
-    : hasClip(nameClip(g)) ? [promptClip('this-is-the-letter'), nameClip(g), promptClip('it-makes-the-sound')] : [promptClip('listen')];
+const lead = (i: MeetItem): ClipId[] => {
+  const g = i.grapheme;
+  if (i.sound && hasClip(ALSO)) return [ALSO];
+  if (g.length > 1) return [hasClip(TOGETHER) ? TOGETHER : promptClip('listen')];
+  return hasClip(nameClip(g)) ? [promptClip('this-is-the-letter'), nameClip(g), promptClip('it-makes-the-sound')] : [promptClip('listen')];
+};
+/** The sound it is met with, and so its keywords: its own, or the second one. */
+const sound = (i: MeetItem): string => i.sound ?? i.grapheme;
 
 export const meet: ExerciseModule<MeetItem> = {
   kind: 'meet',
   clips: (items) => [
-    ...items.flatMap((i) => [...lead(i.grapheme), soundClip(i.grapheme), ...likeIn(i.grapheme)]),
+    ...items.flatMap((i) => [...lead(i), soundClip(sound(i)), ...likeIn(sound(i))]),
   ],
 
   start(items, kit, hooks) {
@@ -60,11 +66,11 @@ export const meet: ExerciseModule<MeetItem> = {
         if (!tile) return;
         if (!told && t > 0.6) {
           told = true;
-          const g = tile.text;
+          const i = items[index];
           // "This is the letter [name]. It makes the sound [sound]. Like in [word]."
-          const said = kit.line([...lead(g), soundClip(g)]);
+          const said = kit.line([...lead(i), soundClip(sound(i))]);
           soundAt = t + said.lastAt;
-          const example = likeIn(g);
+          const example = likeIn(sound(i));
           const end = example.length ? kit.line(example, said.end + BEFORE_LIKE_IN).end : said.end;
           leaveAt = t + end + 0.8; // a beat, then on to the questions
         }

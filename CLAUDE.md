@@ -132,9 +132,9 @@ run the sheet and the critic, and the words still to draw in batches. Read it be
 
 An area is an island: the curriculum (`src/learn/curriculum.ts`) is one flat list of them, `AREAS`, in the
 order the ship finds them. The chart has a sheet for each sea of six of them (`SEA` in `src/scenes/chartSheets.ts`),
-and a crossing shows the sheet of the sea it is in. Seven are open, `i1a1` to `i2a3` (UFLI 1 to 41: the whole alphabet, then the
-short vowels gone back over in longer words): the first sea's sheet is full, and `i2a3` is the first island of the second. (The ids are
-left over from when areas were grouped; saved progress uses them, so they stay. The next is `i2a4`.)
+and a crossing shows the sheet of the sea it is in. Eight are open, `i1a1` to `i2a4` (UFLI 1 to 48: the whole alphabet, then the
+short vowels gone back over in longer words, then the first digraphs): the first sea's sheet is full, and `i2a3` is the first island of the second. (The ids are
+left over from when areas were grouped; saved progress uses them, so they stay. The next is `i2a5`, UFLI 49 to 53.)
 
 The curriculum already lists it. Give it a big one in `BIG_ONES`
 (`src/game/areas.ts`) and an entry in `PLACES` (`src/scenes/places.ts`); a test checks the two agree.

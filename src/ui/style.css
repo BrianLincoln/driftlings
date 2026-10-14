@@ -54,6 +54,9 @@ html, body {
   color: var(--ink);
   white-space: nowrap;
   will-change: transform;
+  /* Every letter on a tile stands on its own: ff is two f's, never the joined ﬀ. */
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'clig' 0;
   /* Andika's lowercase sits low in its line box; nudge to the optical centre. */
   padding-bottom: 0.14em;
   transition: color 0.25s;

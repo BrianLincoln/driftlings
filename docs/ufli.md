@@ -86,7 +86,8 @@ Lessons not listed add none. The review lessons (35 to 41, 49, 53) add none and 
 
 ## Where the game is
 
-Lessons 1 to 41 of 128, on seven islands: the whole alphabet unit and the review of short vowels with longer words. Next is digraphs (42 on).
+Lessons 1 to 48 of 128, on eight islands: the whole alphabet unit, the review of short vowels with longer words, and the
+first half of the digraphs. Next is 49 to 53 (review, wh and ph, ng, nk, review) on `i2a5`.
 
 | Island | UFLI | Notes |
 |---|---|---|
@@ -97,7 +98,8 @@ Lessons 1 to 41 of 128, on seven islands: the whole alphabet unit and the review
 | `i2a1` | 20–27 | 25 (`i2a1-r2`) teaches CCVC with r after another consonant; 27 (`i2a1-l2`) CCVC with l, and CVCC. Both were added after the island was out: see below |
 | `i2a2` | 28–34 | w j y x qu v z, one lesson each. The checkpoint is ours and a boss: the alphabet ends here |
 | `i2a3` | 35–41 | one short vowel a lesson, no new letter: a, i, o, then a, i and o together (and CCVCC), u (and CCCVC), e. 41 (all five) is the checkpoint. See below |
-| next | 42–53 | digraphs |
+| `i2a4` | 42–48 | ff ll ss zz · all oll ull · ck · sh · th (this) · th (thin) · ch, one lesson each. The checkpoint is ours: UFLI's review (49) opens the next island. See below |
+| next | 49–53 | `i2a5`: review, wh and ph, ng, nk, review |
 
 Blends, as the game has them:
 
@@ -147,6 +149,35 @@ The last letters, as the game has them:
 - **x says /ks/ and ends words**: its keywords end with it ("like in fox"), and no word in the list begins with it (a test checks).
 - **z, and s saying /z/**: asked for /z/, s is never one of the wrong choices, since from lesson 21 it says that too.
   Asked for /s/, z may be.
+
+The digraphs (42 to 48), as the game has them:
+
+- **Every one is one grapheme**, as qu is: one tile, one skill (`gpc:sh`), cut by `splitGraphemes` (longest first, so
+  ball is b, all and shell is sh, e, ll), met with "Together, these letters make the sound", never the letter to catch.
+  Lesson 42 teaches ff, ll, ss and zz together (four new tiles in one lesson, as UFLI does).
+- **ff, ll, ss, zz and ck say just what one letter says**, so they are heard from that letter's clip (`HEARD_AS` in
+  `src/learn/skills.ts`: nothing new to record) and never set beside it as a wrong choice (`SAME_SOUND`: asked for /k/,
+  c, k and ck are all right, so only one of them stands). Their keywords end with them (puff, duck).
+- **-all, -oll, -ull are glued sounds: one tile each**, with a sound of its own (`letters/all-sound`, as in ball; oll as
+  in roll; ull as in pull). In a word's shape a glued tile counts as a vowel and a consonant (`isGlued`), so ball is
+  cvc, small ccvc, scroll cccvc, and no new shape or skill kind is needed. A word chain sets a glued tile only beside
+  another (ball, bull, pull). Words where the ll after a vowel is plain (doll, dull, gull) would contradict the glued
+  sounds and are left out of the list; a dot could cut them (`do.ll`) if they are wanted. *Not checked against UFLI's
+  own word lists: that -ull here is the sound of pull and full (not dull) is our reading of "glued sound".*
+- **th has two sounds, one grapheme.** `gpc:th` is /th/ as in "this" (46): the sound "the" has always used
+  (`letters/th-sound`). /th/ as in "thin" is th's second sound, `second:th` (47), taught as s saying /z/ is: a word
+  with it carries that sound in its `sounds` (the token `th-unvoiced`, clip `letters/th-unvoiced-sound`) and is read
+  only once 47 is taught. Which words say it as in "this" is listed (`thSaysThis` in `words.json`: this, that, then,
+  them, than, with); every other th says it as in "thin". Lesson 47 meets the tile again with "These letters can also
+  make the sound" and its keywords (thumb, thin), asks for th by that sound (scored as `second:th`, never by its first
+  sound in the same round), and builds words that have it. The checkpoint asks for both sounds; practice asks for the
+  second when it is shaky.
+- **Word chains keep to th as in "this"**: a chain only uses words where every tile says its usual sound, so thin,
+  bath and path are built and read but never chained. That is the chain's rule, kept.
+- **Irregular words, one to a lesson**: want (42), go (43), says (44), she (45), they (46), were (48; 47 is a second
+  sound, which takes none, like 21). Left out for now: your, no, so, goes, we, their, talk, walk. "the" loses the heart
+  on its th at 46, and she and they keep one only on their last tile. Two new sounds: er (were) and the second th;
+  go and they use the names of o and a.
 
 Our exercises against the eight steps:
 

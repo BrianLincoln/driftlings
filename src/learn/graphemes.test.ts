@@ -47,8 +47,8 @@ describe('cutting a word into graphemes', () => {
     expect(shapeOf(['d', 'u', 'ck'])).toBe('cvc');
   });
 
-  it('is cut by whatever the lessons teach: so far, qu', () => {
-    expect(multiGraphemes()).toEqual(['qu']);
+  it('is cut by whatever the lessons teach: qu, then the digraphs of UFLI 42 to 48', () => {
+    expect(multiGraphemes()).toEqual(['qu', 'ff', 'll', 'ss', 'zz', 'all', 'oll', 'ull', 'ck', 'sh', 'th', 'ch']);
   });
 });
 

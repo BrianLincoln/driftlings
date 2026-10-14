@@ -17,7 +17,13 @@
     "are": { "graphemes": ["are"], "sounds": ["ar"] },
     "you": { "graphemes": ["y", "ou"], "sounds": ["y", "oo"] },
     "what": { "graphemes": ["wh", "a", "t"], "sounds": ["w", "u", "t"] },
-    "have": { "graphemes": ["h", "a", "ve"], "sounds": ["h", "a", "v"] }
+    "have": { "graphemes": ["h", "a", "ve"], "sounds": ["h", "a", "v"] },
+    "want": { "graphemes": ["w", "a", "n", "t"], "sounds": ["w", "o", "n", "t"] },
+    "go": { "graphemes": ["g", "o"], "sounds": ["g", "O"] },
+    "says": { "graphemes": ["s", "ay", "s"], "sounds": ["s", "e", "z"] },
+    "she": { "graphemes": ["sh", "e"], "sounds": ["sh", "E"] },
+    "they": { "graphemes": ["th", "ey"], "sounds": ["th", "A"] },
+    "were": { "graphemes": ["w", "ere"], "sounds": ["w", "er"] }
   },
   "on": ["bed", "dog", "pig", "pot", "cup"],
   "in": ["cup", "pot"]

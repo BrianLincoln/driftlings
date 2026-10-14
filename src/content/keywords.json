@@ -1,5 +1,5 @@
 {
-  "comment": "Two everyday words per grapheme that begin with its sound (x: end with it). They are only heard, never read, so they need not be decodable. scripts/audio-wanted.mjs lists the ones with no clip.",
+  "comment": "Two everyday words per grapheme that begin with its sound (x, a doubled letter and ck: end with it; th's second sound is keyed by the name of its clip, th-unvoiced). They are only heard, never read, so they need not be decodable. scripts/audio-wanted.mjs lists the ones with no clip.",
   "a": ["apple", "alligator"],
   "m": ["monkey", "map"],
   "s": ["snake", "sun"],
@@ -25,5 +25,17 @@
   "x": ["fox", "box"],
   "qu": ["quit", "queen"],
   "v": ["van", "vet"],
-  "z": ["zip", "zoo"]
+  "z": ["zip", "zoo"],
+  "ff": ["puff", "cliff"],
+  "ll": ["bell", "hill"],
+  "ss": ["kiss", "dress"],
+  "zz": ["buzz", "fizz"],
+  "all": ["ball", "tall"],
+  "oll": ["roll", "troll"],
+  "ull": ["pull", "full"],
+  "ck": ["duck", "sock"],
+  "sh": ["ship", "shop"],
+  "th": ["this", "that"],
+  "th-unvoiced": ["thumb", "thin"],
+  "ch": ["chip", "chin"]
 }

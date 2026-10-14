@@ -227,4 +227,30 @@ export const PLACES: Record<string, Place> = {
     ],
     chart: [[-0.6, -0.3, 'rock', 36], [-0.36, -0.56, 'rock', 42], [-0.08, -0.66, 'rock', 28], [0.3, -0.5, 'tree', 16]],
   },
+  // Two islands in one, in the cool of the morning: a pair of green humps joined by a waist of sand (two letters, one
+  // sound), a tree on each, boulders paired along the back, and the stones crossing from one hump to the other.
+  i2a4: {
+    shape: { radius: 7.5, rise: 0.5, sand: 1.6, seed: 3.8, bays: 2.0 },
+    palette: PALETTES.mintMorning,
+    wideZ: [0.9, -0.3, 0.8, -0.6, 0.6, -0.4, 0.9],
+    tallX: [-0.95, 0.0, 0.95, 0.0, -0.95, 0.0, 0.95],
+    bigSide: -1,
+    scenery: () => [
+      tree(18, [-5.4, -3.3], [-2.7, -4.6]),
+      tree(26, [4.6, -4.2], [2.7, 3.2]),
+      rock(32, 0.7, [-3.6, -4.8], [-2.6, -2.6]),
+      rock(34, 0.6, [-2.4, -5.0], [2.6, -1.0]),
+      rock(44, 0.7, [2.2, -4.9], [-2.6, -0.4]),
+      rock(48, 0.6, [3.4, -4.7], [2.5, 1.0]),
+      bush(62, [5.6, -2.4], [-2.5, 1.6]),
+      bush(74, [-4.4, 2.7], [-2.4, 3.2]),
+      rock(86, 0.4, [1.4, 3.0], [2.4, -2.8]),
+    ],
+    far: [[-38, -84, 16], [4, -96, 1], [42, -78, 9]],
+    dressing: [
+      [0.62, -0.46, 'tree'], [0.56, 0.44, 'tree'], [0.5, -0.3, 'rock'], [0.48, 0.28, 'rock'], [0.82, -0.24, 'bush'], [0.78, 0.5, 'rock'],
+      [0.84, 0.06, 'stone'], [0.66, -0.04, 'stone'], [0.5, 0.1, 'stone'], [0.34, 0.0, 'stone'],
+    ],
+    chart: [[-0.58, -0.32, 'tree', 18], [-0.3, -0.6, 'rock', 32], [0.0, -0.66, 'rock', 44], [0.28, -0.48, 'tree', 26]],
+  },
 };

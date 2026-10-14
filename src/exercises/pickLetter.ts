@@ -7,7 +7,8 @@ import type { ExerciseModule } from './contract';
 
 // Hear a sound, pick the letter. A wrong pick dims that tile, which says its
 // own sound, and the question plays again; after two, or a long pause, the
-// companion shows the answer.
+// companion shows the answer. The sound asked for may be the target's second
+// one (th as in "thin"); a tile tapped says its first.
 
 const REPLAY_AFTER = 6;
 const HELP_AFTER = 14;
@@ -16,7 +17,7 @@ const BEFORE_REASK = 2; // long enough that the two sounds are not heard as a pa
 
 export const pickLetter: ExerciseModule<PickLetterItem> = {
   kind: 'pick-letter',
-  clips: (items) => [promptClip('which-letter-makes-the-sound'), ...items.flatMap((i) => i.choices.map(soundClip))],
+  clips: (items) => [promptClip('which-letter-makes-the-sound'), ...items.flatMap((i) => [...(i.sound ? [soundClip(i.sound)] : []), ...i.choices.map(soundClip)])],
 
   start(items, kit, hooks) {
     let index = -1;
@@ -34,7 +35,7 @@ export const pickLetter: ExerciseModule<PickLetterItem> = {
     const place = () => tiles.forEach((tile, i) => tile.goal.copy(kit.spot('tiles', i, tiles.length)));
     const ask = (lead = 0) => {
       lastHeard = t + lead;
-      return lead + kit.say(soundClip(item().target), lead);
+      return lead + kit.say(soundClip(item().sound ?? item().target), lead);
     };
     const giveHelp = () => {
       if (helped || answered) return;
@@ -119,7 +120,7 @@ export const pickLetter: ExerciseModule<PickLetterItem> = {
         if (index >= items.length) return;
         if (askedAt < 0 && t > 0.5) {
           if (index === 0) {
-            const said = kit.line([promptClip('which-letter-makes-the-sound'), soundClip(item().target)]);
+            const said = kit.line([promptClip('which-letter-makes-the-sound'), soundClip(item().sound ?? item().target)]);
             lastHeard = t + said.lastAt;
             askedAt = t + said.end;
           } else askedAt = t + ask();
