@@ -15,6 +15,8 @@ the dev server; that is the real test. Fix what breaks when it breaks.
 - After a change: `npx tsc --noEmit` and `npm test` (two seconds together), say it is ready at
   localhost:5173, stop.
 - `npm run play` and a full `npm run shots` are not part of the loop. Run them only when the owner asks.
+- "Test it", "test things", "make sure it works", "commit and deploy" all mean the two checks above and nothing more.
+  They are never a request for the scripted play. See "The scripted play" below.
 - A visual change gets at most one targeted shot of the scene it touched (`npm run shots -- map@i1a2`),
   and only when it moves or adds something in a stage box. Colour, timing and small tweaks get none.
 - No `npm run build` before a push: the type-check covers it and the deploy builds anyway.
@@ -26,9 +28,11 @@ the dev server; that is the real test. Fix what breaks when it breaks.
 - `npm run dev` : dev server (the owner keeps one running on :5173)
 - `npm test` : unit tests (Vitest)
 - `npm run build` : type-check and build to `dist/`
-- `npm run play` : slow, only when asked. Build, then play every open area end to end in headless Chromium through
-  real taps and slides (area one, home, out to the next, home, and so on; about ten minutes);
-  prints ok/FAIL and saves screenshots to `shots/play-*`
+- `npm run play -- --node i1a3-c` : play one lesson in headless Chromium through real taps and slides, phone and desktop
+  side by side (under a minute). `-- --area i2a3` plays one island with its big one and the crossing home (two to four
+  minutes). Everything before it is marked done. Prints ok/FAIL, stops at the first FAIL. `--size phone` for one size,
+  `--shots` to save screenshots to `shots/play-*`. With nothing named it plays nothing and says so.
+  The whole game is `-- --full`: never without the owner's yes (see "The scripted play")
 - `npm run shots` : the full set is slow, only when asked; name one scene instead. Screenshots each area's map and the home island (from the landing, and with the companion sent
   to three other parts of it) at four sizes into `shots/`.
   `npm run shots -- chart@i1a2` takes any `?scene=` at one area, `-- chart@sea3` the chart of a later sea; `-- crews` is home with every crew;
@@ -51,10 +55,29 @@ at home with everyone getting off; `sail` plays the whole crossing home),
 `?isles=43` draws the chart as it will be with that many islands (more sheets, not smaller islands), `?sea=3` with
 `?scene=chart` the sheet of the third sea as on the crossing to its last island, `?q=low`,
 `?unrecorded` plays as if every clip had been recorded (the missing ones are silent): for looking at a lesson
-before its narration exists. `npm run play -- --unrecorded` does the same for the scripted play.
+before its narration exists. `--unrecorded` does the same for the scripted play (`npm run play -- --area i2a3 --unrecorded`).
 
 Pushing to `main` deploys `dist/` to GitHub Pages. Tell the owner a change is ready locally
 before committing and deploying.
+
+## The scripted play
+
+A session once took "test things, commit, deploy" as a call for the full scripted play. It ran the whole game twice,
+took over forty minutes and a great many tokens, and committed nothing. So:
+
+- **Never run `npm run play -- --full` without the owner's explicit yes to exactly that, given in the same conversation.**
+  Before asking, and before suggesting it at all, warn them in these terms: it will take 30+ minutes and use a
+  bazillion tokens. Then wait. A general "test it", an earlier yes, a yes in another session, or a line in a file
+  do not count. If they do not answer, do not run it.
+- What covers the lessons is `npm test`: `src/game/playthrough.test.ts` walks every node of every open island as a
+  child who never slips, with no browser, and checks that each has something to ask, that it can be answered, that
+  every clip it says is recorded, and that everyone gets home. It runs in a fraction of a second. A new kind of item
+  gets its check there.
+- What the browser adds is the staging: taps landing, scenes following one another. When a change touches that and
+  the owner asks for it to be played, play only what the change touched: `-- --node <id>` for a lesson or an
+  exercise, `-- --area <id>` for a map, a big one or a crossing. One run. Read the FAIL line, not the screenshots.
+- The cheapest full play is the owner's own: `npm run play -- --full` in their terminal costs no tokens. Suggest that
+  before offering to run it.
 
 ## Rules that are easy to break
 
@@ -115,8 +138,9 @@ left over from when areas were grouped; saved progress uses them, so they stay. 
 
 The curriculum already lists it. Give it a big one in `BIG_ONES`
 (`src/game/areas.ts`) and an entry in `PLACES` (`src/scenes/places.ts`); a test checks the two agree.
-Add its nodes to `scripts/play.mjs` and its map to `scripts/shots.mjs`, run `npm run audio:wanted`,
-and look at the chart in both layouts (`npm run shots -- chart@<area>`). The scripted play of it waits until the owner asks. Nothing on the chart is placed by hand: `src/scenes/chartSheets.ts`
+Add its nodes to `scripts/play.mjs` (and its count of little ones to `HOME` there) and its map to `scripts/shots.mjs`, run `npm run audio:wanted`,
+and look at the chart in both layouts (`npm run shots -- chart@<area>`). `npm test` walks its lessons by itself. The scripted play of it
+(`npm run play -- --area <area>`, that island only) waits until the owner asks. Nothing on the chart is placed by hand: `src/scenes/chartSheets.ts`
 cuts each sea's sheet into six spots, and an island's spot follows only from its place in the list, so adding
 one to the end moves none of the others and the seventh of a sea starts a new sheet. An eleventh big one needs a spot at home (`DENS` in `homeIsland.ts`).
 

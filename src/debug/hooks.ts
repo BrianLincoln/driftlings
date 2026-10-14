@@ -24,6 +24,8 @@ export interface DebugHooks {
   steer(x: number, z: number): void;
   /** Mark nodes done without playing them. */
   complete(ids: string[]): void;
+  /** Mark this many little ones as already seen home, as a child who had played that far would have. */
+  welcome(count: number): void;
   events(): unknown[];
 }
 
@@ -54,6 +56,7 @@ export function installHooks(stage: Stage, goto: (name: string, instant?: boolea
     exercise: () => (stage.scene as unknown as { debug?: () => never })?.debug?.() ?? null,
     steer: (x, z) => (stage.scene as unknown as { debugSteer?: (x: number, z: number) => void })?.debugSteer?.(x, z),
     complete: (ids) => ids.forEach((id) => game().completeNode(id)),
+    welcome: (count) => game().welcome(count),
     events: () => game().events,
     info: () => ({
       scene: stage.scene?.name,
