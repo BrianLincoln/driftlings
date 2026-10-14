@@ -125,18 +125,19 @@ export function flag(): Drawing {
   };
 }
 
-/** A plum: a plump purple fruit with a pale bloom, a short stem and a leaf. */
+/**
+ * A plum: an upright oval in two cheeks with a seam between them (the line is drawn where the two meet),
+ * deep purple dusted paler at the shoulder, a short stem and one leaf.
+ */
 export function plum(): Drawing {
+  const skin = (side: number) => (_p: THREE.Vector3, n: THREE.Vector3) => (n.y > 0.35 && n.x * side > 0.1 && n.z > 0 ? C.harebell : PURPLE);
   return {
     geo: merge(
-      part(1,
-        place(ellipsoid(0.22, 0.2, 0.2, PURPLE, 40), [0, 0.2, 0]),
-        place(ellipsoid(0.05, 0.03, 0.03, C.harebell, 14), [0.09, 0.32, 0.15], [0, 0, 0.5]),
-      ),
-      part(2, place(capsule(0.016, 0.1, C.trunk), [0, 0.41, 0], [0.15, 0, 0])),
-      part(3, place(ellipsoid(0.1, 0.02, 0.05, C.foliageLight, 18), [0.11, 0.45, 0.0], [0, 0, 0.35])),
+      part(1, place(ellipsoid(0.165, 0.22, 0.18, skin(-1), 40), [-0.03, 0.22, 0])),
+      part(2, place(ellipsoid(0.165, 0.22, 0.18, skin(1), 40), [0.03, 0.22, 0])),
+      part(3, place(capsule(0.02, 0.07, C.trunk), [0.01, 0.46, 0], [0, 0, -0.25])),
+      part(4, place(ellipsoid(0.11, 0.022, 0.055, GREEN, 18), [0.11, 0.47, 0.02], [0, 0.3, 0.45])),
     ),
-    turn: [0.1, -0.3],
-    scale: 0.95,
+    turn: [0.15, 0.5],
   };
 }
