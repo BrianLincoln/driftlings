@@ -1,7 +1,7 @@
 import { askableGraphemes, decodableWords, key, oddAt, type GenContext } from './generator';
 import type { ChainItem, ChainStep, Word } from './items';
 import { shuffle, weighted } from './rng';
-import { blend, gpc, isVowel, shapeOf, soundsLike } from './skills';
+import { blend, gpc, isGlued, isVowel, shapeOf, soundsLike } from './skills';
 
 // Word chains: a word, then another one letter away, then another. Spelling comes first, and every other step
 // after it is a reading one wherever the new word has a drawing; where it has none, that step is spelling too.
@@ -121,7 +121,8 @@ function spellStep(from: Word, to: Word, at: number, pool: Word[], taught: strin
   const made = (g: string) => pool.find((w) => w.graphemes.length === to.graphemes.length && w.graphemes.every((x, i) => (i === at ? g : to.graphemes[i]) === x));
   const confused = ctx.confusions.get(target);
   const wrong = draw(
-    taught.filter((g) => !soundsLike(g, target) && !soundsLike(g, from.graphemes[at]) && (!vowels || !isVowel(target) || isVowel(g))),
+    // A glued sound (all) stands for a vowel and a consonant, so it is only ever set beside another.
+    taught.filter((g) => !soundsLike(g, target) && !soundsLike(g, from.graphemes[at]) && isGlued(g) === isGlued(target) && (!vowels || !isVowel(target) || isVowel(g))),
     2,
     (g) => 1 + (isVowel(g) === isVowel(target) ? 2 : 0) + (made(g) ? 2 : 0) + 3 * (confused?.get(g) ?? 0),
     ctx,

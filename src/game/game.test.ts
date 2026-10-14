@@ -116,6 +116,36 @@ describe('the last letters of the alphabet', () => {
   });
 });
 
+describe('the digraphs', () => {
+  const groups = Object.entries(wordGroups as Record<string, string[] | string>).filter((e): e is [string, string[]] => Array.isArray(e[1]));
+  const NEW = AREAS.find((a) => a.id === 'i2a4')!.nodes.flatMap((n) => n.teaches.map(graphemeOf)).filter((g): g is string => !!g);
+
+  it('has a new grapheme in every word of the island, enough of each for a lesson, and its keywords', () => {
+    const words = groups.filter(([g]) => g.startsWith('i2a4')).flatMap(([, list]) => list).map(cut);
+    for (const w of words) expect(w.graphemes.some((g) => NEW.includes(g)), w.text).toBe(true);
+    for (const g of NEW) {
+      expect(words.filter((w) => w.graphemes.includes(g)).length, g).toBeGreaterThanOrEqual(3);
+      expect((keywords as Record<string, unknown>)[g], g).toBeDefined();
+    }
+    expect((keywords as Record<string, unknown>)['th-unvoiced']).toBeDefined();
+  });
+
+  it('cuts a vowel and ll as a glued sound, and a short vowel before ll only where a dot says so', () => {
+    expect(cut('ball').graphemes).toEqual(['b', 'all']);
+    expect(cut('bell').graphemes).toEqual(['b', 'e', 'll']);
+    // doll and dull would teach the glued sounds wrong, so the list has none.
+    const all = groups.flatMap(([, list]) => list);
+    for (const w of ['doll', 'dull', 'gull', 'hull', 'shall']) expect(all, w).not.toContain(w);
+  });
+
+  it('lists the words where th says /th/ as in "this", each of them in a group of its own island', () => {
+    const voiced = String((wordGroups as Record<string, unknown>).thSaysThis).split(' ');
+    const i2a4 = groups.filter(([g]) => g.startsWith('i2a4')).flatMap(([, list]) => list);
+    for (const w of voiced) expect(i2a4, w).toContain(w);
+    expect(voiced).toEqual(['this', 'that', 'then', 'them', 'than', 'with']);
+  });
+});
+
 describe('irregular words', () => {
   it('each one a lesson teaches is cut into tiles in hearts.json, with a sound for every tile', () => {
     const taught = allNodes().flatMap((n) => n.teaches.map(heartOf)).filter((w): w is string => !!w);

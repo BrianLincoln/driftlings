@@ -3,7 +3,9 @@
 //
 // What a lesson needs depends on what it teaches:
 //   a grapheme       its sound, its letter name (single letters only), and its keyword words; one of two letters (qu)
-//                    has no name, and the line that introduces it instead
+//                    has no name, and the line that introduces it instead. A grapheme that says just what one letter
+//                    says (ff, ck) is heard from that letter's clip, so it needs only its keywords (HEARD_AS)
+//   a second sound   (th as in "thin") its sound, the line that introduces it, its keywords, and words that have it
 //   blending words   enough buildable words made only of graphemes taught so far
 //   new word shapes  the same, of the shapes the lesson teaches and with its letter in them (r in "trip", l in "flag" and
 //                    "milk"): the lesson's words are shared evenly between its shapes, as the scheduler shares them.
@@ -37,6 +39,7 @@ const has = (id) => id in manifest;
 // { sentence: [words] } is where a sentence can first begin with those (LEADS in src/learn/reads.ts).
 // { chain: true } is where word chains begin: the lesson after the first on blending, when there are words enough to link.
 // { words: [...], why } is a lesson that needs just these words (all in src/content/words.json).
+// { second: g, sound } is a lesson on g's second sound, named as its clip is (SECOND_SOUND in src/learn/skills.ts).
 const STEPS = [
   ['Island 1', ['a', 'm', 's', 't', { blend: 4 }]],
   ['Island 2', ['p', { chain: true }, { heart: 'the' }, 'f', { heart: 'a' }, 'i', { heart: 'I' }, 'n']],
@@ -59,7 +62,23 @@ const STEPS = [
     { words: ['strap', 'strip', 'scrap', 'strum', 'strut', 'scrub', 'stump', 'crust', 'lump', 'plug'], why: 'three consonants first, and short u' },
     { words: ['step', 'sled', 'left', 'best', 'bend', 'tent', 'blend', 'crest', 'spend', 'slept'], why: 'short e in a longer word' },
   ]],
+  // The digraphs (UFLI 42 to 48). Every grapheme is one tile; the doubled letters and ck sound like a letter already recorded.
+  ['Island 8', [
+    'ff', 'll', 'ss', 'zz', { heart: 'want' },
+    { words: ['puff', 'cuff', 'bell', 'hill', 'kiss', 'mess', 'buzz', 'fizz', 'spill', 'dress'], why: 'a doubled letter at the end' },
+    'all', 'oll', 'ull', { heart: 'go' },
+    { words: ['ball', 'tall', 'call', 'roll', 'toll', 'troll', 'pull', 'full', 'bull', 'small'], why: 'a glued sound: all, oll, ull' },
+    'ck', { heart: 'says' }, { words: ['duck', 'sock', 'back', 'kick', 'neck', 'lock', 'black', 'truck'], why: 'ck at the end' },
+    'sh', { heart: 'she' }, { words: ['ship', 'shop', 'fish', 'dish', 'wish', 'cash', 'shell', 'crash'], why: 'sh' },
+    'th', { heart: 'they' }, { words: ['this', 'that', 'then', 'them', 'than', 'with'], why: 'th as in "this"' },
+    { second: 'th', sound: 'th-unvoiced' }, { words: ['thin', 'thick', 'bath', 'math', 'path', 'moth', 'cloth'], why: 'th as in "thin"' },
+    'ch', { heart: 'were' }, { words: ['chip', 'chin', 'chop', 'chat', 'much', 'rich', 'chick', 'lunch'], why: 'ch' },
+  ]],
 ];
+
+/** Graphemes heard from a single letter's clip (HEARD_AS in src/learn/skills.ts): they say just what it says. */
+const HEARD_AS = { ff: 'f', ll: 'l', ss: 's', zz: 'z', ck: 'k' };
+const soundOf = (g) => `letters/${HEARD_AS[g] ?? g}-sound`;
 
 // A word is cut into graphemes the way src/learn/skills.ts cuts it: the two-letter graphemes the lessons teach
 // are one each, the longest that fits first, and a dot in the list forces a cut.
@@ -70,8 +89,9 @@ const split = (spelling) => spelling.split('.').flatMap((part) => {
   return out;
 });
 const words = spelled.map((s) => ({ text: s.replaceAll('.', ''), graphemes: split(s) }));
-const VOWELS = 'aeiou';
-const shapeOf = (w) => w.graphemes.map((g) => (VOWELS.includes(g[0]) ? 'v' : 'c')).join('');
+const VOWELS = ['a', 'e', 'i', 'o', 'u'];
+// A glued sound (all, oll, ull) is a vowel and a consonant in one tile.
+const shapeOf = (w) => w.graphemes.map((g) => (VOWELS.includes(g) ? 'v' : ['all', 'oll', 'ull'].includes(g) ? 'vc' : 'c')).join('');
 
 const lines = [
   '# Audio wanted',
@@ -90,10 +110,15 @@ for (const [title, steps] of STEPS) {
   for (const step of steps) {
     if (typeof step === 'string') {
       taught.add(step);
-      if (!has(`letters/${step}-sound`)) want.push(`\`letters/${step}-sound\` : the sound of "${step}" alone, no trailing "uh"`);
+      if (!has(soundOf(step))) want.push(`\`${soundOf(step)}\` : the sound of "${step}" alone, no trailing "uh"${step.length > 2 ? ` (one sound, as in ${keywords[step][0]})` : ''}`);
       if (step.length > 1 && !has('prompts/together-these-letters-make-the-sound')) want.push('`prompts/together-these-letters-make-the-sound` : "Together, these letters make the sound" (said before the sound of two letters on one tile: qu, and later sh, ch, th)');
       if (step.length === 1 && !has(`letters/${step}-name`)) want.push(`\`letters/${step}-name\` : the name of the letter "${step}"`);
       for (const w of keywords[step] ?? []) if (!has(`words/${w}`)) want.push(`\`words/${w}\` : "${w}" (keyword for ${step})`);
+    } else if (step.second) {
+      const { second: g, sound } = step;
+      if (!has(`letters/${sound}-sound`)) want.push(`\`letters/${sound}-sound\` : the sound of "${g}" as in "${keywords[sound][1]}" (not as in "${keywords[g][0]}"), alone, no trailing "uh"`);
+      if (!has('prompts/these-letters-can-also-make-the-sound')) want.push(`\`prompts/these-letters-can-also-make-the-sound\` : "These letters can also make the sound" (said before ${g}'s second sound)`);
+      for (const w of keywords[sound] ?? []) if (!has(`words/${w}`)) want.push(`\`words/${w}\` : "${w}" (keyword for ${g} as in "${keywords[sound][1]}")`);
     } else if (step.words) {
       for (const w of step.words) {
         if (!words.some((x) => x.text === w)) throw new Error(`${w} is wanted for ${title} but is not in words.json`);
@@ -101,13 +126,13 @@ for (const [title, steps] of STEPS) {
       }
     } else if (step.heart) {
       const w = step.heart;
-      const said = { the: 'as "thuh", not "thee"', a: 'as "uh", not "ay"', to: 'as "too", not "tuh"', of: 'as "uv"', are: 'as in "we are"', was: 'as "wuz"', what: 'as "wut"' }[w];
-      const how = { oo: 'the long "oo" of "to", "do" and "you"', ar: 'the "ar" of "are" and "car"', th: 'the buzzing "th" of "the"' };
+      const said = { the: 'as "thuh", not "thee"', a: 'as "uh", not "ay"', to: 'as "too", not "tuh"', of: 'as "uv"', are: 'as in "we are"', was: 'as "wuz"', what: 'as "wut"', says: 'as "sez"', want: 'as "wont"' }[w];
+      const how = { oo: 'the long "oo" of "to", "do" and "you"', ar: 'the "ar" of "are" and "car"', th: 'the buzzing "th" of "the"', er: 'the "er" of "were" and "her"' };
       const clip = w.toLowerCase();
       if (!has(`words/${clip}`)) want.push(`\`words/${clip}\` : "${w}"${said ? `, said ${said}` : ''} (learned by heart)`);
       for (const snd of hearts.words[w].sounds) {
         // A capital is a letter saying its name, which the letter's own lesson already asks for.
-        const id = /^[A-Z]$/.test(snd) ? `letters/${snd.toLowerCase()}-name` : `letters/${snd}-sound`;
+        const id = /^[A-Z]$/.test(snd) ? `letters/${snd.toLowerCase()}-name` : soundOf(snd);
         if (!has(id)) want.push(`\`${id}\` : ${id.endsWith('-name') ? `the name of the letter "${snd.toLowerCase()}"` : `${how[snd] ?? `the sound of "${snd}"`}, alone, no trailing "uh"`}`);
       }
       for (const [name, text] of [['this-word-is', 'This word is'], ['learn-this-part-by-heart', "Heart words don't follow the rules, so we learn them by heart."]]) if (!has(`prompts/${name}`)) want.push(`\`prompts/${name}\` : "${text}"`);

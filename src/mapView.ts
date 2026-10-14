@@ -47,8 +47,9 @@ export function mapNodesOf(area: AreaDef, done: ReadonlySet<string>): MapNode[] 
   const currentId = nodes.find((n) => !done.has(n.id))?.id ?? null;
   return nodes.map((n) => {
     const letter = n.teaches.map(graphemeOf).find((g) => g);
-    // A lesson about an s on the end shows the s: a whole word with one is too long for a stone's tile.
-    const ending = n.teaches.some((s) => s.startsWith('suffix:') || s.startsWith('second:')) ? 's' : null;
+    // A lesson about an s on the end shows the s: a whole word with one is too long for a stone's tile. One about a
+    // letter's second sound shows the letter (th).
+    const ending = n.teaches.map((s) => (s.startsWith('suffix:') ? 's' : s.startsWith('second:') ? s.slice(7) : null)).find((g) => g) ?? null;
     return {
       id: n.id,
       state: done.has(n.id) ? 'done' : n.id === currentId ? 'current' : 'locked',

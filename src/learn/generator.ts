@@ -1,7 +1,7 @@
 import type { BlendItem, BlendStage, CatchItem, Content, HeartItem, ManyItem, MeetItem, PickLetterItem, ReadWord, Word } from './items';
 import { confusionKey, type SkillState } from './model';
 import { shuffle, weighted, type Rng } from './rng';
-import { answersFor, blend, gpc, graphemeOf, heart, second, shapeOf, suffix, type SkillId } from './skills';
+import { SECOND_SOUND, answersFor, blend, gpc, graphemeOf, heart, second, shapeOf, suffix, type SkillId } from './skills';
 
 // Builds items from what the child knows and what audio exists. Two rules it
 // never breaks: an item only asks about taught skills, and an item is only
@@ -40,10 +40,33 @@ export function meetItem(grapheme: string, ctx: GenContext): MeetItem | null {
   return { kind: 'meet', key: key('meet', grapheme), grapheme };
 }
 
-/** Up to `n` letters to set beside the target: taught ones and foils (only those in `among`, if given), never the target itself or a letter that says the same sound. */
+/** A grapheme's second sound (th as in "thin"), where it has one, it is taught and it can be heard. */
+export function secondSound(grapheme: string, ctx: GenContext): string | null {
+  const sound = SECOND_SOUND[grapheme];
+  return sound && ctx.known.has(gpc(grapheme)) && ctx.known.has(second(grapheme)) && ctx.content.hasSound(sound) ? sound : null;
+}
+
+/** Meet a grapheme's second sound: the same tile, the other sound. */
+export function secondMeetItem(grapheme: string, ctx: GenContext): MeetItem | null {
+  const sound = secondSound(grapheme, ctx);
+  return sound ? { kind: 'meet', key: key('meet', sound), grapheme, sound } : null;
+}
+
+/** Hear a grapheme's second sound, pick the grapheme. Evidence for the second sound, not the first. */
+export function secondPickItem(grapheme: string, ctx: GenContext): PickLetterItem | null {
+  const sound = secondSound(grapheme, ctx);
+  const item = sound ? pickLetterItem(grapheme, ctx) : null;
+  return item && { ...item, key: key('pick', sound!), sound: sound!, skills: [second(grapheme)] };
+}
+
+/**
+ * Up to `n` letters to set beside the target: taught ones and foils (only those in `among`, if given), never the target itself
+ * or a letter that says the same sound, and only ones that can be heard (a wrong tile tapped says what it is).
+ */
 function wrongLetters(target: string, n: number, ctx: GenContext, among?: readonly string[]): string[] {
   const taught = [...ctx.known].map(graphemeOf).filter((g): g is string => !!g && !answersFor(target, g));
-  let pool = [...new Set([...taught, ...ctx.foils.filter((g) => !answersFor(target, g))])].filter((g) => !among || among.includes(g));
+  let pool = [...new Set([...taught, ...ctx.foils.filter((g) => !answersFor(target, g))])]
+    .filter((g) => (!among || among.includes(g)) && ctx.content.hasSound(g));
   const confused = ctx.confusions.get(target);
   const wrong: string[] = [];
   while (wrong.length < n && pool.length > 0) {

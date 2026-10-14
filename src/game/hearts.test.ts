@@ -21,7 +21,10 @@ const heartsAt = (text: string, upTo: string, more: SkillId[] = []) => {
 };
 
 /** The lesson UFLI first has each word in (docs/ufli.md). */
-const UFLI: Record<string, number> = { the: 1, a: 7, I: 1, said: 13, to: 15, do: 15, of: 17, see: 19, he: 23, be: 23, me: 23, from: 25, are: 27, was: 29, you: 31, what: 33, have: 33 };
+const UFLI: Record<string, number> = {
+  the: 1, a: 7, I: 1, said: 13, to: 15, do: 15, of: 17, see: 19, he: 23, be: 23, me: 23, from: 25, are: 27, was: 29, you: 31, what: 33, have: 33,
+  want: 42, go: 43, says: 44, she: 45, they: 46, were: 47,
+};
 
 describe('the irregular words, each at its lesson', () => {
   it('are listed in the order they are taught, none before UFLI has it', () => {
@@ -45,6 +48,8 @@ describe('the irregular words, each at its lesson', () => {
       see: [false, true], he: [false, true], be: [false, true], me: [false, true],
       from: [false, false, true, false], was: [false, true, false], are: [true],
       you: [false, true], what: [true, true, false], have: [false, false, true],
+      want: [false, true, false, false], go: [false, true], says: [false, true, false],
+      she: [false, true], they: [false, true], were: [false, true],
     };
     for (const w of WORDS) expect(heartsAt(w.text, nodeOf(w.text).id), w.text).toEqual(at[w.text]);
   });
@@ -61,6 +66,10 @@ describe('the irregular words, each at its lesson', () => {
     expect(heartsAt('from', 'i2a1-r')).toEqual([false, false, true, false]);
     // Nothing in the six islands takes these away: the e of "he" still says its name, "the" still has two.
     for (const w of ['he', 'be', 'me', 'the', 'I', 'of', 'are']) expect(heartsAt(w, 'i2a2-boss').some(Boolean), w).toBe(true);
+    // th is taught at UFLI 46: "the" keeps only the heart on its e, and "they" on its ey.
+    expect(heartsAt('the', 'i2a4-sh')).toEqual([true, true]);
+    expect(heartsAt('the', 'i2a4-th')).toEqual([false, true]);
+    expect(heartsAt('she', 'i2a4-ck')).toEqual([true, true]);
     // A later lesson that teaches e saying its name takes the last heart off "he", and it is an ordinary word.
     expect(heartsAt('he', 'i2a2-boss', [second('e')])).toEqual([false, false]);
     expect(heartsAt('me', 'i2a2-boss', [second('e')])).toEqual([false, false]);
@@ -69,8 +78,9 @@ describe('the irregular words, each at its lesson', () => {
   it('are heard from clips that can exist: a taught letter, a letter saying its name, or one of three new sounds', () => {
     const letters = nodes.flatMap((n) => n.teaches.map(graphemeOf)).filter(Boolean);
     for (const w of WORDS) {
-      for (const s of w.sounds) expect([...letters, 'th', 'oo', 'ar', 'E', 'I'], `${w.text}: ${s}`).toContain(s);
+      for (const s of w.sounds) expect([...letters, 'oo', 'ar', 'er', 'A', 'E', 'I', 'O'], `${w.text}: ${s}`).toContain(s);
     }
+    expect(soundClip('O')).toBe('letters/o-name');
     expect(soundClip('E')).toBe('letters/e-name');
     expect(soundClip('I')).toBe('letters/i-name');
     expect(soundClip('oo')).toBe('letters/oo-sound');

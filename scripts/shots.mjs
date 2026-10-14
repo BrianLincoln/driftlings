@@ -25,7 +25,7 @@ const args = process.argv.slice(2);
 const flags = new Set(args.filter((a) => a.startsWith('--')));
 const only = args.filter((a) => !a.startsWith('--'));
 const THINGS = only[0] === 'things';
-const SCENES = THINGS ? [] : only.length ? only : ['map', 'map@i1a2', 'map@i1a3', 'map@i1a4', 'map@i2a1', 'map@i2a2', 'map@i2a3', 'home', 'who', 'i1a3-c+chain', 'i2a1-l2+chain'];
+const SCENES = THINGS ? [] : only.length ? only : ['map', 'map@i1a2', 'map@i1a3', 'map@i1a4', 'map@i2a1', 'map@i2a2', 'map@i2a3', 'map@i2a4', 'home', 'who', 'i1a3-c+chain', 'i2a1-l2+chain'];
 /** Every node of the areas that are open, for `crews`. */
 const ALL = [
   'i1a1-a', 'i1a1-m', 'i1a1-s', 'i1a1-t', 'i1a1-blend', 'i1a1-boss',
@@ -35,6 +35,7 @@ const ALL = [
   'i2a1-add-s', 'i2a1-s-z', 'i2a1-k', 'i2a1-h', 'i2a1-r', 'i2a1-l', 'i2a1-boss',
   'i2a2-w', 'i2a2-j', 'i2a2-y', 'i2a2-x', 'i2a2-qu', 'i2a2-v', 'i2a2-z', 'i2a2-boss',
   'i2a3-a', 'i2a3-i', 'i2a3-o', 'i2a3-aio', 'i2a3-u', 'i2a3-e', 'i2a3-boss',
+  'i2a4-ff', 'i2a4-all', 'i2a4-ck', 'i2a4-sh', 'i2a4-th', 'i2a4-th2', 'i2a4-ch', 'i2a4-boss',
 ];
 const SIZES = [
   { name: 'phone-portrait', width: 390, height: 844, dpr: 3, touch: true },

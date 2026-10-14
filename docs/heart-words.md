@@ -6,7 +6,7 @@ then. Which word arrives at which UFLI lesson is in `docs/ufli.md` and is not re
 
 ## What is built
 
-Slices one to three, and sentences that say which thing. Seventeen words, one to a lesson:
+Slices one to three, and sentences that say which thing. Twenty-three words, one to a lesson (the last six with the digraphs, `docs/ufli.md`):
 
 | Word | Tiles (what each says) | Heart at its lesson | Node | UFLI |
 |---|---|---|---|---|
@@ -27,6 +27,12 @@ Slices one to three, and sentences that say which thing. Seventeen words, one to
 | you | y · ou (/oo/) | ou | `i2a2-x` | 31 |
 | what | wh (/w/) · a (/u/) · t | wh, a | `i2a2-v` | 33 |
 | have | h · a · ve (/v/) | ve | `i2a2-z` | 33 |
+| want | w · a (/o/) · n · t | a | `i2a4-ff` | 42 |
+| go | g · o (its name) | o | `i2a4-all` | 43 |
+| says | s · ay (/e/) · s (/z/) | ay | `i2a4-ck` | 44 |
+| she | sh · e (its name) | e | `i2a4-sh` | 45 |
+| they | th · ey (a's name) | ey | `i2a4-th` | 46 |
+| were | w · ere (/er/) | ere | `i2a4-ch` | 47 |
 
 Decisions taken while the owner was away (2026-10-13), each easy to undo:
 

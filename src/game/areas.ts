@@ -37,6 +37,8 @@ export const BIG_ONES: Record<string, BigOne> = {
   i2a2: big('owlet', 'teal', 'merry', 1.4),
   // The first of the second sea, and the first with fins.
   i2a3: big('finlet', 'sky', 'restless'),
+  // Two letters to a sound: a tall one, the first with feelers, watching every one of them go.
+  i2a4: big('stalk', 'butter', 'watchful'),
 };
 
 export const OPEN_AREAS: AreaDef[] = AREAS.filter((a) => a.id in BIG_ONES);
