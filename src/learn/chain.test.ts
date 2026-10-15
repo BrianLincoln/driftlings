@@ -7,7 +7,7 @@ import type { GenContext } from './generator';
 import type { ChainItem, Content, Round } from './items';
 import { seeded } from './rng';
 import { planCheckpoint, planLesson, planPractice } from './scheduler';
-import { blend, gpc, graphemeOf, shapeOf, soundsLike, type SkillId } from './skills';
+import { blend, gpc, graphemeOf, heartOf, shapeOf, soundsLike, type SkillId } from './skills';
 
 const T0 = 1_700_000_000_000;
 
@@ -314,6 +314,8 @@ describe('the scheduler and chains', () => {
         const ctx = at(n.id, { seed });
         const rounds = n.kind === 'lesson' ? planLesson(n, ctx, T0) : planCheckpoint(findNode(n.id)!.area, ctx, T0);
         const cs = chainsIn(rounds);
+        // A stop for an irregular word alone has none.
+        if (n.teaches.length && n.teaches.every(heartOf)) { expect(cs).toEqual([]); continue; }
         // A lesson that goes back over vowels, and its checkpoint, have two: one of short words and one of longer.
         expect(cs.length).toBe(findNode(n.id)!.area.nodes.some((x) => x.review) ? 2 : 1);
         for (const c of cs) check(c, ctx);

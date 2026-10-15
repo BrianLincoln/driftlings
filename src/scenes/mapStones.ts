@@ -19,6 +19,8 @@ export interface MapNode {
   state: 'done' | 'current' | 'locked';
   /** What the stone shows: the letter it teaches, or an example word. Empty for the checkpoint. */
   label: string;
+  /** The label is an irregular word, all of it learned by heart: the stop for "the". */
+  byHeart?: boolean;
   /** The creature found here, if this stone gives one. */
   rescue: Rescue | null;
   boss: boolean;

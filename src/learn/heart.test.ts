@@ -40,7 +40,8 @@ const hearts = (rounds: Round[]) => items(rounds).filter((i): i is HeartItem => 
 
 describe('irregular words', () => {
   it('come one to a lesson: "the", then "a"', () => {
-    expect(node('i1a2-p').teaches).toContain(heart('the'));
+    expect(node('i1a2-the').teaches).toEqual([heart('the')]);
+    expect(node('i1a2-p').teaches).not.toContain(heart('the'));
     expect(node('i1a2-f').teaches).toContain(heart('a'));
     expect(heartOf(heart('the'))).toBe('the');
     expect(heartOf(gpc('a'))).toBeNull();
@@ -60,31 +61,32 @@ describe('irregular words', () => {
 
   it('are not shown before they are taught, or without their clips', () => {
     expect(heartMeet('the', at('i1a1-boss'))).toBeNull();
-    expect(heartMeet('the', at('i1a2-p', { content: content({ hearts: [A] }) }))).toBeNull();
-    expect(heartMeet('the', at('i1a2-p'))).toMatchObject({ stage: 'meet', skills: [], supports: [], graphemes: ['th', 'e'] });
+    expect(heartMeet('the', at('i1a2-the', { content: content({ hearts: [A] }) }))).toBeNull();
+    expect(heartMeet('the', at('i1a2-the'))).toMatchObject({ stage: 'meet', skills: [], supports: [], graphemes: ['th', 'e'] });
   });
 
   it('are picked from among real words, and spelled only if there is more than one tile', () => {
     for (let seed = 1; seed <= 30; seed++) {
-      const find = heartFind('the', at('i1a2-p', { seed }))!;
+      const find = heartFind('the', at('i1a2-the', { seed }))!;
       expect(find.skills).toEqual([heart('the')]);
       expect(find.choices.map((c) => c.text)).toContain('the');
       expect(new Set(find.choices.map((c) => c.text)).size).toBe(3);
       for (const c of find.choices) expect(['the', ...WORDS.map((w) => w.text)]).toContain(c.text);
     }
-    expect(heartBuild('the', at('i1a2-p'), 'free')).toMatchObject({ kind: 'blend', skills: [heart('the')], byHeart: [true, true] });
+    expect(heartBuild('the', at('i1a2-the'), 'free')).toMatchObject({ kind: 'blend', skills: [heart('the')], byHeart: [true, true] });
     expect(heartBuild('a', at('i1a2-f'), 'free')).toBeNull();
   });
 
   it('are met, asked for straight after, and spelled once, in the lesson that teaches one', () => {
-    const rounds = planLesson(node('i1a2-p'), at('i1a2-p'), T0);
+    const rounds = planLesson(node('i1a2-the'), at('i1a2-the'), T0);
     const h = hearts(rounds);
     expect(h[0]).toMatchObject({ stage: 'meet', word: 'the', first: true });
     expect(h.slice(1).every((i) => i.stage === 'find' && i.word === 'the')).toBe(true);
     expect(h.length).toBeGreaterThanOrEqual(4);
     expect(items(rounds).some((i) => i.kind === 'blend' && i.word === 'the' && i.stage === 'guided')).toBe(true);
-    // Nothing before it changed: the letter is still met first.
-    expect(rounds[0].exercise).toBe('meet');
+    // A stop of its own: the word is met first, and the first time it is asked for there are two to choose between.
+    expect(rounds[0].exercise).toBe('heart');
+    expect(h.filter((i) => i.stage === 'find').map((i) => i.choices.length).sort()).toEqual([2, 3, 3]);
   });
 
   it('are met before anything asks about them, by a child who was past the lesson before the game had them', () => {

@@ -1,7 +1,7 @@
 import { CONTENT, soundClip } from './content/content';
 import { OPEN_AREAS, isFinished } from './game/areas';
 import { AREAS, rescueIndex, type AreaDef, type NodeDef } from './learn/curriculum';
-import { blend, graphemeOf, shapeOf } from './learn/skills';
+import { blend, graphemeOf, heartOf, shapeOf } from './learn/skills';
 import { rescue } from './cast/species';
 import type { MapNode } from './scenes/areaMap';
 import { SEA, placeInSea, seaOf } from './scenes/chartSheets';
@@ -49,13 +49,16 @@ export function mapNodesOf(area: AreaDef, done: ReadonlySet<string>): MapNode[] 
     const letter = n.teaches.map(graphemeOf).find((g) => g);
     // A lesson about an s on the end shows the s: a whole word with one is too long for a stone's tile. One about a
     // letter's second sound shows the letter (th).
+    // A stop for an irregular word alone shows the word, on a heart tile.
+    const word = n.teaches.length && n.teaches.every(heartOf) ? heartOf(n.teaches[0]) : null;
     const ending = n.teaches.map((s) => (s.startsWith('suffix:') ? 's' : s.startsWith('second:') ? s.slice(7) : null)).find((g) => g) ?? null;
     return {
       id: n.id,
       state: done.has(n.id) ? 'done' : n.id === currentId ? 'current' : 'locked',
       // The word-building lesson shows the word it opens on: the first in the list of a shape it teaches. A lesson that
       // goes back over vowels shows them.
-      label: n.kind !== 'lesson' ? '' : letter ?? ending ?? (n.review ? (n.favours ?? []).join('') : opensOn(n)),
+      label: n.kind !== 'lesson' ? '' : word ?? letter ?? ending ?? (n.review ? (n.favours ?? []).join('') : opensOn(n)),
+      byHeart: !!word,
       rescue: n.kind === 'lesson' ? rescue(rescueIndex(n.id)) : null,
       boss: n.kind !== 'lesson',
     };

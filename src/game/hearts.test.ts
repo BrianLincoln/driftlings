@@ -37,7 +37,7 @@ describe('the irregular words, each at its lesson', () => {
     for (const n of nodes) {
       const count = n.teaches.filter((s) => heartOf(s)).length;
       expect(count, n.id).toBeLessThanOrEqual(1);
-      if (n.kind !== 'lesson' || n.late || n.teaches.some((s) => /^(suffix|second|blend):/.test(s))) expect(count, n.id).toBe(0);
+      if (n.kind !== 'lesson' || (n.late && !n.rescuedLast) || n.teaches.some((s) => /^(suffix|second|blend):/.test(s))) expect(count, n.id).toBe(0);
     }
   });
 
@@ -89,9 +89,10 @@ describe('the irregular words, each at its lesson', () => {
 
   it('send nobody back: no lesson was added for them, so every rescue keeps its number and a finished island stays finished', () => {
     const lessons = nodes.filter((n) => n.kind === 'lesson');
-    expect(lessons.filter((n) => n.late).map((n) => n.id)).toEqual(['i2a1-r2', 'i2a1-l2']);
+    expect(lessons.filter((n) => n.late).map((n) => n.id)).toEqual(['i1a2-the', 'i2a1-r2', 'i2a1-l2']);
     // The six islands that were out when the words were added; later islands add lessons after these.
-    expect(lessons.findIndex((n) => n.id === 'i2a2-z')).toBe(30);
+    // The stop for "the" was added later still, and numbers its little one after everybody's.
+    expect(lessons.filter((n) => !n.rescuedLast).findIndex((n) => n.id === 'i2a2-z')).toBe(30);
     expect(rescueIndex('i2a2-z')).toBe(30);
     const done = new Set(nodes.map((n) => n.id));
     expect(settled(done)).toEqual(done);

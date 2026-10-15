@@ -13,7 +13,7 @@ import type { Framing, LayoutMode } from '../stage/framing';
 import type { Touchable } from '../stage/touch';
 import type { Diorama, StageContext } from './diorama';
 import { LetterTile } from './letterTile';
-import { PROP_MAT, buildFarIsles } from './props';
+import { PROP_MAT, buildFarIsles, buildTile } from './props';
 import { SEAL_RADIUS } from './chartMarks';
 import { buildSpots, stoneAt, type MapNode, type Spot } from './mapStones';
 import type { Place } from './places';
@@ -228,7 +228,7 @@ export function createAreaMap(plan: AreaMapPlan): Diorama {
       sleeper.enter(ctx.glyphs);
       for (const s of spots) {
         if (!s.node.label) continue;
-        s.tile = new LetterTile(s.node.label, ctx.glyphs, s.node.label.length > 1 ? 0.5 : 0.58);
+        s.tile = new LetterTile(s.node.label, ctx.glyphs, s.node.label.length > 1 ? 0.5 : 0.58, false, buildTile(s.node.byHeart));
         s.tile.dim = s.node.state === 'locked';
         s.tile.done = s.node.state === 'done';
         // The seal is drawn in the scene and the letter over it, so from low down the letter would show through.

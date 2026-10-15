@@ -10,10 +10,12 @@ import { JOINED, placeLine, standWords, wordScale, type StoodWord } from './word
 // has been taught carry a heart: that part is learned by heart.
 //   meet  "This word is ... the." The child taps each tile to hear what it says here (a heart beats
 //         when its tile is tapped), the tiles close up and the word is said. Nothing is asked.
+//         The first one ever goes slowly: the companion taps each tile itself, the word is said, the hearts
+//         beat while it is said what a heart means, and then the tiles open again for the child to do the same.
 //   find  Three words stand together, one is said, and the child taps it. A wrong pick says what
 //         it is, then the question again.
 
-type Phase = 'say' | 'sound' | 'join' | 'told' | 'ask' | 'leave';
+type Phase = 'say' | 'show' | 'sound' | 'join' | 'told' | 'ask' | 'leave';
 
 const MEET_SCALE = 1.1;
 const ASK_SCALE = 0.8;
@@ -24,6 +26,9 @@ const NUDGE_AFTER = 7;
 const REPLAY_AFTER = 6;
 const HELP_AFTER = 14;
 const BEFORE_REASK = 2;
+/** The first meet: the pause between the companion's taps, and how many times the hearts beat. */
+const SHOW_GAP = 1.1;
+const BEATS = 3;
 
 export const heartExercise: ExerciseModule<HeartItem> = {
   kind: 'heart',
@@ -43,6 +48,10 @@ export const heartExercise: ExerciseModule<HeartItem> = {
     /** When the next thing happens by itself; Infinity while waiting on the child. */
     let nextAt = Infinity;
     let beatAt = Infinity;
+    let beats = 0;
+    /** The first meet: the tile the companion taps next, and whether it has shown them all and it is the child's turn. */
+    let shown = 0;
+    let childTurn = false;
     let asked = false;
     let askedAt = -1;
     let lastHeard = 0;
@@ -56,7 +65,7 @@ export const heartExercise: ExerciseModule<HeartItem> = {
       // One line in either layout. (Tried one word behind another on a tall screen: the nearer hid the further.)
       if (item().stage === 'find') return placeLine(kit, words, scale, BETWEEN);
       // To be sounded out the tiles stand apart; then they close up and read as one word.
-      const gap = (phase === 'say' || phase === 'sound' ? 1.14 : JOINED) * scale;
+      const gap = (phase === 'say' || phase === 'show' || phase === 'sound' ? 1.14 : JOINED) * scale;
       words[0].tiles.forEach((tile, i, all) => {
         tile.goal.copy(kit.spot('tiles', 0, 1));
         tile.goal.x = (i - (all.length - 1) / 2) * gap;
@@ -84,6 +93,8 @@ export const heartExercise: ExerciseModule<HeartItem> = {
       askedAt = -1;
       nextSound = 0;
       beatAt = Infinity;
+      shown = 0;
+      childTurn = false;
       point(undefined);
       if (item().stage === 'find') {
         phase = 'ask';
@@ -183,7 +194,7 @@ export const heartExercise: ExerciseModule<HeartItem> = {
         if (index >= items.length) return;
         if (item().stage === 'meet') words[0].tiles.forEach((tile, i) => (tile.active = phase === 'sound' && i === nextSound));
         if (t >= beatAt) {
-          beatAt = Infinity;
+          beatAt = --beats > 0 ? t + 0.7 : Infinity;
           tiles().filter((tile) => tile.byHeart).forEach((tile) => tile.beat());
         }
         if (phase === 'ask' && askedAt >= 0) {
@@ -192,7 +203,27 @@ export const heartExercise: ExerciseModule<HeartItem> = {
         }
         if (t < nextAt) return;
         nextAt = Infinity;
-        if (phase === 'say') {
+        if (phase === 'say' && item().first && !childTurn) {
+          // The companion shows how first: it taps each tile in turn, slowly.
+          phase = 'show';
+          point(words[0].tiles[0]);
+          nextAt = t + SHOW_GAP;
+        } else if (phase === 'show') {
+          const tile = words[0].tiles[shown];
+          tile.press();
+          tile.beat();
+          kit.companion.act('greet');
+          const length = kit.say(soundClip(item().sounds[shown]), 0.03);
+          shown++;
+          if (shown < words[0].tiles.length) {
+            point(words[0].tiles[shown]);
+            nextAt = t + 0.03 + length + SHOW_GAP;
+          } else {
+            phase = 'join';
+            point(undefined);
+            nextAt = t + 0.03 + length + BEFORE_WORD;
+          }
+        } else if (phase === 'say') {
           phase = 'sound';
           point(words[0].tiles[0]);
           nextAt = t + NUDGE_AFTER;
@@ -205,14 +236,23 @@ export const heartExercise: ExerciseModule<HeartItem> = {
           sfx.whoosh();
           place();
           let end = 0.35 + kit.say(wordClip(item().word), 0.35);
-          if (item().first) {
-            // The first one ever: the companion goes to a heart, and it is said what a heart means.
+          if (item().first && !childTurn) {
+            // The first one ever: the companion goes to a heart, and it is said what a heart means while the hearts beat.
             const said = kit.line([promptClip('learn-this-part-by-heart')], end + 0.5);
             point(tiles().find((tile) => tile.byHeart));
             beatAt = t + said.lastAt;
-            end = Math.max(said.end, end + 1.6);
+            beats = BEATS;
+            end = Math.max(said.end, end + 0.7 * BEATS);
           }
           nextAt = t + end + 0.9;
+        } else if (phase === 'told' && item().first && !childTurn) {
+          // Now the child: the tiles open again to be tapped.
+          childTurn = true;
+          phase = 'sound';
+          nextSound = 0;
+          place();
+          point(words[0].tiles[0]);
+          nextAt = t + NUDGE_AFTER;
         } else if (phase === 'told') {
           phase = 'leave';
           tiles().forEach((tile, i) => setTimeout(() => tile.hop(), i * 70));

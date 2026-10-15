@@ -10,7 +10,7 @@ Slices one to three, and sentences that say which thing. Twenty-three words, one
 
 | Word | Tiles (what each says) | Heart at its lesson | Node | UFLI |
 |---|---|---|---|---|
-| the | th · e (/u/) | both | `i1a2-p` | 1 |
+| the | th · e (/u/) | both | `i1a2-the` | 1 |
 | a | a (/u/) | it | `i1a2-f` | 7 |
 | I | I (its name) | it | `i1a2-i` | 1 to 4 |
 | said | s · ai (/e/) · d | ai | `i1a3-d` | 13 |
@@ -35,6 +35,11 @@ Slices one to three, and sentences that say which thing. Twenty-three words, one
 | were | w · ere (/er/) | ere | `i2a4-ch` | 47 |
 
 Decisions taken while the owner was away (2026-10-13), each easy to undo:
+
+- **"the" has a stop of its own** (2026-10-15, after the owner's child brute-forced it inside the p lesson): `i1a2-the`,
+  just after p, `late` and `rescuedLast` (its little one is numbered after everybody's, so nobody already woken changes).
+  The first meet goes slowly: the companion taps each tile itself, the hearts beat while what a heart means is said,
+  and then the child taps them. The first time it is asked for, there are two words to choose between, not three.
 
 - **One word to a lesson, never before UFLI's lesson, and none in a lesson that is already long** (the two on an s
   at the end, the two on word shapes, the checkpoints). So see, be, me, from and are come one to three lessons

@@ -88,7 +88,8 @@ function hearts(ctx: GenContext, now: number, fresh: readonly string[] = [], ask
   const targets = [...taught, ...taught, ...behind, ...shaky, ...ask.filter((w) => met.includes(w) && !meeting.includes(w))];
   const n = meeting.length ? Math.max(SIZES.heartFinds, targets.length) : targets.length || (due.length ? SIZES.reviewFinds : 0);
   while (met.length && targets.length < n) targets.push(weighted(met, (w) => need(ctx.states.get(heart(w)), now), ctx.rng));
-  const finds = spread(nonNull(targets.map((w) => heartFind(w, ctx, met))), ctx, meeting[0]);
+  // The very first time, the first question is one word against one other, not two.
+  const finds = spread(nonNull(targets.map((w, i) => heartFind(w, ctx, met, first && i === 0 ? 1 : 2))), ctx, meeting[0]);
   return {
     rounds: [...round([...meets, ...finds]), ...round(nonNull(taught.map((w) => heartBuild(w, ctx, 'guided'))))],
     met,
@@ -170,6 +171,8 @@ function planReview(node: NodeDef, ctx: GenContext, now: number): Round[] {
 export function planLesson(node: NodeDef, ctx: GenContext, now: number): Round[] {
   const letters = [...nonNull(node.teaches.map(graphemeOf)), ...(node.favours ?? [])];
   const shapes = node.teaches.filter((s) => s.startsWith('blend:'));
+  // A stop for an irregular word alone: nothing but the word, then a phrase or two with it in.
+  if (node.teaches.length && node.teaches.every(heartOf)) return closing(node, ctx, now);
   if (node.review) return [...planReview(node, ctx, now), ...round(vowelChains(ctx, now, node.favours ?? [], shapes)), ...closing(node, ctx, now)];
   return [...teaching(node, ctx, now), ...round(chains(ctx, now, letters, shapes)), ...closing(node, ctx, now)];
 }

@@ -511,7 +511,7 @@ describe('a lesson added to an area already out', () => {
     expect(ids.every((id) => done.has(id))).toBe(true);
     expect(currentNode(A, done)).toBeNull();
     expect(knownSkills(done)).toEqual(new Set(AREAS.slice(0, 5).flatMap((a) => a.nodes).flatMap((x) => x.teaches)));
-    expect(rescuesHome(done)).toEqual(Array.from({ length: 24 }, (_, i) => i));
+    expect(rescuesHome(done)).toEqual([...Array.from({ length: 24 }, (_, i) => i), rescueIndex('i1a2-the')]);
   });
 
   it('is the next thing to do for a child still there, who keeps everything already done', () => {
@@ -525,14 +525,14 @@ describe('a lesson added to an area already out', () => {
     // Partway: nothing skipped, nothing undone.
     expect(currentNode(A, settled(new Set([...earlier, ...was.slice(0, 5)])))!.id).toBe('i2a1-r2');
     expect(currentNode(A, settled(new Set([...earlier, ...was.slice(0, 3)])))!.id).toBe('i2a1-h');
-    expect(rescuesHome(settled(new Set([...earlier, ...was.slice(0, -1)])))).toEqual(Array.from({ length: 16 }, (_, i) => i));
+    expect(rescuesHome(settled(new Set([...earlier, ...was.slice(0, -1)])))).toEqual([...Array.from({ length: 16 }, (_, i) => i), rescueIndex('i1a2-the')]);
   });
 
   it('leaves everyone already woken who they were', () => {
     // As numbered before the two lessons were added: every lesson in order.
     expect(was.slice(0, -1).map(rescueIndex)).toEqual([16, 17, 18, 19, 20, 21]);
     expect(['i2a1-r2', 'i2a1-l2'].map(rescueIndex)).toEqual([22, 23]);
-    expect(new Set(AREAS.slice(0, 5).flatMap((a) => a.nodes).filter((x) => x.kind === 'lesson').map((x) => rescueIndex(x.id)))).toEqual(new Set(Array.from({ length: 24 }, (_, i) => i)));
+    expect(new Set(AREAS.slice(0, 5).flatMap((a) => a.nodes).filter((x) => x.kind === 'lesson').map((x) => rescueIndex(x.id)))).toEqual(new Set([...Array.from({ length: 24 }, (_, i) => i), rescueIndex('i1a2-the')]));
   });
 
   it('settles nothing in an area whose checkpoint is not beaten', () => {

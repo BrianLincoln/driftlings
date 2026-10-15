@@ -10,7 +10,7 @@ import type { Crossing, ExerciseModule } from './contract';
 import { JOINED, wordScale } from './wordRow';
 
 // Stepping stones: a word chain. A word stands on its tiles by a stream, and each step changes one letter of it.
-//   spell  The new word is said and one tile goes blank. The child taps the letter, of three, that makes the word.
+//   spell  The new word is said and one tile goes blank. The child taps the letter, of three cards, that makes the word.
 //          A wrong one goes onto the blank tile, what that spells is said if it is a word, and it comes back out.
 //   read   One tile changes by itself and nobody says the word. By it stand three drawings, and the child taps
 //          the one the word now names. A wrong one says what it is and goes; the question is asked again.
@@ -135,9 +135,10 @@ export const chainExercise: ExerciseModule<ChainItem> = {
       helped = false;
       point(null);
       if (spelling()) {
-        // The letter is wiped off its tile, and the empty tile shows where the new one goes.
+        // The letter is wiped off its tile, and the empty tile shows where the new one goes. What is offered comes on
+        // coloured cards, not stone: a child took the word's own tiles for the choices and tapped its first letter.
         row[s.at].blank = true;
-        options = s.letters.map((l) => ({ tile: kit.tile(l.grapheme, rows().size), at: kit.at(0, 0), value: l.grapheme, makes: l.makes, out: false, inWord: false }));
+        options = s.letters.map((l, i) => ({ tile: kit.card(l.grapheme, si + i, rows().size), at: kit.at(0, 0), value: l.grapheme, makes: l.makes, out: false, inWord: false }));
       } else {
         // The new letter drops into place by itself.
         sfx.whoosh();

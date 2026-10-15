@@ -24,6 +24,11 @@ export interface NodeDef {
    * so nobody a child has already woken turns into somebody else.
    */
   late?: boolean;
+  /**
+   * Added after the islands beyond it were out: its rescue is numbered after every other, so nobody already
+   * woken on any island turns into somebody else.
+   */
+  rescuedLast?: boolean;
 }
 
 export interface AreaDef {
@@ -36,6 +41,11 @@ const lesson = (id: string, ufli: number, ...teaches: SkillId[]): NodeDef => ({ 
 const shapes = (id: string, ufli: number, favours: string[], ...teaches: SkillId[]): NodeDef => ({ ...lesson(id, ufli, ...teaches), favours, late: true });
 /** A lesson that goes back over short vowels (see `review`), bringing in longer words where it teaches a shape. */
 const review = (id: string, ufli: number, vowels: string[], ...teaches: SkillId[]): NodeDef => ({ ...lesson(id, ufli, ...teaches), favours: vowels, review: true });
+/**
+ * A short stop for an irregular word on its own: the first, where what a heart means is shown slowly before anything
+ * is asked. Added to an area already out (see `late`, `rescuedLast`).
+ */
+const heartStop = (id: string, ufli: number, word: string): NodeDef => ({ ...lesson(id, ufli, heart(word)), late: true, rescuedLast: true });
 const check = (id: string, kind: 'miniboss' | 'boss', ufli: number | null): NodeDef => ({ id, kind, ufli, teaches: [] });
 
 /** Every island there is, in the order the ship finds them. Each is one area: a few lessons and the checkpoint that ends it. */
@@ -57,7 +67,9 @@ export const AREAS: AreaDef[] = [
       // Irregular words come one to a lesson, never before UFLI has them and never in a lesson that is already long
       // (an ending, new word shapes), so some come a lesson or two after UFLI's (docs/heart-words.md has the table).
       // A word added to a lesson a child is already past needs nothing here: it is met at the top of their next lesson.
-      lesson('i1a2-p', 6, gpc('p'), heart('the')),
+      // The first one, "the", has a stop of its own: met inside the p lesson, a child did not follow what a heart meant.
+      lesson('i1a2-p', 6, gpc('p')),
+      heartStop('i1a2-the', 6, 'the'),
       lesson('i1a2-f', 7, gpc('f'), heart('a')),
       lesson('i1a2-i', 8, gpc('i'), heart('I')),
       lesson('i1a2-n', 9, gpc('n')),
@@ -199,11 +211,14 @@ export function currentNode(area: AreaDef, done: ReadonlySet<string>): NodeDef |
   return area.nodes.find((n) => !done.has(n.id)) ?? null;
 }
 
-/** The lesson nodes in the order their rescues are numbered: area by area, a late lesson after the others of its area. */
-const rescueOrder = (): NodeDef[] => AREAS.flatMap((a) => {
-  const lessons = a.nodes.filter((n) => n.kind === 'lesson');
-  return [...lessons.filter((n) => !n.late), ...lessons.filter((n) => n.late)];
-});
+/** The lesson nodes in the order their rescues are numbered: area by area, a late lesson after the others of its area, and one `rescuedLast` after them all. */
+const rescueOrder = (): NodeDef[] => [
+  ...AREAS.flatMap((a) => {
+    const lessons = a.nodes.filter((n) => n.kind === 'lesson' && !n.rescuedLast);
+    return [...lessons.filter((n) => !n.late), ...lessons.filter((n) => n.late)];
+  }),
+  ...allNodes().filter((n) => n.rescuedLast),
+];
 
 /** Which rescue a lesson node gives. */
 export function rescueIndex(nodeId: string): number {

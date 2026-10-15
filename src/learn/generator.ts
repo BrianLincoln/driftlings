@@ -185,25 +185,25 @@ export function heartMeet(word: string, ctx: GenContext, first = false): HeartIt
 }
 
 /**
- * Hear the word, pick it from three. The others are real words the child can read, and other irregular
+ * Hear the word, pick it from three (from two, with `others` 1). The others are real words the child can read, and other irregular
  * words from `among`: never a misspelling. Ones of the same length, sharing a letter, or picked wrongly before come first.
  */
-export function heartFind(word: string, ctx: GenContext, among: readonly string[] = []): HeartItem | null {
+export function heartFind(word: string, ctx: GenContext, among: readonly string[] = [], others = 2): HeartItem | null {
   const w = heartWords(ctx).find((x) => x.text === word);
   if (!w) return null;
   let pool = [...heartWords(ctx).filter((x) => among.includes(x.text)), ...readableWords(ctx)].filter((x) => x.text !== word);
   const confused = ctx.confusions.get(confusionKey('heart', word));
-  const others: Word[] = [];
-  while (others.length < 2 && pool.length > 0) {
+  const picked: Word[] = [];
+  while (picked.length < others && pool.length > 0) {
     const pick = weighted(pool, (x) =>
       1 + (x.text.length === word.length ? 1 : 0) + ([...x.text].some((c) => word.includes(c)) ? 1 : 0) + 3 * (confused?.get(x.text) ?? 0), ctx.rng);
-    others.push(pick);
+    picked.push(pick);
     pool = pool.filter((x) => x.text !== pick.text);
   }
-  if (others.length < 2) return null;
+  if (picked.length < others) return null;
   return {
     kind: 'heart', key: key('find', word), word, ...onTiles(w, ctx), stage: 'find', first: false,
-    choices: shuffle([w, ...others], ctx.rng).map((x) => onTiles(x, ctx)),
+    choices: shuffle([w, ...picked], ctx.rng).map((x) => onTiles(x, ctx)),
     skills: [heart(word)], supports: behaving(w, ctx),
   };
 }

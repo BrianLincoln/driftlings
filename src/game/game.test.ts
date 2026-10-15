@@ -3,7 +3,7 @@ import endings from '../content/endings.json';
 import hearts from '../content/hearts.json';
 import keywords from '../content/keywords.json';
 import wordGroups from '../content/words.json';
-import { AREAS, allNodes } from '../learn/curriculum';
+import { AREAS, allNodes, rescueIndex } from '../learn/curriculum';
 import type { LogEvent } from '../learn/events';
 import { graphemeOf, heartOf, shapeOf } from '../learn/skills';
 import { cut } from '../content/content';
@@ -28,7 +28,8 @@ describe('a saved game from before lessons were added to an island', () => {
     const game = await gameWith([...earlier, ...was]);
     expect(AREAS.slice(0, 5).every((a) => isFinished(a, game.done))).toBe(true);
     expect(AREAS[4].nodes.every((n) => game.done.has(n.id))).toBe(true);
-    expect(game.home.residents).toEqual(Array.from({ length: 24 }, (_, i) => i));
+    // With the little one of the stop for "the", numbered after everybody.
+    expect(game.home.residents).toEqual([...Array.from({ length: 24 }, (_, i) => i), rescueIndex('i1a2-the')]);
     // Every node can still be played again, the new ones included.
     for (const n of AREAS[4].nodes) expect(game.planNode(n.id)!.rounds.length, n.id).toBeGreaterThan(0);
   });
@@ -44,7 +45,7 @@ describe('a saved game from before lessons were added to an island', () => {
       game.completeNode(id);
     }
     expect(isFinished(AREAS[4], game.done)).toBe(true);
-    expect(game.home.residents.length).toBe(24);
+    expect(game.home.residents.length).toBe(25);
   });
 });
 

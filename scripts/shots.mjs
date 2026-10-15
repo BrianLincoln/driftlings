@@ -29,7 +29,7 @@ const SCENES = THINGS ? [] : only.length ? only : ['map', 'map@i1a2', 'map@i1a3'
 /** Every node of the areas that are open, for `crews`. */
 const ALL = [
   'i1a1-a', 'i1a1-m', 'i1a1-s', 'i1a1-t', 'i1a1-blend', 'i1a1-boss',
-  'i1a2-p', 'i1a2-f', 'i1a2-i', 'i1a2-n', 'i1a2-boss',
+  'i1a2-p', 'i1a2-the', 'i1a2-f', 'i1a2-i', 'i1a2-n', 'i1a2-boss',
   'i1a3-o', 'i1a3-d', 'i1a3-c', 'i1a3-boss',
   'i1a4-u', 'i1a4-g', 'i1a4-b', 'i1a4-e', 'i1a4-boss',
   'i2a1-add-s', 'i2a1-s-z', 'i2a1-k', 'i2a1-h', 'i2a1-r', 'i2a1-l', 'i2a1-boss',
